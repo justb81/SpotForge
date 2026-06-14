@@ -11,9 +11,9 @@ updates:
       minor-and-patch:
         update-types: ["minor", "patch"]
     ignore:
-      # @types/node an die Laufzeit koppeln (Node 20 – siehe .nvmrc und
+      # @types/node an die Laufzeit koppeln (Node 24 – siehe .nvmrc und
       # engines). Major-Sprünge würden Typen für APIs einführen, die unter
-      # Node 20 fehlen; daher nur Minor/Patch innerhalb der 20.x-Linie.
+      # Node 24 fehlen; daher nur Minor/Patch innerhalb der 24.x-Linie.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
       # React, React Native und die expo-* Pakete bilden mit der Expo-SDK ein

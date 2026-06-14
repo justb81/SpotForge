@@ -3,7 +3,7 @@
 #   Dockerfile-Pfad  = apps/backend/Dockerfile
 #
 # Mehrstufig: install → build (tsup-Bundle) → schlankes Runtime-Image.
-FROM node:20-alpine AS base
+FROM node:24-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
@@ -33,7 +33,7 @@ RUN pnpm --filter "@spotforge/backend" build
 RUN pnpm --filter "@spotforge/backend" deploy --prod /prod/backend
 
 # --- Runtime: minimal, non-root ---
-FROM node:20-alpine AS runner
+FROM node:24-alpine AS runner
 ENV NODE_ENV=production
 ENV PORT=3000
 WORKDIR /app

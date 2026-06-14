@@ -10,6 +10,20 @@ updates:
       # Kleinere/Patch-Updates gebündelt, um PR-Rauschen zu reduzieren.
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # @types/node an die Laufzeit koppeln (Node 20 – siehe .nvmrc und
+      # engines). Major-Sprünge würden Typen für APIs einführen, die unter
+      # Node 20 fehlen; daher nur Minor/Patch innerhalb der 20.x-Linie.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # React, React Native und die expo-* Pakete bilden mit der Expo-SDK ein
+      # fest verzahntes Set und werden über `expo install` (SDK-Upgrade)
+      # gemeinsam gehoben – nicht einzeln durch Dependabot.
+      - dependency-name: "react"
+      - dependency-name: "react-native"
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "@types/react"
 
   # GitHub-Actions in den Workflows aktuell halten.
   - package-ecosystem: github-actions

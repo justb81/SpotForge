@@ -3,12 +3,13 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition } from "@spotforge/app-config";
 import { SpotForgeApp } from "@spotforge/app-shell";
 import type { Classifier } from "@spotforge/ai-engine";
-import { Asset } from "expo-asset";
+import { initExecutorch } from "react-native-executorch";
+import { ExpoResourceFetcher } from "react-native-executorch-expo-resource-fetcher";
 import Constants from "expo-constants";
-// Gebündeltes Modell (#50). data/models/* liegt nicht im Git; `pnpm fetch-models`
-// (CI vor dem Bundle, lokal vor `dev`) legt die Datei ab. Metro bündelt sie als
-// Asset (assetExts in metro.config.js), expo-asset löst die lokale URI auf.
-import modelAsset from "../../data/models/mobilenetv2-12.onnx";
+// Gebündeltes ExecuTorch-Modell (#50, EfficientNet-V2-S int8). data/models/*
+// liegt nicht im Git; `pnpm fetch-models` (CI vor dem Bundle, lokal vor `dev`)
+// legt die Datei ab. Metro bündelt sie als Asset (assetExts in metro.config.js).
+import modelAsset from "../../data/models/efficientnet_v2_s_int8.pte";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "?";
 
@@ -41,17 +42,14 @@ class StartupErrorBoundary extends Component<{ children: ReactNode }, { error?: 
   }
 }
 
-const tick = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
-
 function Root() {
   // Die aktive Variante wird zur Build-Zeit von app.config.ts aufgelöst und ihre
   // vollständige AppDefinition in expoConfig.extra hinterlegt.
   const definition = Constants.expoConfig?.extra?.appDefinition as AppDefinition | undefined;
 
-  // Modell laden und Klassifikator bereitstellen. Der native ONNX-Crash lässt
-  // sich ohne logcat nur per „printf auf den Bildschirm" lokalisieren: jeder
-  // Schritt aktualisiert `status`; der zuletzt sichtbare Schritt vor dem Schließen
-  // markiert die Crash-Stelle. Kurze Pausen, damit React den Schritt rendert.
+  // ExecuTorch initialisieren und den Klassifikator aus dem gebündelten Modell
+  // bereitstellen. Status-Overlay zeigt den Fortschritt (inkl. Modell-Ladens);
+  // Fehler werden sichtbar gemacht statt verschluckt.
   const [classifier, setClassifier] = useState<Classifier>();
   const [modelError, setModelError] = useState<string>();
   const [status, setStatus] = useState("Start…");
@@ -62,24 +60,16 @@ function Root() {
     };
     (async () => {
       try {
-        set("1/5 ai-engine laden…");
-        await tick();
-        const { createMobileNetClassifier } = await import("@spotforge/ai-engine");
+        set("1/3 ExecuTorch init…");
+        initExecutorch({ resourceFetcher: ExpoResourceFetcher });
 
-        set("2/5 Asset auflösen…");
-        await tick();
-        const asset = Asset.fromModule(modelAsset);
-        await asset.downloadAsync();
+        set("2/3 Modell laden…");
+        const { createClassifier } = await import("@spotforge/ai-engine");
+        const ready = await createClassifier(modelAsset, (p) =>
+          set(`2/3 Modell laden… ${Math.round(p * 100)}%`),
+        );
 
-        const uri = asset.localUri ?? asset.uri;
-        set(`3/5 Asset downloaded=${asset.downloaded} uri=${uri ?? "null"}`);
-        await tick(2000);
-
-        set("4/5 InferenceSession erstellen…");
-        await tick(1500);
-        const ready = await createMobileNetClassifier(uri);
-
-        set("5/5 bereit ✓");
+        set("3/3 bereit ✓");
         if (active) setClassifier(ready);
       } catch (e) {
         if (active) setModelError(e instanceof Error ? (e.stack ?? e.message) : String(e));

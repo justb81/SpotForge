@@ -48,9 +48,9 @@ Kein Eingriff in den App-Code.
 
 ## Development Build & PoC-Test-APK
 
-Der PoC (#48–#51) bindet native Module ein (ONNX, Kamera) und nutzt daher einen
-**Development Build** (`expo-dev-client`); **Expo Go ist kein Ziel**. JS-Iteration
-weiterhin via `pnpm dev`/Metro gegen den Dev-Build.
+Der PoC (#48–#51) bindet native Module ein (ExecuTorch, Kamera) und nutzt daher
+einen **Development Build** (`expo-dev-client`); **Expo Go ist kein Ziel**.
+JS-Iteration weiterhin via `pnpm dev`/Metro gegen den Dev-Build.
 
 Zum schnellen Testen auf einem echten Gerät baut der Workflow
 [`poc-android-apk.yml`](../../.github/workflows/poc-android-apk.yml) ohne
@@ -62,11 +62,12 @@ einen `claude/poc-**`-Branch.
 ## Status
 
 Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`
-mit der aktiven `AppDefinition`. **PoC-Loop komplett (#48–#51):** Dev-Build +
-Test-APK-Pipeline, Kamera-Capture, gebündeltes MobileNet-Modell (via `expo-asset`)
-und der injizierte On-Device-Klassifikator stehen. Echte Icon-/Splash-Assets der
-Variante sind noch Platzhalter (`variants/cars/assets/`).
+mit der aktiven `AppDefinition`, initialisiert ExecuTorch und reicht den aus dem
+gebündelten `.pte` erzeugten On-Device-Klassifikator durch. **PoC-Loop (#48–#51):**
+Dev-Build + Test-APK-Pipeline, Kamera-Capture und EfficientNet-Klassifikation
+(react-native-executorch). Echte Icon-/Splash-Assets der Variante sind noch
+Platzhalter (`variants/cars/assets/`).
 
 ## Abhängigkeiten
 
-`@spotforge/app-shell`, `@spotforge/app-config`.
+`@spotforge/app-shell`, `@spotforge/app-config`, `@spotforge/ai-engine`.

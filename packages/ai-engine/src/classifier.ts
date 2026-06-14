@@ -6,17 +6,17 @@
  * (`forgeCard`, Guardrails, FactLookup) folgt in #8.
  */
 
-/** Eingabe für die Klassifikation: ein vorbereitetes, quadratisches JPEG. */
+/** Eingabe für die Klassifikation: die lokale URI eines aufgenommenen Fotos. */
 export interface ClassifierInput {
-  /** Base64-kodiertes JPEG in Modell-Eingabegröße (z.B. 224×224). */
-  base64Jpeg: string;
+  /** Lokale Bild-URI/-Pfad (Pre-Processing übernimmt die Engine intern). */
+  imageUri: string;
 }
 
 /** Ergebnis einer Klassifikation. */
 export interface ClassificationResult {
   /** Erkanntes Label (Klartext). */
   label: string;
-  /** Konfidenz 0..1 (Softmax-Wahrscheinlichkeit der Top-Klasse). */
+  /** Konfidenz 0..1 (Wahrscheinlichkeit der Top-Klasse). */
   confidence: number;
 }
 

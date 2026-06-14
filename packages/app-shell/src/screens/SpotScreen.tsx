@@ -4,8 +4,6 @@ import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
 import type { Classifier, ClassificationResult } from "@spotforge/ai-engine";
 import { SpotCamera } from "../camera/SpotCamera";
-import { preparePhotoForClassification } from "../camera/preprocess";
-import type { CapturedPhoto } from "../camera/types";
 
 export interface SpotScreenProps {
   /** Aktive Variante – liefert Theme, Texte und Guardrails. */
@@ -35,7 +33,7 @@ export function SpotScreen({ definition, locale = DEFAULT_LOCALE, classifier }: 
   };
 
   const [mode, setMode] = useState<Mode>("idle");
-  const [photo, setPhoto] = useState<CapturedPhoto | null>(null);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [result, setResult] = useState<ClassificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,13 +42,13 @@ export function SpotScreen({ definition, locale = DEFAULT_LOCALE, classifier }: 
       setMode("processing");
       setResult(null);
       setError(null);
+      setPhotoUri(uri);
 
-      const prepared = await preparePhotoForClassification(uri, { includeBase64: true });
-      setPhoto(prepared);
-
-      if (classifier && prepared.base64) {
+      // Die Engine (ExecuTorch) übernimmt Resize/Normalisierung intern – wir
+      // reichen die Foto-URI direkt durch.
+      if (classifier) {
         try {
-          setResult(await classifier.classify({ base64Jpeg: prepared.base64 }));
+          setResult(await classifier.classify({ imageUri: uri }));
         } catch {
           setError(text("spot.error", "Erkennung fehlgeschlagen. Bitte erneut versuchen."));
         }
@@ -89,9 +87,9 @@ export function SpotScreen({ definition, locale = DEFAULT_LOCALE, classifier }: 
           <View style={styles.center}>
             <ActivityIndicator color={theme.colors.primary} />
           </View>
-        ) : mode === "preview" && photo ? (
+        ) : mode === "preview" && photoUri ? (
           <View style={styles.fill}>
-            <Image source={{ uri: photo.uri }} style={styles.preview} resizeMode="cover" />
+            <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
             <View style={[styles.resultOverlay, { backgroundColor: theme.colors.secondary }]}>
               {renderResult()}
             </View>

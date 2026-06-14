@@ -3,7 +3,8 @@
 // On-Device-Pipeline: Klassifikation → Fakten → Card → Card-Art. Siehe README.md.
 
 export type { Classifier, ClassifierInput, ClassificationResult } from "./classifier";
-export { createMobileNetClassifier } from "./mobilenet/MobileNetClassifier";
+export { createClassifier } from "./executorch/createClassifier";
+export type { ModelSource } from "./executorch/createClassifier";
 
 // Geplante Verträge (noch nicht implementiert):
 //

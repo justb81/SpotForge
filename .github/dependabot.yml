@@ -6,6 +6,14 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    # Mindestalter (Quarantäne) für Updates: frische Releases werden erst nach
+    # einer Karenzzeit als PR vorgeschlagen – fängt kurzfristig zurückgezogene,
+    # kompromittierte Versionen ab (siehe ADR 0006). An die pnpm-
+    # `minimumReleaseAge` (7 Tage) angeglichen, damit Dependabot nichts
+    # vorschlägt, was pnpm beim Install ohnehin ablehnen würde.
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
     groups:
       # Kleinere/Patch-Updates gebündelt, um PR-Rauschen zu reduzieren.
       minor-and-patch:
@@ -30,3 +38,6 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    # Auch Action-Updates erst nach 7 Tagen Karenz (siehe ADR 0006).
+    cooldown:
+      default-days: 7

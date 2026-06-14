@@ -132,6 +132,9 @@ ergänzen.
 - **[ADR 0005](./docs/adr/0005-node-24-lts-baseline.md):** Node **24 LTS** als
   fixierte Laufzeit-Baseline (gerade = LTS; Current-Linien 25/odd nicht für
   Produktion). Neubewertung bei Node 26 LTS (~Okt 2026).
+- **[ADR 0006](./docs/adr/0006-supply-chain-hardening.md):** Supply-Chain-Härtung –
+  pnpm 11, **7-Tage-Mindestalter** (`minimumReleaseAge`) + Dependabot-`cooldown`,
+  blockierte Build-Skripte (`allowBuilds`); Expo/RN-Baseline ausgenommen.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

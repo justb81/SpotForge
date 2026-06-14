@@ -1,3 +1,40 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# --- Supply-Chain-Härtung (siehe ADR 0006) ---
+
+# Mindestalter (Quarantäne) für neu veröffentlichte Versionen: 7 Tage
+# (10080 Minuten). pnpm löst nur Versionen auf, die so lange in der Registry
+# liegen, und verifiziert das Lockfile bei jedem Install dagegen – fängt
+# kurzfristig zurückgezogene, kompromittierte Releases ab. An die Dependabot-
+# `cooldown` (7 Tage) angeglichen.
+minimumReleaseAge: 10080
+
+# Ausnahme: das bewusst exakt gepinnte Framework-Baseline (Expo-SDK + React
+# Native). Diese Versionen sind exakt festgelegt und werden gemeinsam über die
+# Expo-SDK gehoben (in Dependabot ignoriert); sie lassen sich nicht auf eine
+# gealterte Version herunterstufen. Reine Build-/Transpile-Toolchain der
+# Expo-Welt (metro/hermes/babel-preset-expo) gehört dazu.
+minimumReleaseAgeExclude:
+  - react
+  - react-dom
+  - react-native
+  - "@react-native/*"
+  - "@react-native-community/*"
+  - "@types/react"
+  - expo
+  - "expo-*"
+  - "@expo/*"
+  - metro
+  - "metro-*"
+  - "hermes-*"
+  - babel-preset-expo
+  - babel-plugin-syntax-hermes-parser
+
+# Build-/Install-Skripte von Abhängigkeiten sind in pnpm 11 standardmäßig
+# blockiert (häufigster Einfallsvektor für Schad-Pakete). esbuild ist bewusst
+# auf `false`: es läuft über die vorinstallierten Plattform-Binaries (@esbuild/*)
+# ohne eigenes Install-Skript.
+allowBuilds:
+  esbuild: false

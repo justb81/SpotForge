@@ -124,6 +124,11 @@ ergänzen.
   React Native/Expo + TypeScript end-to-end.
 - **[ADR 0002](./docs/adr/0002-multi-app-single-codebase.md):** White-Label –
   viele Apps aus einer Codebase via Build-Varianten; ein mandantenfähiger Server.
+- **[ADR 0003](./docs/adr/0003-ci-cd-und-deployment.md):** CI/CD über GitHub
+  Actions; Backend self-hosted auf Coolify (Build aus dem Repo); Mobile via EAS.
+- **[ADR 0004](./docs/adr/0004-distributionsstrategie-apps-vs-lobby.md):**
+  Distributionsstrategie (separate Apps vs. Lobby) – **offen**, Entscheidung bei
+  Vertikale #2; aktuelle Tendenz zu einer App wegen des Netzwerk-Effekts.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

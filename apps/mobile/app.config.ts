@@ -27,6 +27,12 @@ const config: ExpoConfig = {
   slug: app.identity.slug,
   scheme: app.identity.scheme,
   version,
+  // onnxruntime-react-native (1.24.x, neueste auf npm) nutzt das Legacy-
+  // NativeModules-/JSI-install-Muster, das unter der New Architecture
+  // (Bridgeless) `null` liefert → „Cannot read property 'install' of null".
+  // Bis das RN-Binding bridgeless unterstützt (upstream getaggt, nicht auf npm
+  // veröffentlicht), läuft der PoC auf der alten Architektur. Revisit in #9.
+  newArchEnabled: false,
   icon: `../../variants/${variant}/${app.assets.icon}`.replace("/./", "/"),
   splash: {
     image: `../../variants/${variant}/${app.assets.splash}`.replace("/./", "/"),

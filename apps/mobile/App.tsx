@@ -1,5 +1,5 @@
 import { Component, type ReactNode, useEffect, useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
+import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition } from "@spotforge/app-config";
 import { SpotForgeApp } from "@spotforge/app-shell";
 import type { Classifier } from "@spotforge/ai-engine";
@@ -9,6 +9,8 @@ import Constants from "expo-constants";
 // (CI vor dem Bundle, lokal vor `dev`) legt die Datei ab. Metro bündelt sie als
 // Asset (assetExts in metro.config.js), expo-asset löst die lokale URI auf.
 import modelAsset from "../../data/models/mobilenetv2-12.onnx";
+
+const APP_VERSION = Constants.expoConfig?.version ?? "?";
 
 /**
  * Fängt Render-/Startfehler ab und zeigt sie **auf dem Bildschirm** an, statt die
@@ -29,7 +31,7 @@ class StartupErrorBoundary extends Component<{ children: ReactNode }, { error?: 
         <SafeAreaView style={styles.errorRoot}>
           <ScrollView contentContainerStyle={styles.errorContent}>
             <Text style={styles.errorTitle}>Startfehler</Text>
-            <Text style={styles.errorVersion}>v{Constants.expoConfig?.version ?? "?"}</Text>
+            <Text style={styles.errorVersion}>v{APP_VERSION}</Text>
             <Text style={styles.errorText}>{error.stack ?? String(error)}</Text>
           </ScrollView>
         </SafeAreaView>
@@ -39,33 +41,48 @@ class StartupErrorBoundary extends Component<{ children: ReactNode }, { error?: 
   }
 }
 
+const tick = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function Root() {
   // Die aktive Variante wird zur Build-Zeit von app.config.ts aufgelöst und ihre
   // vollständige AppDefinition in expoConfig.extra hinterlegt.
   const definition = Constants.expoConfig?.extra?.appDefinition as AppDefinition | undefined;
 
-  // Modell einmalig aus dem Bundle laden und den On-Device-Klassifikator
-  // bereitstellen. Fehler werden sichtbar gemacht statt verschluckt.
+  // Modell laden und Klassifikator bereitstellen. Der native ONNX-Crash lässt
+  // sich ohne logcat nur per „printf auf den Bildschirm" lokalisieren: jeder
+  // Schritt aktualisiert `status`; der zuletzt sichtbare Schritt vor dem Schließen
+  // markiert die Crash-Stelle. Kurze Pausen, damit React den Schritt rendert.
   const [classifier, setClassifier] = useState<Classifier>();
   const [modelError, setModelError] = useState<string>();
+  const [status, setStatus] = useState("Start…");
   useEffect(() => {
     let active = true;
+    const set = (s: string) => {
+      if (active) setStatus(s);
+    };
     (async () => {
       try {
-        // ai-engine (und damit onnxruntime-react-native) bewusst erst hier
-        // dynamisch laden – nicht im Startpfad. Ein Fehler im nativen ONNX-Modul
-        // wird so abfangbar (sichtbarer Modell-Ladefehler) statt Sofort-Absturz.
+        set("1/5 ai-engine laden…");
+        await tick();
         const { createMobileNetClassifier } = await import("@spotforge/ai-engine");
+
+        set("2/5 Asset auflösen…");
+        await tick();
         const asset = Asset.fromModule(modelAsset);
         await asset.downloadAsync();
-        const ready = await createMobileNetClassifier(asset.localUri ?? asset.uri);
-        if (active) {
-          setClassifier(ready);
-        }
+
+        const uri = asset.localUri ?? asset.uri;
+        set(`3/5 Asset downloaded=${asset.downloaded} uri=${uri ?? "null"}`);
+        await tick(2000);
+
+        set("4/5 InferenceSession erstellen…");
+        await tick(1500);
+        const ready = await createMobileNetClassifier(uri);
+
+        set("5/5 bereit ✓");
+        if (active) setClassifier(ready);
       } catch (e) {
-        if (active) {
-          setModelError(e instanceof Error ? (e.stack ?? e.message) : String(e));
-        }
+        if (active) setModelError(e instanceof Error ? (e.stack ?? e.message) : String(e));
       }
     })();
     return () => {
@@ -78,7 +95,7 @@ function Root() {
       <SafeAreaView style={styles.errorRoot}>
         <ScrollView contentContainerStyle={styles.errorContent}>
           <Text style={styles.errorTitle}>AppDefinition fehlt</Text>
-          <Text style={styles.errorVersion}>v{Constants.expoConfig?.version ?? "?"}</Text>
+          <Text style={styles.errorVersion}>v{APP_VERSION}</Text>
           <Text style={styles.errorText}>
             Constants.expoConfig.extra.appDefinition ist im Build nicht verfügbar. expoConfig=
             {String(Constants.expoConfig != null)} keys=
@@ -94,14 +111,25 @@ function Root() {
       <SafeAreaView style={styles.errorRoot}>
         <ScrollView contentContainerStyle={styles.errorContent}>
           <Text style={styles.errorTitle}>Modell-Ladefehler</Text>
-          <Text style={styles.errorVersion}>v{Constants.expoConfig?.version ?? "?"}</Text>
+          <Text style={styles.errorVersion}>v{APP_VERSION}</Text>
           <Text style={styles.errorText}>{modelError}</Text>
         </ScrollView>
       </SafeAreaView>
     );
   }
 
-  return <SpotForgeApp definition={definition} classifier={classifier} />;
+  // Diagnose-Overlay: zeigt Version + aktuellen Lade-Schritt über der App. Der
+  // letzte sichtbare Schritt vor einem nativen Crash lokalisiert die Ursache.
+  return (
+    <View style={styles.appRoot}>
+      <SpotForgeApp definition={definition} classifier={classifier} />
+      <View style={styles.statusOverlay} pointerEvents="none">
+        <Text style={styles.statusText}>
+          v{APP_VERSION} · {status}
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 export default function App() {
@@ -113,6 +141,24 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+  },
+  statusOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    paddingTop: 44,
+    paddingBottom: 6,
+    paddingHorizontal: 10,
+  },
+  statusText: {
+    color: "#00ff88",
+    fontSize: 11,
+    fontFamily: "monospace",
+  },
   errorRoot: {
     flex: 1,
     backgroundColor: "#1a0000",

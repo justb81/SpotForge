@@ -42,6 +42,15 @@ mandantenfähiger Server** bedient alle Apps.
    Features sind bewusst „später zuschaltbar", nicht jetzt.
 5. **Privacy-first.** KI-Inferenz on-device; Fotos verlassen das Gerät nur per
    Opt-in; Standort nur grob (PLZ/Region).
+6. **Vor 1.0: keine Abwärtskompatibilität, keine Altlasten.** Solange wir nicht
+   bei **Version 1.0** sind, wird **keinerlei** Abwärtskompatibilität, kein
+   Legacy-Pfad und keine veraltete Information aufbewahrt. Beim Ändern von Code,
+   Doku, Issues oder Konfiguration **ersetzt** du Überholtes vollständig, statt
+   es „für später" daneben stehen zu lassen. Keine deprecated-Schichten, keine
+   „erst X, dann Y"-Migrationsbrücken, keine veralteten Hinweise/Workflows in
+   READMEs oder Kommentaren. Wenn etwas nicht mehr der eingeschlagene Weg ist,
+   **entfernen**, nicht behalten. (Beispiel: Expo Go ist kein Ziel → es darf
+   nirgends mehr referenziert werden.)
 
 ---
 

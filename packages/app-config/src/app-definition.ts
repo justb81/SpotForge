@@ -38,14 +38,39 @@ export interface AppDefinition {
   assets: AssetManifest;
 }
 
+/**
+ * Unterstützte Sprachcodes (ISO 639-1). Jeder benutzersichtbare Text einer
+ * Variante muss für **alle** hier gelisteten Sprachen vorliegen.
+ */
+export type LocaleCode = "de" | "en";
+
+/**
+ * Ein mehrsprachiger Text: pro unterstütztem {@link LocaleCode} genau eine
+ * Übersetzung. Das `Record` erzwingt Vollständigkeit – fehlt eine Sprache,
+ * schlägt die Typprüfung fehl.
+ */
+export type LocalizedText = Record<LocaleCode, string>;
+
+/** Standard-Sprache, wenn keine bevorzugte Sprache bekannt ist. */
+export const DEFAULT_LOCALE: LocaleCode = "de";
+
+/**
+ * Löst einen {@link LocalizedText} in die bevorzugte Sprache auf. Fehlt diese,
+ * wird auf {@link DEFAULT_LOCALE} und schließlich auf die erste vorhandene
+ * Übersetzung zurückgefallen.
+ */
+export function resolveText(text: LocalizedText, locale: LocaleCode = DEFAULT_LOCALE): string {
+  return text[locale] ?? text[DEFAULT_LOCALE] ?? Object.values(text)[0] ?? "";
+}
+
 /** Grenzen dessen, was der Klassifikator als gültiges Objekt akzeptiert. */
 export interface CategoryGuardrails {
   /** Erlaubte Kategorien (i.d.R. nur die primäre). */
   allowed: CategoryId[];
   /** Mindest-Konfidenz 0..1, darunter wird abgelehnt. */
   minConfidence: number;
-  /** Meldung, wenn ein Objekt außerhalb des Scopes gespottet wird. */
-  rejectMessage: string;
+  /** Mehrsprachige Meldung, wenn ein Objekt außerhalb des Scopes gespottet wird. */
+  rejectMessage: LocalizedText;
 }
 
 export interface AiPrompts {
@@ -75,10 +100,11 @@ export interface ThemeTokens {
 }
 
 /**
- * Text-Overrides als flache Key→Wert-Map (i18n-Schlüssel). Nicht gesetzte
- * Schlüssel nutzen die gemeinsamen Defaults aus @spotforge/app-shell.
+ * Text-Overrides als flache Map vom i18n-Schlüssel auf einen mehrsprachigen
+ * Text. Jeder Override muss für alle {@link LocaleCode}s übersetzt sein. Nicht
+ * gesetzte Schlüssel nutzen die gemeinsamen Defaults aus @spotforge/app-shell.
  */
-export type ContentOverrides = Record<string, string>;
+export type ContentOverrides = Record<string, LocalizedText>;
 
 export interface AssetManifest {
   icon: string;

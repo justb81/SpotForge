@@ -21,8 +21,10 @@ export default defineApp({
     guardrails: {
       allowed: ["vehicles"],
       minConfidence: 0.6,
-      rejectMessage:
-        "Das sieht nicht nach einem Fahrzeug aus. Richte die Kamera auf ein Auto, Motorrad, einen LKW oder Bus.",
+      rejectMessage: {
+        de: "Das sieht nicht nach einem Fahrzeug aus. Richte die Kamera auf ein Auto, Motorrad, einen LKW oder Bus.",
+        en: "That doesn't look like a vehicle. Point the camera at a car, motorcycle, truck or bus.",
+      },
     },
   },
 
@@ -52,10 +54,10 @@ export default defineApp({
   },
 
   content: {
-    "spot.cta": "Auto spotten",
-    "forge.title": "Karte schmieden",
-    "collection.title": "Garage",
-    "battle.title": "Duell",
+    "spot.cta": { de: "Auto spotten", en: "Spot a car" },
+    "forge.title": { de: "Karte schmieden", en: "Forge card" },
+    "collection.title": { de: "Garage", en: "Garage" },
+    "battle.title": { de: "Duell", en: "Duel" },
   },
 
   assets: {

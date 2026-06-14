@@ -107,6 +107,12 @@ Builds laufen in der **Expo Cloud** (EAS). Profile stehen in
   (`production|preview|development`), `submit`.
 - **`mobile-update.yml`** (Push auf `main`, JS-/Asset-Pfade): `eas update` (OTA) auf den
   Channel `production`. Für Fakten-/Content-Updates ohne Store-Release.
+  **Optional und standardmäßig inaktiv:** Das Paket `expo-updates` ist bewusst nicht
+  installiert – die App aktualisiert sich damit **ausschließlich über die Stores**
+  (App Store / Google Play). OTA greift erst nach bewusstem `expo-updates`-Setup
+  (EAS Update ist nur bis ~1000 MAU kostenfrei; Build und Update werden getrennt
+  abgerechnet). Alternativ self-hosted via eigenem Update-Server. Native Änderungen
+  erfordern ohnehin immer einen vollständigen Build.
 
 Lokal starten:
 

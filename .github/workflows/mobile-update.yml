@@ -1,8 +1,11 @@
 name: Mobile OTA Update
 
-# OTA-Update (EAS Update) für JS/Assets – ohne neuen Store-Release. Nutzt der
-# Auslieferung von Fakten-/Content-Updates (siehe ADR 0001). Native Änderungen
-# brauchen weiterhin einen vollständigen Build (mobile-build.yml).
+# OPTIONAL. OTA-Update (EAS Update) für JS/Assets – ohne neuen Store-Release.
+# Standardmäßig NICHT aktiv: das Paket `expo-updates` ist bewusst nicht installiert,
+# d.h. die App aktualisiert sich ausschließlich über App Store / Google Play.
+# Dieser Workflow greift erst nach bewusstem expo-updates-Setup (EAS Update ist nur
+# bis ~1000 MAU kostenfrei). Native Änderungen brauchen ohnehin einen Build
+# (mobile-build.yml). Siehe docs/deployment.md.
 on:
   push:
     branches: [main]

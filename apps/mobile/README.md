@@ -1,32 +1,40 @@
 # @spotforge/mobile
 
-Die Spieler-App (Expo / React Native, iOS + Android).
+**Generischer Expo-Host.** Dieses eine Projekt baut *jede* SpotForge-App – die
+konkrete App wird zur Build-Zeit über `APP_VARIANT` ausgewählt. Der eigentliche
+App-Code liegt in `@spotforge/app-shell`; hier wird er nur mit der aktiven
+`AppDefinition` (aus `variants/<APP_VARIANT>/`) gemountet.
 
-## Verantwortung
+## So funktioniert es
 
-- **Spotting:** Kamera (Vision Camera v4, Frame-Processor) zum Fotografieren.
-- **Forge-Flow:** Ruft `@spotforge/ai-engine` auf, zeigt die Schmiede-Animation.
-- **Kartenbibliothek:** Sammlung, Filter, Upgrades, Foil-Darstellung.
-- **Battle-UI:** Trumpf-Duelle (offline gegen KI über `game-core`, online via Backend).
-- **Tausch & Sozial:** Marktplatz, Direkttausch, Feed, Clans (über `api-client`).
-- **Profil/Progression:** Level, Titel, Achievements, Daily Challenges.
-- **Onboarding:** FTUE inkl. erstem Spot, Tutorial-Battle (GDD §11).
+- `app.config.ts` liest `APP_VARIANT`, lädt `variants/<variant>/app.definition`
+  und übernimmt Name, Slug, Bundle-IDs, Icon/Splash daraus.
+- `eas.json` hat pro App ein Build-Profil, das `APP_VARIANT` setzt.
+- Die Shell bekommt dieselbe `AppDefinition` und konfiguriert Guardrails,
+  KI-Prompts, Theme, Texte und Assets.
 
-## Grenzen
+```bash
+# Auto-App lokal starten (Default-Variante)
+APP_VARIANT=cars pnpm dev
 
-Enthält **keine** Spielregel-Logik – die kommt aus `@spotforge/game-core`.
-Rendering von Karten kommt aus `@spotforge/ui`.
+# Auto-App bauen
+eas build --profile cars
+```
 
-## Abhängigkeiten
+## Eine neue App ausliefern
 
-`@spotforge/game-core`, `@spotforge/ai-engine`, `@spotforge/api-client`,
-`@spotforge/ui`.
+1. `variants/<name>/` mit `app.definition.ts` + Assets anlegen.
+2. Build-Profil in `eas.json` ergänzen (`"env": { "APP_VARIANT": "<name>" }`).
+3. `eas build --profile <name>`.
 
-## Stack
-
-Expo, React Native, Reanimated 3, Lottie, Zustand (State), Vision Camera v4.
+Kein Eingriff in den App-Code.
 
 ## Status
 
-Gerüst – noch kein Expo-Projekt initialisiert. Nächster Schritt:
-`pnpm create expo-app` in dieses Verzeichnis bzw. Expo-Template einrichten.
+Gerüst – Expo-Projekt noch nicht initialisiert (`app.config.ts`/`eas.json`
+liegen als Vorlage vor). Start: Expo in dieses Verzeichnis initialisieren und
+`@spotforge/app-shell` als Entry mounten.
+
+## Abhängigkeiten
+
+`@spotforge/app-shell`, `@spotforge/app-config`.

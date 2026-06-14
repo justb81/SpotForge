@@ -1,83 +1,90 @@
 # Repository-Struktur
 
-SpotForge ist ein **TypeScript-Monorepo** (pnpm Workspaces + Turborepo). Diese
-Datei erklärt, *warum* jedes Modul existiert und *welche Grenzen* es hat. Das
-Spielkonzept dahinter steht im [GDD](../Game-Design.md).
+SpotForge ist ein **TypeScript-Monorepo** (pnpm Workspaces + Turborepo) nach dem
+**White-Label-Prinzip**: Jede Kartenkategorie ist eine eigene App, alle aus einer
+gemeinsamen Codebase, unterschieden nur durch Konfiguration. Ein zentraler,
+mandantenfähiger Server bedient alle Apps. Diese Datei erklärt, *warum* jedes
+Modul existiert und *welche Grenzen* es hat. Spielkonzept: [GDD](../Game-Design.md).
+Grundsatzentscheidung: [ADR 0002](./adr/0002-multi-app-single-codebase.md).
 
 ## Leitprinzipien
 
-1. **Eine Domäne, zwei Laufzeiten.** Die Trumpf-Spiellogik und das Kartenschema
-   müssen sowohl im Client (Offline-Battle gegen KI, Anzeige) als auch im Server
-   (Anti-Cheat-Validierung bei PvP) identisch laufen. Deshalb lebt diese Logik in
-   `packages/game-core` und wird von beiden Seiten importiert – nie kopiert.
-2. **Reine Domäne bleibt frameworkfrei.** `game-core` kennt weder React Native
-   noch Fastify, weder Kamera noch Datenbank. Das macht es testbar und portabel.
-3. **Daten sind Code-getrennt.** Kategorien, Faktendaten und ML-Modelle liegen in
-   `data/` als versionierte Quelle bzw. als Bezugsanweisung – nicht im App-Bundle
-   fest verdrahtet.
-4. **Privacy-first.** Die KI-Inferenz (`ai-engine`) ist on-device gekapselt; das
-   Backend sieht standardmäßig keine Fotos (siehe GDD §10.4).
+1. **Eine Codebase, viele Apps.** Der gesamte App-Code ist generisch und
+   kategorie-neutral (`packages/app-shell`). Eine konkrete App entsteht aus einer
+   `AppDefinition` (`variants/<name>/`) – **kein neuer Code pro App**.
+2. **Konfiguration statt Code.** Alles per-App Variable – Kategorie-Guardrails,
+   KI-Prompts, Styling, Text-Overrides, Grafiken – steckt in der `AppDefinition`
+   (`packages/app-config`). Eine neue App = neuer `variants/`-Ordner + Build-Profil.
+3. **Eine Domäne, zwei Laufzeiten.** Trumpf-Logik und Kartenschema laufen
+   identisch in App (Offline) und Server (Anti-Cheat) → `packages/game-core`,
+   nie kopiert.
+4. **Reine Domäne bleibt frameworkfrei.** `game-core` kennt weder RN noch Fastify.
+5. **Privacy-first.** KI-Inferenz (`ai-engine`) ist on-device gekapselt.
+6. **Ein zentraler, mandantenfähiger Server.** Daten sind pro App (`appId`)
+   getrennt; app-übergreifende Features bleiben später zuschaltbar.
 
 ## Module
 
-### `apps/mobile` — Expo / React Native
-Die Spieler-App. Verantwortlich für Spotting (Kamera), Kartenbibliothek, Battle-
-und Tausch-UI, Profil/Progression, Onboarding. Importiert `game-core`,
-`ai-engine`, `api-client`, `ui`. Enthält keine eigene Spielregel-Logik.
+### `apps/mobile` — generischer Expo-Host
+Baut *jede* App. `app.config.ts` liest `APP_VARIANT`, lädt die passende
+`AppDefinition` aus `variants/` und mountet `@spotforge/app-shell`. `eas.json`
+hat pro App ein Build-Profil. Enthält selbst keine Feature-Logik.
 
-### `apps/backend` — Fastify + WebSockets
-Auth (JWT/OAuth2), PvP-Matchmaking & autoritative Battle-Validierung,
-Marktplatz/Tausch, Leaderboards, Karten-/Account-Persistenz, Sync der
-Offline-Daten. Importiert `game-core` für die Regel-Validierung. PostgreSQL,
-Redis, MeiliSearch, S3-kompatibler Storage.
+### `apps/backend` — zentraler, mandantenfähiger Server (Fastify)
+Auth, PvP + autoritative Battle-Validierung (`game-core`), Marktplatz,
+Leaderboards, Persistenz, Sync – alles **pro `appId` getrennt**. PostgreSQL,
+Redis, MeiliSearch, S3.
+
+### `packages/app-config` — AppDefinition-Schema (Herzstück)
+Typisiertes Schema + `defineApp`-Helper für alles per-App Konfigurierbare:
+Identität, Kategorie + Guardrails, KI-Prompts, Theme, Text-Overrides, Assets.
+
+### `packages/app-shell` — die generische App
+Navigation, Screens und Flows (Spotting, Forge, Bibliothek, Battle, Tausch,
+Profil, Onboarding), kategorie-neutral. Wird mit einer `AppDefinition`
+parametrisiert und liefert die gemeinsamen Text-Defaults.
 
 ### `packages/game-core` — Spiel- & Kartendomäne (rein, frameworkfrei)
-Typen und Regeln: `Card`, `Category`, `Attribute`, `Rarity`, Seltenheits­
-algorithmus, Trumpf-Battle-Engine, Karten-Upgrade-Logik. Single Source of Truth
-für alles Spielmechanische. Keine I/O-, UI- oder Netzwerk-Abhängigkeiten.
+`Card`, `Category`, `Attribute`, `Rarity`, Seltenheitsalgorithmus,
+Trumpf-Battle-Engine, Upgrade-Logik. Single Source of Truth für die Regeln.
 
-### `packages/ai-engine` — On-Device-KI-Pipeline
-Kapselt Bild-Klassifikation → Kategorie-Erkennung → Fakten-Lookup → Karten-
-Generierung → Card-Art. Definiert Interfaces (`Classifier`, `FactLookup`,
-`CardArtGenerator`) plus ONNX-/SQLite-Implementierungen. Liefert ein fertiges
-`Card`-Objekt (aus `game-core`) zurück.
+### `packages/ai-engine` — On-Device-KI-Pipeline (generisch)
+Klassifikation → Guardrail-Prüfung → Fakten-Lookup → Karten-Generierung →
+Card-Art. Guardrails und Prompts kommen aus der `AppDefinition`.
 
 ### `packages/api-client` — typisierter Backend-Client
-Generierter/handgepflegter REST- und WebSocket-Client. Teilt Request-/Response-
-Typen mit dem Backend, damit Client und Server nie auseinanderlaufen. Wird nur
-von der App genutzt.
+REST + WebSocket, teilt DTO-Typen mit dem Backend (inkl. `appId`-Kontext).
 
-### `packages/ui` — Design-System & Kartenrendering
-Wiederverwendbare RN-Komponenten, Design-Tokens, das visuelle Kartenlayout
-(inkl. Seltenheits-Frames, Foil-Effekte). Trennt Optik von Spiellogik.
+### `packages/ui` — themebares Design-System & Kartenrendering
+Komponenten konsumieren Theme-Tokens und Asset-Pfade aus der `AppDefinition`.
 
 ### `packages/config` — geteilte Dev-Konfiguration
-Basis-`tsconfig`, ESLint-/Prettier-Konfiguration, die alle Pakete erweitern.
+Basis-`tsconfig`, ESLint/Prettier.
 
-### `data/categories` — Kategorien- & Attributschema
-Die zehn Kategorien aus GDD §4 als deklaratives Schema (Attribute, Einheiten,
-welche Attribute trumpffähig sind). Quelle für `game-core` und `ai-engine`.
+### `variants/<name>` — eine App (nur Konfiguration)
+`app.definition.ts` + `assets/`. Aktuell: `cars` (CarForge). Kein Code.
 
-### `data/facts` — Offline-Fakten-DB (Seeds)
-Seed-/Migrationsmaterial für die SQLite-Faktendatenbank (~50.000 Einträge,
-FTS5). Die gebaute `.db` wird nicht eingecheckt.
+### `data/categories` · `data/facts` · `data/models`
+Kategorien-/Attributschema, Offline-Fakten-DB-Seeds, ML-Modell-Artefakte.
 
-### `data/models` — ML-Modell-Artefakte
-Klassifikations- und Card-Art-Modelle. Nicht im Git (Größe) – README beschreibt
-Bezug via CDN/OTA.
-
-### `tools` — Build-, Codegen- & Seed-Skripte
-Hilfsskripte: Faktendaten in SQLite seeden, API-Typen generieren, Modelle holen.
+### `tools`
+Build-, Codegen- und Seed-Skripte.
 
 ## Abhängigkeitsrichtung
 
 ```
-apps/mobile ───▶ ui, api-client, ai-engine, game-core
-apps/backend ──▶ game-core
-ai-engine ─────▶ game-core, data/categories
-api-client ────▶ game-core (geteilte DTO-Typen)
-game-core ─────▶ (keine internen Abhängigkeiten)
+variants/<name> ──▶ app-config (AppDefinition-Typen)
+apps/mobile ──────▶ app-shell, app-config  +  variants/<APP_VARIANT> (zur Build-Zeit)
+apps/backend ─────▶ game-core
+app-shell ────────▶ ui, api-client, ai-engine, game-core, app-config
+ai-engine ────────▶ game-core, app-config, data/categories
+ui ───────────────▶ game-core, app-config
+api-client ───────▶ game-core
+app-config ───────▶ game-core
+game-core ────────▶ (keine internen Abhängigkeiten)
 ```
 
-`game-core` ist die Wurzel: Es darf von nichts im Repo abhängen, aber alles darf
-von ihm abhängen. Zyklen sind nicht erlaubt.
+`game-core` ist die Wurzel (hängt von nichts ab), `app-config` definiert den
+Konfigurations-Vertrag, `app-shell` ist die generische App. Zyklen sind nicht
+erlaubt. `variants/` sind bewusst **keine** Workspace-Pakete, sondern reine
+Config-Bündel, die `apps/mobile` per `APP_VARIANT` auflöst.

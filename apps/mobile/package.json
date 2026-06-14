@@ -3,16 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "echo \"TODO: expo start\" && exit 0",
+    "dev": "echo \"TODO: expo start (APP_VARIANT=${APP_VARIANT:-cars})\" && exit 0",
     "build": "echo \"TODO: eas build\" && exit 0",
     "lint": "echo \"TODO: eslint\" && exit 0",
     "test": "echo \"TODO: jest\" && exit 0",
     "typecheck": "echo \"TODO: tsc --noEmit\" && exit 0"
   },
   "dependencies": {
-    "@spotforge/ai-engine": "workspace:*",
-    "@spotforge/api-client": "workspace:*",
-    "@spotforge/game-core": "workspace:*",
-    "@spotforge/ui": "workspace:*"
+    "@spotforge/app-config": "workspace:*",
+    "@spotforge/app-shell": "workspace:*"
   }
 }

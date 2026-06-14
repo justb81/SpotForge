@@ -1,21 +1,25 @@
 # @spotforge/ui
 
-Geteiltes Design-System und Kartenrendering für die App.
+Geteiltes, **themebares** Design-System und Kartenrendering für die App.
 
 ## Verantwortung
 
-- Design-Tokens (Farben, Typografie, Abstände).
+- Komponenten konsumieren **Theme-Tokens** aus der aktiven `AppDefinition`
+  (`theme.colors`, `theme.typography`, `theme.radius`) – so bekommt jede App ihr
+  eigenes Look-&-Feel, ohne Code-Duplikat.
 - Wiederverwendbare React-Native-Komponenten.
-- **Kartenlayout:** visuelle Darstellung einer `Card` inkl. Seltenheits-Frames
-  (C/U/R/E/L), Foil-Effekt, Spotted-By-Tag, Attribut-Anzeige.
+- **Kartenlayout:** Darstellung einer `Card` inkl. Seltenheits-Frames (aus
+  `assets.cardFrames` der Variante), Foil-Effekt, Spotted-By-Tag, Attribut-Anzeige.
 
 ## Grenzen
 
-Reine Präsentation. Keine Spiellogik (kommt aus `game-core`), keine Netzwerklogik.
+Reine Präsentation. Keine Spiellogik (kommt aus `game-core`), keine Netzwerklogik,
+keine fest kodierten Farben/Texte.
 
 ## Abhängigkeiten
 
-React Native. Liest `Card`-Typen aus `@spotforge/game-core` für Props.
+React Native. `@spotforge/game-core` (Card-Typen), `@spotforge/app-config`
+(ThemeTokens-Typ).
 
 ## Status
 

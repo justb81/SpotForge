@@ -1,0 +1,20 @@
+{
+  "name": "@spotforge/app-shell",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "echo \"TODO: tsc\" && exit 0",
+    "lint": "echo \"TODO: eslint\" && exit 0",
+    "test": "echo \"TODO: jest\" && exit 0",
+    "typecheck": "echo \"TODO: tsc --noEmit\" && exit 0"
+  },
+  "dependencies": {
+    "@spotforge/ai-engine": "workspace:*",
+    "@spotforge/api-client": "workspace:*",
+    "@spotforge/app-config": "workspace:*",
+    "@spotforge/game-core": "workspace:*",
+    "@spotforge/ui": "workspace:*"
+  }
+}

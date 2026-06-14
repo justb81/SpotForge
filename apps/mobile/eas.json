@@ -1,0 +1,9 @@
+{
+  "//": "EAS-Build-Profile. Eine neue App = ein neues Profil, das APP_VARIANT setzt – kein Code.",
+  "cli": { "version": ">= 5.0.0" },
+  "build": {
+    "cars": {
+      "env": { "APP_VARIANT": "cars" }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@spotforge/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo \"TODO: fastify dev server\" && exit 0",
+    "build": "echo \"TODO: tsc\" && exit 0",
+    "lint": "echo \"TODO: eslint\" && exit 0",
+    "test": "echo \"TODO: vitest\" && exit 0",
+    "typecheck": "echo \"TODO: tsc --noEmit\" && exit 0"
+  },
+  "dependencies": {
+    "@spotforge/game-core": "workspace:*"
+  }
+}

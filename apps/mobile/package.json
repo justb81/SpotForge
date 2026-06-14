@@ -1,0 +1,16 @@
+{
+  "name": "@spotforge/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"TODO: expo start (APP_VARIANT=${APP_VARIANT:-cars})\" && exit 0",
+    "build": "echo \"TODO: eas build\" && exit 0",
+    "lint": "echo \"TODO: eslint\" && exit 0",
+    "test": "echo \"TODO: jest\" && exit 0",
+    "typecheck": "echo \"TODO: tsc --noEmit\" && exit 0"
+  },
+  "dependencies": {
+    "@spotforge/app-config": "workspace:*",
+    "@spotforge/app-shell": "workspace:*"
+  }
+}

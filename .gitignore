@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Expo / React Native
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Native
+android/
+ios/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Turbo
+.turbo/
+
+# Tests
+coverage/
+
+# ML model artifacts (bezogen via CDN, siehe data/models/README.md)
+data/models/*.onnx
+data/models/*.ort
+data/models/*.bin
+
+# Generated SQLite databases
+data/facts/*.db
+data/facts/*.sqlite

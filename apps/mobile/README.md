@@ -18,12 +18,18 @@ App-Code liegt in `@spotforge/app-shell`; hier wird er nur mit der aktiven
   und reicht sie an `<SpotForgeApp/>`.
 
 ```bash
+# Einmalig: gebündeltes ONNX-Modell beziehen (liegt nicht im Git, #50)
+pnpm fetch-models
+
 # Auto-App lokal starten (Default-Variante)
 APP_VARIANT=cars pnpm --filter @spotforge/mobile dev
 
 # Auto-App bauen (EAS Cloud)
 eas build --profile cars-production
 ```
+
+> `App.tsx` bindet das Modell per statischem `require` ein – ohne vorheriges
+> `pnpm fetch-models` schlägt der Metro-Bundle fehl.
 
 ## Build-Profile (eas.json)
 
@@ -56,9 +62,10 @@ einen `claude/poc-**`-Branch.
 ## Status
 
 Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`
-mit der aktiven `AppDefinition`. PoC #48: `expo-dev-client` + Spot-Screen-Shell
-+ Test-APK-Pipeline stehen. Echte Icon-/Splash-Assets der Variante sind noch
-Platzhalter (`variants/cars/assets/`).
+mit der aktiven `AppDefinition`. **PoC-Loop komplett (#48–#51):** Dev-Build +
+Test-APK-Pipeline, Kamera-Capture, gebündeltes MobileNet-Modell (via `expo-asset`)
+und der injizierte On-Device-Klassifikator stehen. Echte Icon-/Splash-Assets der
+Variante sind noch Platzhalter (`variants/cars/assets/`).
 
 ## Abhängigkeiten
 

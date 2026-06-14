@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@spotforge/game-core": "workspace:*"
+    "@spotforge/game-core": "workspace:*",
+    "jpeg-js": "^0.4.4",
+    "onnxruntime-react-native": "^1.24.3"
   }
 }

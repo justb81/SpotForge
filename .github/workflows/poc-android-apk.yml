@@ -49,6 +49,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Bezieht das gebündelte ONNX-Modell (#50). Muss VOR dem Bundle laufen, da
+      # App.tsx es per statischem require einbindet (Binary liegt nicht im Git).
+      - name: Fetch ML models
+        run: pnpm fetch-models
+
       # Erzeugt das native android/-Projekt aus app.config/Plugins. --no-install,
       # weil die JS-Abhängigkeiten oben bereits via pnpm installiert sind.
       # Hinweis: Schlägt das Autolinking der nativen Module unter pnpm fehl,

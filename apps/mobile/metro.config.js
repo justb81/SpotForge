@@ -18,4 +18,8 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
+// 3. ONNX-Modelle als Assets bündeln (#50). Das gebündelte .onnx (bzw. später
+//    optimiertes .ort) wird per require/expo-asset geladen.
+config.resolver.assetExts.push("onnx", "ort");
+
 module.exports = config;

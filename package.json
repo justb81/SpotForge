@@ -14,7 +14,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "fetch-models": "node tools/fetch-models/index.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

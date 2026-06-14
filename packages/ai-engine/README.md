@@ -39,4 +39,11 @@ kein Foto-Upload (on-device).
 
 ## Status
 
-Gerüst – Interfaces werden als Nächstes definiert.
+Gerüst. **PoC #50:** minimale Klassifikation steht – `Classifier`-Vertrag
+(`classify({ base64Jpeg }) → { label, confidence }`, entkoppelt von den
+Domänentypen) plus `createMobileNetClassifier(modelUri)` auf Basis von
+MobileNetV2 (ImageNet, ONNX Runtime Mobile). Bildvorverarbeitung (JPEG-Dekodierung
+via `jpeg-js`, ImageNet-Normalisierung, NCHW-Float32-Tensor) und Top-1-Softmax
+sind enthalten; die URI-Auflösung des **gebündelten** Modells übernimmt der
+App-Host (`expo-asset`). `FactLookup`, `CardArtGenerator` und die
+`forgeCard`-Orchestrierung folgen (#8/#10/#11).

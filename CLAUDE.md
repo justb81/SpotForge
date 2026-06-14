@@ -129,6 +129,9 @@ ergänzen.
 - **[ADR 0004](./docs/adr/0004-distributionsstrategie-apps-vs-lobby.md):**
   Distributionsstrategie (separate Apps vs. Lobby) – **offen**, Entscheidung bei
   Vertikale #2; aktuelle Tendenz zu einer App wegen des Netzwerk-Effekts.
+- **[ADR 0005](./docs/adr/0005-node-24-lts-baseline.md):** Node **24 LTS** als
+  fixierte Laufzeit-Baseline (gerade = LTS; Current-Linien 25/odd nicht für
+  Produktion). Neubewertung bei Node 26 LTS (~Okt 2026).
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

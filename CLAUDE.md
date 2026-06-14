@@ -214,6 +214,39 @@ committet & gepusht werden.
 
 ---
 
+## Gelernte Fallstricke (Mobile / On-Device) — bevor du Zeit verbrennst
+
+Aus dem Car-Spotting-PoC (#48–#51) hart erkauft:
+
+- **New Architecture ist Pflicht.** Expo SDK 56 / RN 0.85 erzwingen die New
+  Architecture (Bridgeless); `expo prebuild` schreibt `newArchEnabled=true` und
+  **ignoriert `newArchEnabled: false`** in `app.config`. Native Module, die das
+  Legacy-Muster `NativeModules.X.install()` nutzen (z.B. `onnxruntime-react-native`
+  bis 1.24.3), crashen dann mit **„Cannot read property 'install' of null"** beim
+  Import. → On-Device-KI läuft über **ExecuTorch** ([ADR 0007](./docs/adr/0007-on-device-inference-executorch.md)).
+  Neue native Libs vorab auf Bridgeless-Tauglichkeit prüfen.
+- **On-Device-Test geht nur über ein echtes Gerät** – die Agent-Umgebung kann
+  keine App ausführen. Test-APK baut **`.github/workflows/poc-android-apk.yml`**
+  (ohne Expo-Cloud: `expo prebuild` + `gradlew assembleRelease`) als
+  herunterladbares Actions-Artefakt; jeder Build trägt eine eindeutige Version
+  (`0.1.0-build.<run>`), damit Sideload-Updates sauber durchlaufen. Akzeptanz-
+  kriterien „auf echtem Gerät" verifiziert der Mensch, nicht der Agent.
+- **Standalone-Release crasht still?** Kein Metro-Overlay vorhanden → eine
+  Error-Boundary, die Fehler **auf den Bildschirm** schreibt, ist Gold wert.
+  Crasht es nativ **vor** dem Rendern (Splash → zu), hilft nur `adb logcat`.
+- **`minimumReleaseAge` (7 Tage, ADR 0006)** blockiert taufrische Versionen:
+  neue Pakete auf eine **≥7 Tage alte** Version pinnen (z.B. executorch `0.9.0`,
+  nicht `0.9.1`), sonst scheitert der Install.
+- **Modelle nie ins Git.** Bezug reproduzierbar über `tools/fetch-models`
+  (Manifest + SHA-256) → als Metro-Asset (`.pte`) gebündelt; läuft in CI **vor**
+  dem Bundle. Größere/fahrzeug-spezifische Modelle = eigener ExecuTorch-Export (#9).
+- **`expo prebuild` verändert `apps/mobile/package.json`** (Scripts) und legt
+  `android/`/`ios/` an (gitignored). Lokal danach `git checkout apps/mobile/package.json`
+  und `rm -rf apps/mobile/android`. pnpm-Autolinking funktioniert ohne
+  `node-linker=hoisted`.
+
+---
+
 ## Spielmechanik-Kurzreferenz (Details im GDD)
 
 - **Seltenheit:** `f(Realwelt-Seltenheit × App-Häufigkeit × Standort-Bonus)` →

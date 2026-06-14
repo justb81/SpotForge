@@ -1,0 +1,60 @@
+name: Mobile OTA Update
+
+# OPTIONAL. OTA-Update (EAS Update) für JS/Assets – ohne neuen Store-Release.
+# Standardmäßig NICHT aktiv: das Paket `expo-updates` ist bewusst nicht installiert,
+# d.h. die App aktualisiert sich ausschließlich über App Store / Google Play.
+# Dieser Workflow greift erst nach bewusstem expo-updates-Setup (EAS Update ist nur
+# bis ~1000 MAU kostenfrei). Native Änderungen brauchen ohnehin einen Build
+# (mobile-build.yml). Siehe docs/deployment.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/**"
+      - "variants/**"
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "App-Variante"
+        type: string
+        default: cars
+      channel:
+        description: "Release-Channel"
+        type: choice
+        options: [production, preview]
+        default: production
+
+env:
+  VARIANT: ${{ github.event.inputs.variant || 'cars' }}
+  CHANNEL: ${{ github.event.inputs.channel || 'production' }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: EAS Update
+        working-directory: apps/mobile
+        env:
+          APP_VARIANT: ${{ env.VARIANT }}
+        run: eas update --non-interactive --channel "$CHANNEL" --message "${{ github.event.head_commit.message || github.sha }}"

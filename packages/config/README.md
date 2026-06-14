@@ -4,18 +4,25 @@ Geteilte Entwickler-Konfiguration, die alle Pakete erweitern.
 
 ## Inhalt
 
-- `tsconfig.base.json`-Erweiterungen pro Zielumgebung (Node, React Native).
-- ESLint- und Prettier-Konfiguration.
+- `tsconfig/base.json` – gemeinsame Basis (erbt von `../../tsconfig.base.json`,
+  source-first: kein Emit).
+- `tsconfig/library.json` – reine TS-Pakete · `tsconfig/react.json` – React-Native-
+  Pakete (jsx) · `tsconfig/node.json` – Node-Apps (backend).
+- `eslint/index.mjs` – ESLint-Flat-Config-Preset (typescript-eslint).
+- `prettier/index.json` – Prettier-Preset.
 
 ## Nutzung
 
-In einem Paket-`tsconfig.json`:
+Paket-`tsconfig.json` (relativer Pfad, kein Dependency nötig):
 
 ```jsonc
-{ "extends": "@spotforge/config/tsconfig.node.json" }
+{ "extends": "../config/tsconfig/library.json", "include": ["src"] }
 ```
+
+ESLint/Prettier werden an der Repo-Wurzel angezogen
+(`eslint.config.mjs` re-exportiert `@spotforge/config/eslint`, `.prettierrc`
+referenziert `@spotforge/config/prettier`) und kaskadieren in alle Pakete.
 
 ## Status
 
-Gerüst – Basiskonfiguration liegt im Repo-Root (`tsconfig.base.json`);
-spezialisierte Presets folgen hier.
+Aktiv – Presets in Verwendung durch alle Pakete/Apps.

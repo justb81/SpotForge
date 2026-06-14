@@ -2,15 +2,26 @@
   "name": "@spotforge/mobile",
   "version": "0.1.0",
   "private": true,
+  "main": "index.ts",
   "scripts": {
-    "dev": "echo \"TODO: expo start (APP_VARIANT=${APP_VARIANT:-cars})\" && exit 0",
-    "build": "echo \"TODO: eas build\" && exit 0",
-    "lint": "echo \"TODO: eslint\" && exit 0",
-    "test": "echo \"TODO: jest\" && exit 0",
-    "typecheck": "echo \"TODO: tsc --noEmit\" && exit 0"
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@spotforge/app-config": "workspace:*",
-    "@spotforge/app-shell": "workspace:*"
+    "@spotforge/app-shell": "workspace:*",
+    "expo": "~56.0.11",
+    "expo-constants": "~56.0.18",
+    "expo-status-bar": "~56.0.4",
+    "react": "19.2.3",
+    "react-native": "0.85.3"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "tsx": "^4.19.0"
   }
 }

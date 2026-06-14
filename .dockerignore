@@ -1,0 +1,17 @@
+# Build-Context ist die Repo-Wurzel (siehe apps/backend/Dockerfile / Coolify).
+# Diese Datei greift, da Docker das .dockerignore am Context-Root verwendet.
+**/node_modules
+**/dist
+**/.turbo
+**/.expo
+**/coverage
+.git
+*.log
+**/.env
+**/.env.*
+!**/.env.example
+data/facts/*.db
+data/facts/*.sqlite
+data/models/*.onnx
+data/models/*.ort
+data/models/*.bin

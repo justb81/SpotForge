@@ -1,9 +1,47 @@
 {
-  "//": "EAS-Build-Profile. Eine neue App = ein neues Profil, das APP_VARIANT setzt – kein Code.",
+  "//": "EAS-Profile. Basis-Profile (production/preview/development) definieren die Umgebung;",
+  "//2": "pro Variante erbt ein <variant>-<env>-Profil davon und setzt nur APP_VARIANT – kein Code.",
   "cli": { "version": ">= 5.0.0" },
   "build": {
-    "cars": {
+    "production": {
+      "channel": "production",
+      "autoIncrement": true
+    },
+    "preview": {
+      "channel": "preview",
+      "distribution": "internal"
+    },
+    "development": {
+      "channel": "development",
+      "distribution": "internal",
+      "developmentClient": true
+    },
+
+    "cars-production": {
+      "extends": "production",
       "env": { "APP_VARIANT": "cars" }
+    },
+    "cars-preview": {
+      "extends": "preview",
+      "env": { "APP_VARIANT": "cars" }
+    },
+    "cars-development": {
+      "extends": "development",
+      "env": { "APP_VARIANT": "cars" }
+    }
+  },
+  "submit": {
+    "//": "Store-Credentials hier bzw. als EAS-Secrets hinterlegen (Platzhalter).",
+    "cars-production": {
+      "ios": {
+        "appleId": "APPLE_ID_PLACEHOLDER",
+        "ascAppId": "ASC_APP_ID_PLACEHOLDER",
+        "appleTeamId": "APPLE_TEAM_ID_PLACEHOLDER"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      }
     }
   }
 }

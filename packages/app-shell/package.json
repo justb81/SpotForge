@@ -5,10 +5,9 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "echo \"TODO: tsc\" && exit 0",
-    "lint": "echo \"TODO: eslint\" && exit 0",
-    "test": "echo \"TODO: jest\" && exit 0",
-    "typecheck": "echo \"TODO: tsc --noEmit\" && exit 0"
+    "lint": "eslint .",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@spotforge/ai-engine": "workspace:*",
@@ -16,5 +15,14 @@
     "@spotforge/app-config": "workspace:*",
     "@spotforge/game-core": "workspace:*",
     "@spotforge/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "react": "19.2.3",
+    "react-native": "0.85.3"
   }
 }

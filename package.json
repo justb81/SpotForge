@@ -5,7 +5,7 @@
   "description": "Spot, forge and battle real-world objects as AI-generated trading cards.",
   "packageManager": "pnpm@9.12.0",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "turbo run dev",

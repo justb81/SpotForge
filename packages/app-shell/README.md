@@ -38,7 +38,10 @@ Bundle-IDs. Alles Variable kommt aus `@spotforge/app-config`.
 
 ## Status
 
-Gerüst. PoC #48: `SpotScreen` als Spot-Screen-Shell (Header, Kamera-Auslöser und
-Ergebnisbereich – noch Platzhalter); `SpotForgeApp` startet direkt dort, ohne
-Login/Onboarding. Kamera-Capture (#49), ONNX-Klassifikation (#50) und die
-Verdrahtung Foto→Inferenz→Anzeige (#51) docken an dieser Shell an.
+Gerüst. PoC #48: `SpotScreen` als Spot-Screen-Shell; `SpotForgeApp` startet
+direkt dort, ohne Login/Onboarding. PoC #49: `SpotCamera` (Live-Vorschau,
+Permission-Handling, Auslöser via `expo-camera`) + `preparePhotoForClassification`
+(Resize auf Modell-Eingabegröße via `expo-image-manipulator`) als Übergabeformat
+an die Klassifikation. `SpotScreen` orchestriert idle→capture→preview. Die
+ONNX-Klassifikation (#50) und die Anzeige von Label+Konfidenz (#51) docken im
+Preview-Schritt an.

@@ -22,8 +22,17 @@ const config: ExpoConfig = {
   ios: { bundleIdentifier: app.identity.ios.bundleIdentifier },
   android: { package: app.identity.android.package },
   // Native Module / Config-Plugins. expo-dev-client für den Development Build
-  // (PoC-Baseline, #48). Kamera (#49) und ONNX (#50) erweitern diese Liste.
-  plugins: ["expo-dev-client"],
+  // (PoC-Baseline, #48); expo-camera für den Capture (#49). ONNX (#50) erweitert
+  // diese Liste. Der Permission-Text nutzt den App-Namen der aktiven Variante.
+  plugins: [
+    "expo-dev-client",
+    [
+      "expo-camera",
+      {
+        cameraPermission: `${app.identity.displayName} nutzt die Kamera, um Objekte zu spotten und Karten zu schmieden.`,
+      },
+    ],
+  ],
   // Variante + vollständige Definition zur Laufzeit verfügbar machen. App.tsx
   // liest die Definition aus extra und reicht sie an die generische app-shell.
   extra: { appVariant: variant, appDefinition: app },

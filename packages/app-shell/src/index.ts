@@ -8,5 +8,11 @@ export type { SpotForgeAppProps } from "./SpotForgeApp";
 export { SpotScreen } from "./screens/SpotScreen";
 export type { SpotScreenProps } from "./screens/SpotScreen";
 
+export { SpotCamera } from "./camera/SpotCamera";
+export type { SpotCameraProps, SpotCameraLabels } from "./camera/SpotCamera";
+export { preparePhotoForClassification, DEFAULT_MODEL_INPUT_SIZE } from "./camera/preprocess";
+export type { PreprocessOptions } from "./camera/preprocess";
+export type { CapturedPhoto } from "./camera/types";
+
 // Geplant:
 //   export const defaultContent: ContentOverrides; // gemeinsame Text-Defaults

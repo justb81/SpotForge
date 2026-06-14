@@ -1,9 +1,12 @@
-import type { AppDefinition } from "@spotforge/app-config";
+import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
+import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
 import { SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 export interface SpotForgeAppProps {
   /** Die zur Build-Variante gehörende Definition (Identität, Theme, Texte …). */
   definition: AppDefinition;
+  /** Bevorzugte Anzeige-Sprache; Default: {@link DEFAULT_LOCALE}. */
+  locale?: LocaleCode;
 }
 
 /**
@@ -14,15 +17,16 @@ export interface SpotForgeAppProps {
  * folgen in den Feature-Issues. Hier wird bewusst nur Theme/Identität gerendert,
  * um die White-Label-Verkabelung Ende-zu-Ende zu zeigen.
  */
-export function SpotForgeApp({ definition }: SpotForgeAppProps) {
+export function SpotForgeApp({ definition, locale = DEFAULT_LOCALE }: SpotForgeAppProps) {
   const { theme, identity, content } = definition;
+  const cta = content["spot.cta"];
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <View style={styles.center}>
         <Text style={[styles.title, { color: theme.colors.primary }]}>{identity.displayName}</Text>
         <Text style={[styles.subtitle, { color: theme.colors.text }]}>
-          {content["spot.cta"] ?? "Los geht's"}
+          {cta ? resolveText(cta, locale) : "Los geht's"}
         </Text>
       </View>
     </SafeAreaView>

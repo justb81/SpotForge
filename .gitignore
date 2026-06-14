@@ -55,3 +55,7 @@ data/models/*.bin
 # Generated SQLite databases
 data/facts/*.db
 data/facts/*.sqlite
+
+# Python
+__pycache__/
+*.pyc

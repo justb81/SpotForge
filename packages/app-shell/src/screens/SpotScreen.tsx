@@ -132,11 +132,19 @@ export function SpotScreen({ definition, locale = DEFAULT_LOCALE, classifier }: 
 
     const percent = Math.round(result.confidence * 100);
     const lowConfidence = result.confidence < minConfidence;
+    // Weitere Kandidaten (Top-k ohne die Top-1) zur Disambiguierung.
+    const alternatives = result.candidates.slice(1);
 
     return (
       <View style={styles.resultBody}>
         <Text style={[styles.resultLabel, { color: theme.colors.text }]}>{result.label}</Text>
         <Text style={[styles.resultConfidence, { color: theme.colors.accent }]}>{percent} %</Text>
+        {alternatives.length > 0 ? (
+          <Text style={[styles.resultHint, { color: theme.colors.text }]}>
+            {text("spot.alternatives", "Auch möglich")}:{" "}
+            {alternatives.map((c) => `${c.label} (${Math.round(c.confidence * 100)} %)`).join(", ")}
+          </Text>
+        ) : null}
         {lowConfidence ? (
           <Text style={[styles.resultHint, { color: theme.colors.text }]}>
             {resolveText(rejectMessage, locale)}

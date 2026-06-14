@@ -1,0 +1,16 @@
+{
+  "$comment": "Beispiel-Export für CarForge (#9): Marke+Modell-Klassifikation über ein auf Stanford Cars (196 Klassen, Format 'Make Model Year') fine-getuntes ViT. Quelle bekannt begrenzt (~bis 2012) – genau dafür ist der OTA-Modell-Lifecycle da. Der eigentliche Export läuft im CI-Workflow .github/workflows/model-export.yml.",
+  "id": "cars-stanford-vit",
+  "name": "Stanford Cars ViT (Marke+Modell, 196 Klassen)",
+  "version": "1.0.0",
+  "category": "vehicles",
+  "sourceModel": "therealcyberlord/stanford-car-vit-patch16",
+  "revision": "main",
+  "task": "image-classification",
+  "recipe": "xnnpack",
+  "extraArgs": [],
+  "output": {
+    "model": "cars_stanford_vit.pte",
+    "labels": "cars_stanford_vit.labels.json"
+  }
+}

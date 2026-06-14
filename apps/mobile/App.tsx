@@ -58,7 +58,13 @@ function Root() {
       try {
         initExecutorch({ resourceFetcher: ExpoResourceFetcher });
         const { createClassifier } = await import("@spotforge/ai-engine");
-        const ready = await createClassifier(modelAsset);
+        // PoC-Basismodell: eingebautes ImageNet-EfficientNet (grobe Klassen).
+        // Das fahrzeug-spezifische Modell (#9) löst dies als `kind: "custom"`
+        // mit eigenem Label-Satz ab, sobald es exportiert/gehostet ist.
+        const ready = await createClassifier({
+          kind: "imagenet-efficientnet-v2-s",
+          modelSource: modelAsset,
+        });
         if (active) {
           setClassifier(ready);
         }

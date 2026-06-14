@@ -1,13 +1,24 @@
 {
-  "$comment": "Gebündelte ML-Modelle für den On-Device-Loop. Binaries liegen NICHT im Git (data/models/* ist ignoriert) – sie werden über dieses Manifest reproduzierbar bezogen und per SHA-256 verifiziert. Der spätere CDN/OTA-Lifecycle (#9) baut hierauf auf.",
+  "$comment": "Modell-Manifest (schemaVersion 2). Source of Truth für jedes ausgelieferte Modell-Artefakt: Bezugsquelle, SHA-256, Version, Kompatibilität. Binaries liegen NICHT im Git (data/models/* ist ignoriert). 'bundled' = vor dem Build via tools/fetch-models geladen & gebündelt (Offline-Fallback); 'ota' = zur Laufzeit per packages/ai-engine bezogen. Fahrzeug-spezifische Modelle erzeugt tools/export-model (#9) und hostet sie als GitHub-Release-Asset.",
+  "schemaVersion": 2,
   "models": [
     {
-      "name": "efficientnet-v2-s-int8",
-      "$comment": "EfficientNet-V2-S, ImageNet (1000 Klassen), int8-quantisiert, XNNPACK. ExecuTorch .pte von Software Mansion (HuggingFace). PoC-Klassifikator (#50). Größere/eigene Modelle: eigener Export in #9.",
-      "url": "https://huggingface.co/software-mansion/react-native-executorch-efficientnet-v2-s/resolve/v0.9.0/xnnpack/efficientnet_v2_s_xnnpack_int8.pte",
-      "dest": "data/models/efficientnet_v2_s_int8.pte",
-      "sha256": "30835124e9dd20b8350f93c6c687ad09d6a05a1646b7dabdec3259a3c9145266",
-      "bytes": 22943904
+      "id": "imagenet-efficientnet-v2-s",
+      "name": "EfficientNet-V2-S (ImageNet, int8/XNNPACK) – PoC-Basismodell",
+      "version": "1.0.0",
+      "distribution": "bundled",
+      "category": "imagenet",
+      "runtime": "react-native-executorch@0.9",
+      "compat": { "appMin": "0.1.0" },
+      "preprocessor": null,
+      "artifacts": {
+        "model": {
+          "url": "https://huggingface.co/software-mansion/react-native-executorch-efficientnet-v2-s/resolve/v0.9.0/xnnpack/efficientnet_v2_s_xnnpack_int8.pte",
+          "dest": "data/models/efficientnet_v2_s_int8.pte",
+          "sha256": "30835124e9dd20b8350f93c6c687ad09d6a05a1646b7dabdec3259a3c9145266",
+          "bytes": 22943904
+        }
+      }
     }
   ]
 }

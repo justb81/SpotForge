@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  onnxruntime-react-native@1.24.3: 90b8e198965665fb6d42b7038dfd55db210a5a7fd8f07aa7a37b836489ba439a
+
 importers:
 
   .:
@@ -98,7 +101,7 @@ importers:
         version: 56.0.4(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       onnxruntime-react-native:
         specifier: ^1.24.3
-        version: 1.24.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+        version: 1.24.3(patch_hash=90b8e198965665fb6d42b7038dfd55db210a5a7fd8f07aa7a37b836489ba439a)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -123,7 +126,7 @@ importers:
         version: 0.4.4
       onnxruntime-react-native:
         specifier: ^1.24.3
-        version: 1.24.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+        version: 1.24.3(patch_hash=90b8e198965665fb6d42b7038dfd55db210a5a7fd8f07aa7a37b836489ba439a)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
 
   packages/api-client:
     dependencies:
@@ -6616,7 +6619,7 @@ snapshots:
 
   onnxruntime-common@1.24.3: {}
 
-  onnxruntime-react-native@1.24.3(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
+  onnxruntime-react-native@1.24.3(patch_hash=90b8e198965665fb6d42b7038dfd55db210a5a7fd8f07aa7a37b836489ba439a)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
     dependencies:
       onnxruntime-common: 1.24.3
       react: 19.2.3

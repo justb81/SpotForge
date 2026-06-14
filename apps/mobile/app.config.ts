@@ -21,6 +21,9 @@ const config: ExpoConfig = {
   },
   ios: { bundleIdentifier: app.identity.ios.bundleIdentifier },
   android: { package: app.identity.android.package },
+  // Native Module / Config-Plugins. expo-dev-client für den Development Build
+  // (PoC-Baseline, #48). Kamera (#49) und ONNX (#50) erweitern diese Liste.
+  plugins: ["expo-dev-client"],
   // Variante + vollständige Definition zur Laufzeit verfügbar machen. App.tsx
   // liest die Definition aus extra und reicht sie an die generische app-shell.
   extra: { appVariant: variant, appDefinition: app },

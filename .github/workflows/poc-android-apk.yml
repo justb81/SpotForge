@@ -1,0 +1,74 @@
+name: PoC Android APK
+
+# Baut – ohne Expo-Cloud/EAS – ein eigenständiges, installierbares Android-APK
+# direkt im Runner und stellt es als herunterladbares Workflow-Artefakt bereit.
+# Gedacht zum schnellen Testen des Car-Spotting-PoC (#48–#51) auf einem echten
+# Gerät: APK aus dem Run laden, sideloaden, offline starten.
+#
+# Profil `cars-preview`: JS-Bundle ist eingebettet (kein Metro-Dev-Server nötig),
+# die nativen Module (ONNX in #50, Kamera in #49) sind enthalten. Release wird
+# – wie im Expo-Bare-Template – mit dem Debug-Keystore signiert; das genügt zum
+# Sideloaden, ist aber kein Store-Build (dafür bleibt EAS via mobile-build.yml).
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "App-Variante (Ordner unter variants/)"
+        type: string
+        default: cars
+  push:
+    branches: ["claude/poc-**"]
+
+env:
+  VARIANT: ${{ github.event.inputs.variant || 'cars' }}
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Setup Java (JDK 17)
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Erzeugt das native android/-Projekt aus app.config/Plugins. --no-install,
+      # weil die JS-Abhängigkeiten oben bereits via pnpm installiert sind.
+      # Hinweis: Schlägt das Autolinking der nativen Module unter pnpm fehl,
+      # ist `node-linker=hoisted` (root .npmrc) der dokumentierte Fallback.
+      - name: Expo prebuild (android)
+        working-directory: apps/mobile
+        env:
+          APP_VARIANT: ${{ env.VARIANT }}
+        run: pnpm exec expo prebuild --platform android --no-install
+
+      - name: Gradle assembleRelease
+        working-directory: apps/mobile/android
+        env:
+          APP_VARIANT: ${{ env.VARIANT }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VARIANT }}-poc-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 14

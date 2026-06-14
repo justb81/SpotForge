@@ -38,4 +38,7 @@ Bundle-IDs. Alles Variable kommt aus `@spotforge/app-config`.
 
 ## Status
 
-Gerüst.
+Gerüst. PoC #48: `SpotScreen` als Spot-Screen-Shell (Header, Kamera-Auslöser und
+Ergebnisbereich – noch Platzhalter); `SpotForgeApp` startet direkt dort, ohne
+Login/Onboarding. Kamera-Capture (#49), ONNX-Klassifikation (#50) und die
+Verdrahtung Foto→Inferenz→Anzeige (#51) docken an dieser Shell an.

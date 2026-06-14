@@ -40,10 +40,24 @@ Basis-Profile `production` / `preview` / `development`; pro Variante erbt
 
 Kein Eingriff in den App-Code.
 
+## Development Build & PoC-Test-APK
+
+Der PoC (#48–#51) bindet native Module ein (ONNX, Kamera) und nutzt daher einen
+**Development Build** (`expo-dev-client`); **Expo Go ist kein Ziel**. JS-Iteration
+weiterhin via `pnpm dev`/Metro gegen den Dev-Build.
+
+Zum schnellen Testen auf einem echten Gerät baut der Workflow
+[`poc-android-apk.yml`](../../.github/workflows/poc-android-apk.yml) ohne
+Expo-Cloud ein eigenständiges, **offline lauffähiges** APK (`expo prebuild` +
+`gradlew assembleRelease`, Profil `cars-preview`) und legt es als
+herunterladbares Workflow-Artefakt ab. Manuell auslösbar oder bei jedem Push auf
+einen `claude/poc-**`-Branch.
+
 ## Status
 
 Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`
-mit der aktiven `AppDefinition`. Echte Icon-/Splash-Assets der Variante sind noch
+mit der aktiven `AppDefinition`. PoC #48: `expo-dev-client` + Spot-Screen-Shell
++ Test-APK-Pipeline stehen. Echte Icon-/Splash-Assets der Variante sind noch
 Platzhalter (`variants/cars/assets/`).
 
 ## Abhängigkeiten

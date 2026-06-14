@@ -1,0 +1,12 @@
+# Generierte/fremde Artefakte – nicht formatieren.
+**/dist/**
+**/build/**
+**/node_modules/**
+**/.expo/**
+**/.turbo/**
+**/coverage/**
+pnpm-lock.yaml
+*.md
+# Daten-Schemata sind Source of Truth – Format wird nicht von Prettier bestimmt.
+data/
+

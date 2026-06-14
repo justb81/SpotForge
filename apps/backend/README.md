@@ -33,6 +33,25 @@ einzige Wahrheit, identisch zu den Apps.
 
 `@spotforge/game-core`. PostgreSQL, Redis, MeiliSearch, S3.
 
+## Entwickeln & Bauen
+
+```bash
+cp ../../.env.example ../../.env     # einmalig
+docker compose up -d                  # lokale Infra (von der Repo-Wurzel)
+pnpm --filter @spotforge/backend dev  # Fastify, tsx watch
+pnpm --filter @spotforge/backend build  # ESM-Bundle nach dist/ (tsup)
+```
+
+Endpunkte: `GET /health` (Liveness), `GET /ready` (Readiness). Fachliche Routen
+erwarten den Mandanten-Header `x-app-id`.
+
+## Deployment
+
+Container-Build via `apps/backend/Dockerfile` (Build-Context = Repo-Wurzel).
+Deployt auf **Coolify** direkt aus dem Git-Repo – Schritt-für-Schritt in
+[`docs/deployment.md`](../../docs/deployment.md).
+
 ## Status
 
-Gerüst – noch kein Fastify-Projekt initialisiert.
+Gerüst – lauffähiger Fastify-Server mit Health/Readiness und `appId`-Hook.
+Persistenz/PvP/Marktplatz folgen in den Backend-Issues.

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "React-Native-/React-Pakete (app-shell, ui). Kein DOM-lib – RN braucht es nicht.",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "jsx": "react-jsx"
+  }
+}

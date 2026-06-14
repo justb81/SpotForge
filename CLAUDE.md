@@ -177,8 +177,14 @@ committet & gepusht werden.
   - `gh api` ist dennoch nützlich für **Lesen** (PR-State, Checks, Milestones,
     Branch-Vergleiche).
 - **Repo-Scope der MCP-Tools:** aktuell auf `justb81/spotforge` beschränkt.
-- **CI:** Derzeit keine Checks konfiguriert (`pnpm`-Skripte sind noch
-  Platzhalter). Wenn du CI einrichtest, dokumentiere es hier.
+- **CI/CD:** GitHub Actions unter `.github/workflows/` – `ci.yml`
+  (format/lint/typecheck/test/build via Turborepo), `mobile-build.yml`
+  (EAS Build/Submit) und `mobile-update.yml` (EAS Update/OTA). Das **Backend**
+  wird **nicht** über Actions deployt, sondern self-hosted auf **Coolify**
+  (Build direkt aus dem Git-Repo via `apps/backend/Dockerfile`). Details:
+  [`docs/deployment.md`](./docs/deployment.md) und
+  [ADR 0003](./docs/adr/0003-ci-cd-und-deployment.md). Geteilte Tooling-Configs
+  liegen in `@spotforge/config` (ESLint/Prettier/tsconfig).
 - Git-Push: `git push -u origin <branch>`; nach dem Push einen PR (ready for
   review) eröffnen, falls noch keiner existiert.
 

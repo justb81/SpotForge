@@ -80,13 +80,17 @@ Details: [`docs/repo-structure.md`](./docs/repo-structure.md) ·
 corepack enable
 pnpm install
 
-# Aufgaben über alle Workspaces (sobald implementiert)
-# Die zu bauende App wählt APP_VARIANT (Default: cars)
-APP_VARIANT=cars pnpm dev   # Auto-App + Backend im Watch-Modus
-pnpm build        # alle Pakete bauen
-pnpm test         # Tests
-pnpm lint         # Linting
+# Aufgaben über alle Workspaces
+APP_VARIANT=cars pnpm dev   # die zu bauende App wählt APP_VARIANT (Default: cars)
+pnpm build         # alle Pakete bauen
+pnpm test          # Tests
+pnpm lint          # Linting
+pnpm typecheck     # Typprüfung
+pnpm format        # Prettier (Format:check via `pnpm format:check`)
 ```
+
+**CI/CD & Deployment:** GitHub Actions (`.github/workflows/`), Backend self-hosted
+auf Coolify, Mobile via EAS – siehe [`docs/deployment.md`](./docs/deployment.md).
 
 ---
 

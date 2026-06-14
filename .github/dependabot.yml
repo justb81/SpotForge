@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # npm/pnpm-Abhängigkeiten im gesamten Workspace.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Kleinere/Patch-Updates gebündelt, um PR-Rauschen zu reduzieren.
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # GitHub-Actions in den Workflows aktuell halten.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

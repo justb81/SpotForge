@@ -1,0 +1,68 @@
+name: Mobile Build
+
+# Baut eine Variante via EAS (Expo Cloud) und reicht sie optional an die Stores.
+# Manuell auslösbar oder über ein `mobile-v*`-Tag (Defaults: cars/all/production).
+#
+# Voraussetzung: Secret EXPO_TOKEN (Expo-Access-Token). Für Submit zusätzlich die
+# Store-Credentials (als EAS-Secrets bzw. im submit-Block der eas.json hinterlegt).
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "App-Variante (Ordner unter variants/)"
+        type: string
+        default: cars
+      platform:
+        description: "Zielplattform"
+        type: choice
+        options: [all, ios, android]
+        default: all
+      profile:
+        description: "Build-Umgebung"
+        type: choice
+        options: [production, preview, development]
+        default: production
+      submit:
+        description: "Nach dem Build an die Stores einreichen?"
+        type: boolean
+        default: false
+  push:
+    tags: ["mobile-v*"]
+
+env:
+  VARIANT: ${{ github.event.inputs.variant || 'cars' }}
+  PLATFORM: ${{ github.event.inputs.platform || 'all' }}
+  ENVIRONMENT: ${{ github.event.inputs.profile || 'production' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: EAS Build
+        working-directory: apps/mobile
+        run: eas build --non-interactive --platform "$PLATFORM" --profile "${VARIANT}-${ENVIRONMENT}"
+
+      - name: EAS Submit
+        if: ${{ github.event.inputs.submit == 'true' }}
+        working-directory: apps/mobile
+        run: eas submit --non-interactive --platform "$PLATFORM" --profile "${VARIANT}-${ENVIRONMENT}" --latest

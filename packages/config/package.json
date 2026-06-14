@@ -2,7 +2,16 @@
   "name": "@spotforge/config",
   "version": "0.1.0",
   "private": true,
+  "description": "Geteilte Build-/Lint-/Format-Konfiguration (tsconfig, ESLint, Prettier) für das SpotForge-Monorepo.",
+  "exports": {
+    "./eslint": "./eslint/index.mjs",
+    "./prettier": "./prettier/index.json",
+    "./tsconfig/base.json": "./tsconfig/base.json",
+    "./tsconfig/library.json": "./tsconfig/library.json",
+    "./tsconfig/react.json": "./tsconfig/react.json",
+    "./tsconfig/node.json": "./tsconfig/node.json"
+  },
   "scripts": {
-    "lint": "echo \"no-op\" && exit 0"
+    "lint": "echo \"no-op (reines Config-Bündel)\" && exit 0"
   }
 }

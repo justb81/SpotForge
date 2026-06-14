@@ -13,27 +13,38 @@ App-Code liegt in `@spotforge/app-shell`; hier wird er nur mit der aktiven
 - Die Shell bekommt dieselbe `AppDefinition` und konfiguriert Guardrails,
   KI-Prompts, Theme, Texte und Assets.
 
+- Die `AppDefinition` wird in `app.config.ts` zusätzlich in `extra.appDefinition`
+  hinterlegt; `App.tsx` liest sie von dort (Metro-sicher, kein dynamisches require)
+  und reicht sie an `<SpotForgeApp/>`.
+
 ```bash
 # Auto-App lokal starten (Default-Variante)
-APP_VARIANT=cars pnpm dev
+APP_VARIANT=cars pnpm --filter @spotforge/mobile dev
 
-# Auto-App bauen
-eas build --profile cars
+# Auto-App bauen (EAS Cloud)
+eas build --profile cars-production
 ```
+
+## Build-Profile (eas.json)
+
+Basis-Profile `production` / `preview` / `development`; pro Variante erbt
+`<variant>-<env>` davon und setzt `APP_VARIANT` (z.B. `cars-production`,
+`cars-preview`). Builds/Submit/OTA laufen über die `mobile-*`-Workflows – siehe
+[`docs/deployment.md`](../../docs/deployment.md).
 
 ## Eine neue App ausliefern
 
 1. `variants/<name>/` mit `app.definition.ts` + Assets anlegen.
-2. Build-Profil in `eas.json` ergänzen (`"env": { "APP_VARIANT": "<name>" }`).
-3. `eas build --profile <name>`.
+2. Profile `<name>-production|preview|development` in `eas.json` ergänzen.
+3. `mobile-build.yml` mit `variant=<name>` auslösen (oder lokal `eas build`).
 
 Kein Eingriff in den App-Code.
 
 ## Status
 
-Gerüst – Expo-Projekt noch nicht initialisiert (`app.config.ts`/`eas.json`
-liegen als Vorlage vor). Start: Expo in dieses Verzeichnis initialisieren und
-`@spotforge/app-shell` als Entry mounten.
+Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`
+mit der aktiven `AppDefinition`. Echte Icon-/Splash-Assets der Variante sind noch
+Platzhalter (`variants/cars/assets/`).
 
 ## Abhängigkeiten
 

@@ -1,0 +1,98 @@
+# Lokale Entwicklungs-Infrastruktur für das SpotForge-Backend.
+#
+#   docker compose up -d        # Postgres, Redis, MeiliSearch, MinIO starten
+#   docker compose --profile backend up --build   # zusätzlich das Backend-Image
+#
+# In Produktion werden diese Dienste NICHT hierüber betrieben, sondern als
+# eigene Ressourcen in Coolify (siehe docs/deployment.md). Werte stammen aus
+# .env (Vorlage: .env.example).
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-spotforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spotforge}
+      POSTGRES_DB: ${POSTGRES_DB:-spotforge}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spotforge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe}
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilidata:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-spotforge}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-spotforge-secret}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optionales Backend-Image (nur mit `--profile backend`). Baut dasselbe
+  # Dockerfile, das auch Coolify nutzt.
+  backend:
+    profiles: ["backend"]
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+  meilidata:
+  miniodata:

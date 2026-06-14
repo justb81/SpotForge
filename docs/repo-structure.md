@@ -4,7 +4,7 @@ SpotForge ist ein **TypeScript-Monorepo** (pnpm Workspaces + Turborepo) nach dem
 **White-Label-Prinzip**: Jede Kartenkategorie ist eine eigene App, alle aus einer
 gemeinsamen Codebase, unterschieden nur durch Konfiguration. Ein zentraler,
 mandantenfähiger Server bedient alle Apps. Diese Datei erklärt, *warum* jedes
-Modul existiert und *welche Grenzen* es hat. Spielkonzept: [GDD](../Game-Design.md).
+Modul existiert und *welche Grenzen* es hat. Spielkonzept: [GDD](./Game-Design.md).
 Grundsatzentscheidung: [ADR 0002](./adr/0002-multi-app-single-codebase.md).
 
 ## Leitprinzipien

@@ -3,5 +3,5 @@
   "compilerOptions": {
     "strict": true
   },
-  "include": ["App.tsx", "index.ts"]
+  "include": ["App.tsx", "index.ts", "assets.d.ts"]
 }

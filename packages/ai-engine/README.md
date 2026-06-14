@@ -21,9 +21,10 @@ forgeCard(photo, { guardrails, prompts })
 
 ## Verträge (austauschbare Implementierungen)
 
-- `Classifier` — YOLOv11-nano / MobileNetV4 über ONNX Runtime Mobile.
+- `Classifier` — EfficientNet-V2-S (ImageNet) über **react-native-executorch**
+  (PyTorch ExecuTorch). Fahrzeug-spezifische Modelle: eigener Export/Fine-Tune (#9).
 - `FactLookup` — SQLite + FTS5 (Seeds aus `data/facts`).
-- `CardArtGenerator` — LCM / quantisiertes Stable Diffusion (ONNX).
+- `CardArtGenerator` — On-Device-Generator (#11).
 - `Fallback` — unbekanntes/abgelehntes Objekt → Guardrail-Meldung bzw.
   Community-Meldung + manuelle Kategorisierung.
 
@@ -35,8 +36,19 @@ kein Foto-Upload (on-device).
 ## Abhängigkeiten
 
 `@spotforge/game-core`, `@spotforge/app-config` (Guardrails/Prompts-Typen),
-`data/categories`. Laufzeit: ONNX Runtime Mobile, SQLite.
+`data/categories`. Laufzeit: react-native-executorch, SQLite.
 
 ## Status
 
-Gerüst – Interfaces werden als Nächstes definiert.
+Gerüst. **PoC #50:** minimale Klassifikation steht – `Classifier`-Vertrag
+(`classify({ imageUri }) → { label, confidence }`, entkoppelt von den
+Domänentypen) plus `createClassifier(modelSource, onProgress?)` auf Basis von
+EfficientNet-V2-S (ImageNet, int8) über react-native-executorch. Resize/
+Normalisierung/Softmax übernimmt ExecuTorch intern; die Modell-Asset-Quelle
+(gebündeltes `.pte`) reicht der App-Host durch.
+
+> Hinweis: Ursprünglich war ONNX Runtime Mobile vorgesehen
+> (`onnxruntime-react-native`), das aber die von Expo SDK 56 erzwungene React-
+> Native-New-Architecture (Bridgeless) nicht unterstützt. Wechsel auf ExecuTorch;
+> ADR-Aktualisierung folgt. `FactLookup`, `CardArtGenerator` und die
+> `forgeCard`-Orchestrierung folgen (#8/#10/#11).

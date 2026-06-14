@@ -46,7 +46,8 @@ yarn-error.*
 # Tests
 coverage/
 
-# ML model artifacts (bezogen via CDN, siehe data/models/README.md)
+# ML model artifacts (bezogen via tools/fetch-models, siehe data/models/README.md)
+data/models/*.pte
 data/models/*.onnx
 data/models/*.ort
 data/models/*.bin

@@ -107,7 +107,7 @@ game-core ───────▶ (nichts – Wurzel)
 | Sprache        | TypeScript (end-to-end)                                       |
 | Mobile         | React Native + Expo (White-Label via `APP_VARIANT`)           |
 | Backend        | Node.js + Fastify (multi-tenant), PostgreSQL, Redis, Socket.io|
-| On-Device-KI   | ONNX Runtime Mobile (YOLOv11-nano / MobileNetV4 / LCM)        |
+| On-Device-KI   | ExecuTorch (react-native-executorch) – PyTorch `.pte`        |
 | Offline-Daten  | SQLite + FTS5                                                 |
 | Monorepo       | pnpm Workspaces + Turborepo                                   |
 
@@ -144,6 +144,10 @@ ergänzen.
 - **[ADR 0006](./docs/adr/0006-supply-chain-hardening.md):** Supply-Chain-Härtung –
   pnpm 11, **7-Tage-Mindestalter** (`minimumReleaseAge`) + Dependabot-`cooldown`,
   blockierte Build-Skripte (`allowBuilds`); Expo/RN-Baseline ausgenommen.
+- **[ADR 0007](./docs/adr/0007-on-device-inference-executorch.md):** On-Device-
+  Inferenz über **ExecuTorch** (`react-native-executorch`) statt ONNX Runtime
+  Mobile – ONNX-RN unterstützt die von Expo SDK 56 erzwungene New Architecture
+  (Bridgeless) nicht. Modelle als gebündelte `.pte`.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

@@ -38,4 +38,11 @@ Bundle-IDs. Alles Variable kommt aus `@spotforge/app-config`.
 
 ## Status
 
-Gerüst.
+Gerüst. PoC #48: `SpotScreen` als Spot-Screen-Shell; `SpotForgeApp` startet
+direkt dort, ohne Login/Onboarding. PoC #49: `SpotCamera` (Live-Vorschau,
+Permission-Handling, Auslöser via `expo-camera`). **PoC #51:** `SpotScreen`
+orchestriert den vollen Loop idle→capture→processing→preview, reicht die Foto-URI
+an den vom Host injizierten `Classifier` (#50, ExecuTorch – Vorverarbeitung
+intern) und zeigt Label + Konfidenz; bei Konfidenz unter
+`guardrails.minConfidence` erscheint die `rejectMessage` der Variante.
+Vollständig offline.

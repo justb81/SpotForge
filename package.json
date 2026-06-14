@@ -17,7 +17,7 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "@eslint/js": "^9.13.0",
+    "@eslint/js": "^10.0.1",
     "@spotforge/app-config": "workspace:*",
     "@spotforge/config": "workspace:*",
     "@vitest/coverage-v8": "^2.1.0",

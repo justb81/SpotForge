@@ -9,7 +9,7 @@ Pflanze und mehr – eine **lokale KI-Engine** erkennt es, zieht reale Fakten un
 *schmiedet* daraus eine einzigartige Sammelkarte. Karten werden gesammelt,
 getauscht und in Trumpf-Duellen eingesetzt.
 
-Das vollständige Spielkonzept steht im [Game Design Document](./Game-Design.md).
+Das vollständige Spielkonzept steht im [Game Design Document](./docs/Game-Design.md).
 
 ---
 
@@ -73,7 +73,7 @@ Details: [`docs/repo-structure.md`](./docs/repo-structure.md) ·
 ## Setup
 
 > Status: **Gerüst** – die Module enthalten READMEs und Workspace-Konfiguration,
-> die Implementierung folgt gemäß der [Roadmap](./Game-Design.md#13-roadmap-post-launch).
+> die Implementierung folgt gemäß der [Roadmap](./docs/Game-Design.md#13-roadmap-post-launch).
 
 ```bash
 # Voraussetzungen: Node (siehe .nvmrc), pnpm

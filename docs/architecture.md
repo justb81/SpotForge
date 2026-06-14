@@ -1,6 +1,6 @@
 # Architektur
 
-Ergänzt das [GDD §10](../Game-Design.md#10-technische-architektur) um die
+Ergänzt das [GDD §10](./Game-Design.md#10-technische-architektur) um die
 Umsetzung im Monorepo. SpotForge folgt einem **White-Label-Modell**: viele Apps
 (eine pro Kategorie) aus einer Codebase, ein zentraler mandantenfähiger Server.
 Modulgrenzen: [`repo-structure.md`](./repo-structure.md). Grundsatzentscheidungen:

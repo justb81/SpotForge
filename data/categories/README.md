@@ -1,6 +1,6 @@
 # data/categories
 
-Deklaratives Schema der zehn Spielkategorien aus [GDD §4](../../Game-Design.md#4-kategorien--kartenattribute).
+Deklaratives Schema der zehn Spielkategorien aus [GDD §4](../../docs/Game-Design.md#4-kategorien--kartenattribute).
 Source of Truth für `game-core` (Attribute, trumpffähige Werte) und `ai-engine`
 (Klassifikations-Mapping).
 

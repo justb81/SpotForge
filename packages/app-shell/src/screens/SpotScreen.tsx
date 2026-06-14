@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
-import type { AppDefinition } from "@spotforge/app-config";
+import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
+import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
 import type { Classifier, ClassificationResult } from "@spotforge/ai-engine";
 import { SpotCamera } from "../camera/SpotCamera";
 import { preparePhotoForClassification } from "../camera/preprocess";
@@ -9,6 +10,8 @@ import type { CapturedPhoto } from "../camera/types";
 export interface SpotScreenProps {
   /** Aktive Variante – liefert Theme, Texte und Guardrails. */
   definition: AppDefinition;
+  /** Bevorzugte Anzeige-Sprache; Default: {@link DEFAULT_LOCALE}. */
+  locale?: LocaleCode;
   /** On-Device-Klassifikator (#50); erst gesetzt, wenn das Modell geladen ist. */
   classifier?: Classifier;
 }
@@ -21,10 +24,15 @@ type Mode = "idle" | "capturing" | "processing" | "preview";
  * (Aufbereitung + On-Device-Inferenz, #50) → **preview** (Foto + erkanntes
  * Label & Konfidenz). Vollständig offline, kein Login/Onboarding.
  */
-export function SpotScreen({ definition, classifier }: SpotScreenProps) {
+export function SpotScreen({ definition, locale = DEFAULT_LOCALE, classifier }: SpotScreenProps) {
   const { theme, identity, content } = definition;
   const { minConfidence, rejectMessage } = definition.category.guardrails;
-  const text = (key: string, fallback: string) => content[key] ?? fallback;
+  // Mehrsprachige Overrides in die aktive Sprache auflösen; fehlende Schlüssel
+  // fallen auf den mitgegebenen Default zurück.
+  const text = (key: string, fallback: string) => {
+    const override = content[key];
+    return override ? resolveText(override, locale) : fallback;
+  };
 
   const [mode, setMode] = useState<Mode>("idle");
   const [photo, setPhoto] = useState<CapturedPhoto | null>(null);
@@ -132,7 +140,9 @@ export function SpotScreen({ definition, classifier }: SpotScreenProps) {
         <Text style={[styles.resultLabel, { color: theme.colors.text }]}>{result.label}</Text>
         <Text style={[styles.resultConfidence, { color: theme.colors.accent }]}>{percent} %</Text>
         {lowConfidence ? (
-          <Text style={[styles.resultHint, { color: theme.colors.text }]}>{rejectMessage}</Text>
+          <Text style={[styles.resultHint, { color: theme.colors.text }]}>
+            {resolveText(rejectMessage, locale)}
+          </Text>
         ) : null}
       </View>
     );

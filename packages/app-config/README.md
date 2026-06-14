@@ -16,8 +16,36 @@ Eine `AppDefinition` bündelt genau die per-App variablen Dinge:
 | `category`    | Welche `game-core`-Kategorie die App schmiedet + **Guardrails**        |
 | `ai`          | **KI-Prompts** für Klassifikation, Card-Art, Fakten-Extraktion         |
 | `theme`       | **Styling**-Tokens (Farben, Typografie), konsumiert von `@spotforge/ui` |
-| `content`     | **Text-Overrides** (i18n), fällt auf gemeinsame Defaults zurück        |
+| `content`     | **Mehrsprachige Text-Overrides** (i18n), fällt auf gemeinsame Defaults zurück |
 | `assets`      | **Grafiken**: Icon, Splash, Logo, Kartenrahmen, Hintergründe           |
+
+## Mehrsprachigkeit
+
+Alle benutzersichtbaren Texte einer Variante sind **mehrsprachig**: Statt eines
+nackten Strings tragen sie einen `LocalizedText` – eine Map vom Sprachcode
+(ISO 639-1, Typ `LocaleCode`) auf die Übersetzung. Aktuell unterstützt:
+`de` (Deutsch) und `en` (Englisch). Das `Record<LocaleCode, string>` erzwingt,
+dass **jede** Sprache vorhanden ist; fehlt eine, schlägt die Typprüfung fehl.
+
+Betroffen sind die `content`-Overrides und `category.guardrails.rejectMessage`:
+
+```ts
+content: {
+  "spot.cta": { de: "Auto spotten", en: "Spot a car" },
+},
+category: {
+  guardrails: {
+    // ...
+    rejectMessage: {
+      de: "Das sieht nicht nach einem Fahrzeug aus. …",
+      en: "That doesn't look like a vehicle. …",
+    },
+  },
+},
+```
+
+Die `ai`-Prompts bleiben einzelne Strings – sie sind Modell-Instruktionen, keine
+Anzeigetexte.
 
 ## Guardrails
 

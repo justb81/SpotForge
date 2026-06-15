@@ -5,7 +5,8 @@ alles Spielmechanische – importiert von App *und* Backend.
 
 ## Inhalt
 
-- **Domänentypen:** `Card`, `Category`, `Attribute`, `Rarity`, `Ability`.
+- **Domänentypen:** `Card` (inkl. Lebenszyklus `draft → forged`, ADR 0010),
+  `Category`, `Attribute`, `Rarity`, `Ability`.
 - **Seltenheits-Algorithmus:** `f(Realwelt-Seltenheit × lokale Spotting-Dichte)`
   → C/U/R/E/L (GDD §5.3, ADR 0009). Der Standort steckt in der Spotting-Dichte.
 - **Trumpf-Battle-Engine:** Stich-Auflösung, Deck-Verwaltung, Spielmodi
@@ -39,5 +40,9 @@ manuelle Kuratierung) über `rarityPercentile` zu einer Stufe – rein &
 deterministisch. Die **lokale Spotting-Dichte** liefert `spottingDensity` aus
 einem adaptiven Standort-Raster (ADR 0009): die räumlichen Zähler je Stufe
 (grob→fein) ermittelt der Server, die Auswahl-Policy (`spottingDensity`,
-`SpottingDensityConfig`) bleibt eine reine Funktion hier. Es folgen Trumpf-Engine
-und Upgrade-Logik.
+`SpottingDensityConfig`) bleibt eine reine Funktion hier. Der **Karten-Lebenszyklus**
+(#74, ADR 0010) ist angelegt: `Card.status` (`draft`/`forged`), Draft-Felder
+(`photoUri`, `proposedAttributes`, `artUri`) und `buildDraft` (reine Assembly eines
+Drafts mit Platzhalter-Seltenheit `PLACEHOLDER_RARITY`). Die server-autoritative
+Finalisierung (`forgeCard`) folgt mit der Online-Schmiede (#76). Es folgen
+Trumpf-Engine und Upgrade-Logik.

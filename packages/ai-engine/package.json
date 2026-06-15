@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@spotforge/app-config": "workspace:*",
     "@spotforge/game-core": "workspace:*",
     "react-native-executorch": "0.9.0"
   }

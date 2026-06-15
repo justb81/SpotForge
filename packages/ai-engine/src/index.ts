@@ -34,8 +34,14 @@ export type {
 export { MANIFEST_SCHEMA_VERSION, parseManifest } from "./models/manifest";
 export type { ModelManifest, ModelManifestEntry, ModelArtifact } from "./models/manifest";
 
-// Geplante Verträge (noch nicht implementiert):
-//
-//   export interface FactLookup { /* find(objectId) */ }
-//   export interface CardArtGenerator { /* generate(card) */ }
-//   export function forgeCard(/* ... */) { /* orchestriert die Pipeline */ }
+// Spot-Pipeline (On-Device): Foto → Draft (ADR 0010). Das Forgen ist online (#76).
+export { createSpot, gateConfigFromAppDefinition, slugLabelResolver } from "./spot";
+export type {
+  SpotInput,
+  SpotResult,
+  SpotDeps,
+  Resolution,
+  LabelResolver,
+  FactRecord,
+  FactLookup,
+} from "./spot";

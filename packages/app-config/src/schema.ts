@@ -39,6 +39,12 @@ const guardrailsSchema = z.object({
   rejectMessage: localizedTextSchema,
 });
 
+const gateSchema = z.object({
+  allow: z
+    .array(nonEmpty("gate.allow[]"))
+    .min(1, "category.gate.allow muss mindestens ein Label enthalten"),
+});
+
 const aiPromptsSchema = z.object({
   classificationHint: z.string().min(1).optional(),
   cardArtPrompt: nonEmpty("ai.cardArtPrompt"),
@@ -102,6 +108,7 @@ export const appDefinitionSchema = z
     category: z.object({
       primary: categoryIdSchema,
       guardrails: guardrailsSchema,
+      gate: gateSchema,
     }),
     ai: aiPromptsSchema,
     theme: themeTokensSchema,

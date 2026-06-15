@@ -82,10 +82,14 @@ ImageNet-Basismodell **und** eigene Modelle (`fromCustomModel` mit Label-Satz +
 Normalisierung). Dazu die Zwei-Stufen-Kaskade und der Manifest-Parser (`models/`);
 Modelle werden fest gebündelt (kein OTA).
 
-Offen: die `spot`-Orchestrierung (#8), `FactLookup` (#10) und `CardArtGenerator`
-(#11). Das **Forgen** (World Data + autoritative Seltenheit) ist server-seitig
-([ADR 0010]), nicht in dieser Engine. Produktionsreifes Fahrzeugmodell + Geräte-
-Verifikation sind Mensch-/Geräte-Aufgaben (#9, siehe [ADR 0008]).
+Implementiert: die `spot`-Orchestrierung (#8) – Gate-Guardrail aus der
+`AppDefinition` (`category.gate.allow` + `minConfidence`), trivialer
+Default-`LabelResolver` (`slugLabelResolver`), Reject- und `unrecognized`-Pfad sowie
+`game-core.buildDraft` → Draft. Offen: produktive `FactLookup`-Impl (#10),
+`CardArtGenerator` (#11) und der produktive Resolver (#72). Das **Forgen** (World
+Data + autoritative Seltenheit) ist server-seitig ([ADR 0010]), nicht in dieser
+Engine. Produktionsreifes Fahrzeugmodell + Geräte-Verifikation sind Mensch-/Geräte-
+Aufgaben (#9, siehe [ADR 0008]).
 
 > Hinweis: Ursprünglich war ONNX Runtime Mobile vorgesehen
 > (`onnxruntime-react-native`), das aber die von Expo SDK 56 erzwungene React-

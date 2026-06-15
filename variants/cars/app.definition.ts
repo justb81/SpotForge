@@ -26,6 +26,36 @@ export default defineApp({
         en: "That doesn't look like a vehicle. Point the camera at a car, motorcycle, truck or bus.",
       },
     },
+    // Rohe ImageNet-1k-Labels (EfficientNet-V2-S-Gate, ADR 0008) für Straßen-
+    // fahrzeuge: Autos, LKW, Busse, motorisierte Zweiräder. Müssen exakt dem
+    // Label-Vokabular des Gate-Modells entsprechen; Domänen-Mapping → #72.
+    gate: {
+      allow: [
+        "ambulance",
+        "beach wagon",
+        "cab",
+        "convertible",
+        "jeep",
+        "limousine",
+        "minivan",
+        "Model T",
+        "racer",
+        "sports car",
+        "recreational vehicle",
+        "pickup",
+        "tow truck",
+        "trailer truck",
+        "garbage truck",
+        "fire engine",
+        "moving van",
+        "police van",
+        "minibus",
+        "school bus",
+        "trolleybus",
+        "moped",
+        "motor scooter",
+      ],
+    },
   },
 
   ai: {

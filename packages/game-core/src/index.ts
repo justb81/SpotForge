@@ -4,7 +4,8 @@
 
 export * from "./category"; // CategoryId, CATEGORY_IDS, CategoryDefinition, findAttribute
 export * from "./attribute"; // AttributeDefinition, AttributeKey, AttributeValues, compareAttribute
-export * from "./rarity"; // Rarity, RARITY_ORDER, rarityRank, compareRarity, rarityFromPercentile
+export * from "./rarity"; // Rarity, RARITY_ORDER, rarityRank, compareRarity, rarityFromPercentile, RarityInput, rarityPercentile, computeRarity
+export * from "./spotting-density"; // SpottingDensityConfig, spottingDensity (lokale Dichte → appSpottingFrequency)
 export * from "./ability"; // Ability, AbilityKind, ABILITY_KINDS
 export * from "./card"; // Card, CardLevel, FOIL_LEVEL, isFoil, getAttributeValue
 

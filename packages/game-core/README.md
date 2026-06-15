@@ -6,8 +6,8 @@ alles Spielmechanische – importiert von App *und* Backend.
 ## Inhalt
 
 - **Domänentypen:** `Card`, `Category`, `Attribute`, `Rarity`, `Ability`.
-- **Seltenheits-Algorithmus:** `f(Realwelt-Seltenheit × App-Häufigkeit ×
-  Standort-Bonus)` → C/U/R/E/L (GDD §5.3).
+- **Seltenheits-Algorithmus:** `f(Realwelt-Seltenheit × lokale Spotting-Dichte)`
+  → C/U/R/E/L (GDD §5.3, ADR 0009). Der Standort steckt in der Spotting-Dichte.
 - **Trumpf-Battle-Engine:** Stich-Auflösung, Deck-Verwaltung, Spielmodi
   (Klassisch, Speed Spotting, Team) (GDD §6).
 - **Spezialfähigkeiten:** Turbo, Schild, Wildcard, Fusion, Scout (GDD §6.3).
@@ -33,5 +33,11 @@ Keine internen. Konsumiert das Kategorienschema aus `data/categories`.
 
 Domänentypen (#2) stehen: `Card`, `CategoryDefinition` + `AttributeDefinition`,
 `Rarity` (inkl. `rarityFromPercentile` für die GDD-§5.3-Bänder) und `Ability`
-(Platzhalter). Es folgen Trumpf-Engine, Upgrade-Logik und der zusammengesetzte
-Seltenheits-Algorithmus `f(Realwelt × App-Häufigkeit × Standort)`.
+(Platzhalter). Der Seltenheits-Algorithmus (#4) ist umgesetzt: `computeRarity`
+verdichtet `RarityInput` (Realwelt-Seltenheit × lokale Spotting-Dichte, plus
+manuelle Kuratierung) über `rarityPercentile` zu einer Stufe – rein &
+deterministisch. Die **lokale Spotting-Dichte** liefert `spottingDensity` aus
+einem adaptiven Standort-Raster (ADR 0009): die räumlichen Zähler je Stufe
+(grob→fein) ermittelt der Server, die Auswahl-Policy (`spottingDensity`,
+`SpottingDensityConfig`) bleibt eine reine Funktion hier. Es folgen Trumpf-Engine
+und Upgrade-Logik.

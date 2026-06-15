@@ -40,9 +40,15 @@ SPOT → FORGE → COLLECT → BATTLE/TRADE
   └──────────────────────────────┘
 ```
 
-1. **SPOT** – Spieler fotografiert ein Objekt in der echten Welt
-2. **FORGE** – Lokale KI identifiziert das Objekt, zieht Fakten und generiert eine Karte
-3. **COLLECT** – Karte wird ins persönliche Deck aufgenommen, Seltenheit wird bestimmt
+1. **SPOT** – Spieler fotografiert ein Objekt; eine **lokale KI** prüft sofort die
+   Kategorie (Gate) und erkennt – bei Treffer – Marke/Modell. Es entsteht **offline**
+   eine **Draft-Karte** (aufgenommenes Foto + erkanntes Objekt), die der Spieler
+   bestätigen, korrigieren oder mit eigenen Attributvorschlägen ergänzen kann.
+2. **FORGE** – Der Spieler reicht Draft(s) **online** in der Schmiede ein (einzeln
+   oder als Bulk). Der **Server** ermittelt die Kartendaten aus **World Data** und
+   berechnet **autoritativ die Seltenheit**; neue/unbekannte Objekte gehen in einen
+   **Freigabeprozess**. Die Karte wechselt auf Status **„forged"**.
+3. **COLLECT** – Die geschmiedete Karte wird ins persönliche Deck/Sammlung aufgenommen
 4. **BATTLE/TRADE** – Spieler duellieren sich mit Trumpf-Mechanik oder tauschen Karten
 
 ***
@@ -82,44 +88,54 @@ Unabhängig vom Kategorieschema trägt jede Karte **kategorie-neutrale Sonderwer
 
 ***
 
-## 5. KI-Engine (Lokale Verarbeitung)
+## 5. KI-Engine & Schmiede (Spot on-device, Forge online)
 
-### 5.1 On-Device-Pipeline
+### 5.1 On-Device-Spot-Pipeline (offline → Draft)
 
 ```
 Foto-Input
     │
     ▼
-[Bild-Klassifikation] ← lokales Vision-Modell (z.B. YOLO v11 / MobileNetV4)
+[Zwei-Stufen-Kaskade]              ← lokal & gebündelt (ExecuTorch/.pte), ADR 0007/0008
+  Gate: „ist es ein Fahrzeug?"     → bei Reject: Hinweis inkl. erkannter Klasse
+    │ akzeptiert
+    ▼
+  Feinmodell: Marke + Modell       → Objekt-Label
     │
     ▼
-[Kategorie-Erkennung] → Kategorie + Unterkategorie + Objekt-ID
-    │
+[Draft-Karte]                      → aufgenommenes Foto + erkanntes Objekt, Status „draft"
+    │   Spieler bestätigt / korrigiert / schlägt Attributwerte vor
     ▼
-[Fakten-Lookup] → lokale SQLite-DB mit ~50.000 Einträgen
-    │   + optional: gecachter API-Abruf (Offline-first)
-    ▼
-[Karten-Generator] → Layout + Stats + Seltenheits-Algorithmus
-    │
-    ▼
-[Card-Art-Generator] ← leichtgewichtiges diffusion-basiertes Modell (ExecuTorch/.pte)
-    │
-    ▼
-Fertige Sammelkarte → lokale Kartenbibliothek
+Lokale Draft-Sammlung (offline)    → wartet auf das Forgen (§5.4)
 ```
+
+Die Spot-Pipeline läuft **vollständig on-device und offline** und erzeugt nur
+einen **Entwurf** (Draft), keine fertige Karte. Reale Stats und Seltenheit kommen
+autoritativ aus der **Online-Schmiede** (§5.4). Ein automatischer Zuschnitt des
+Fotos auf das erkannte Objekt (Bounding-Box/Detection) ist ein späteres Thema;
+vorerst speichert der Draft das aufgenommene Foto.
 
 ### 5.2 Technische Anforderungen
 
-- **Klassifikationsmodell:** YOLO v11 nano oder MobileNetV4 (< 50 MB, < 2s Inference)
-- **Fakten-Datenbank:** Offline-SQLite mit regelmäßigen Sync-Updates (WLAN)
-- **Card-Art:** ExecuTorch (`.pte`) mit komprimiertem Stable-Diffusion-Modell (< 200 MB)
-- **Seltenheits-Algorithmus:** Berücksichtigt Realwelt-Seltenheit + globale Spotting-Häufigkeit in der App
-- **Fallback:** Bei unbekanntem Objekt → Community-Meldung + manuelle Kategorisierung
+- **Klassifikation:** Zwei-Stufen-Kaskade – ImageNet-Gate (EfficientNet-V2-S) +
+  Feinmodell Marke/Modell (EfficientNet-B4), fest gebündelt je Variante (ADR 0008)
+- **Offline-Fakten-DB (SQLite + FTS5):** liefert nur **provisorische Vorschläge** für
+  den Draft und die Offline-Anzeige – **nicht** die autoritativen Werte
+- **World Data (server-seitig):** autoritative Attribute beim Forgen (§5.4),
+  mandantenskopiert je App-Kategorie (ADR 0002)
+- **Card-Art:** ExecuTorch (`.pte`), generiert beim/nach dem Forgen (Seltenheits-Rahmen)
+- **Seltenheits-Algorithmus:** **server-autoritativ** beim Forgen (§5.3, ADR 0009);
+  der Client trägt bis dahin einen Platzhalter
+- **Fallback:** unbekanntes Objekt → Freigabe-/Kuratierungsprozess (§5.4)
 
 ### 5.3 Seltenheits-Berechnung
 
+Seltenheit ergibt sich aus **Realwelt-Seltenheit** und **lokaler Spotting-Dichte**
+(ADR 0009 – der frühere „Standort-Bonus" ist darin aufgegangen):
+
 ```
-Seltenheit = f(Realwelt-Seltenheit × App-Häufigkeit × Standort-Bonus)
+percentile = realWorldRarity × (1 − lokaleSpottingDichte)   (∈ [0,1])
+rarity     = rarityFromPercentile(percentile)               → C/U/R/E/L
 
 Common     (C)  = Top 60% aller gespotteten Objekte
 Uncommon   (U)  = Top 20–60%
@@ -129,6 +145,28 @@ Legendary  (L)  = < 1% (oder manuell kuratiert)
 ```
 
 Beispiel: Ein VW Golf ist **Common**, ein Ferrari LaFerrari ist **Rare**, ein Bugatti Veyron ist **Epic**, ein bestimmter Prototyp-Rennwagen ist **Legendary**.
+
+Die Berechnung erfolgt **server-autoritativ beim Forgen** (§5.4); die lokale
+Spotting-Dichte führt der Server über ein adaptives Standort-Raster (ADR 0009).
+
+### 5.4 Online-Schmiede (Forge)
+
+Das **Forgen ist ein Online-Schritt** (das Spotten/Draften bleibt offline, §5.1).
+Der Spieler reicht eine oder – per **Bulk** – mehrere Draft-Karten beim Server ein:
+
+1. **World-Data-Lookup:** Der Server ermittelt zum erkannten Objekt die realen
+   Attribute aus der zentralen **World Data** (mandantenskopiert, je App-Kategorie).
+2. **Autoritative Seltenheit:** Der Server berechnet die Seltenheit (§5.3) mit der
+   server-seitig geführten lokalen Spotting-Dichte (ADR 0009). Bis dahin trägt die
+   Karte nur einen Platzhalter.
+3. **Freigabeprozess für Neues:** Ist das Objekt unbekannt oder schlägt der Spieler
+   abweichende Daten vor, wandern diese in einen **Kuratierungs-/Freigabeprozess**;
+   erst nach Freigabe fließen sie in die World Data zurück.
+4. **Status „forged":** Nach erfolgreichem Forgen wechselt die Karte von `draft`
+   auf `forged` und wird in die Sammlung des Spielers einsortiert.
+
+**Privacy:** Eingereicht werden Draft-Metadaten (erkanntes Objekt + Attribut-
+vorschläge), **nicht** das Foto – das verlässt das Gerät nur per Opt-in (§10.4).
 
 ***
 
@@ -298,10 +336,15 @@ Modelle:          fest ins APK gebündelt je Variante – kein
 
 ### 10.4 Datenschutz & Offline-First
 
-- **Fotos verlassen das Gerät nur mit expliziter Zustimmung** (Opt-in für Community-Feed)
-- **KI-Inference vollständig on-device** – kein Foto-Upload für Kartenerstellung nötig
+- **Fotos verlassen das Gerät nur mit expliziter Zustimmung** (Opt-in für Community-Feed);
+  auch das **Forgen** lädt **kein Foto** hoch, sondern nur Draft-Metadaten (erkanntes
+  Objekt + Attributvorschläge)
+- **KI-Inference (Spotten/Erkennen) vollständig on-device** – das Erstellen eines
+  Draft-Entwurfs braucht kein Netz
 - **DSGVO-konform:** Standortdaten werden nur grob (PLZ-Ebene) gespeichert
-- **Offline-Modus:** Spotting & Kartenerstellung ohne Internetverbindung möglich (Sync bei Verbindung)
+- **Offline-Modus:** **Spotten & Draft-Erstellung** funktionieren offline; das **Forgen**
+  (World-Data + autoritative Seltenheit, §5.4) erfordert eine Verbindung – Drafts werden
+  bei Verbindung eingereicht
 
 ***
 

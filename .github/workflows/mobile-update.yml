@@ -6,13 +6,11 @@ name: Mobile OTA Update
 # Dieser Workflow greift erst nach bewusstem expo-updates-Setup (EAS Update ist nur
 # bis ~1000 MAU kostenfrei). Native Änderungen brauchen ohnehin einen Build
 # (mobile-build.yml). Siehe docs/deployment.md.
+#
+# Deshalb NUR manuell auslösbar (workflow_dispatch): Solange `expo-updates` nicht
+# eingerichtet ist, würde `eas update` bei jedem Push fehlschlagen. Erst beim
+# bewussten expo-updates-Setup hier wieder einen `push`-Trigger ergänzen.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/mobile/**"
-      - "packages/**"
-      - "variants/**"
   workflow_dispatch:
     inputs:
       variant:

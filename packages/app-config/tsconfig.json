@@ -1,4 +1,8 @@
 {
   "extends": "../config/tsconfig/library.json",
+  "//": "Der Build-Zeit-Loader (loader.ts) nutzt node:-APIs – daher node-Typen.",
+  "compilerOptions": {
+    "types": ["node"]
+  },
   "include": ["src"]
 }

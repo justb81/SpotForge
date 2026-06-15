@@ -1,7 +1,9 @@
-// @spotforge/app-config — öffentliche Einstiegspunkte.
+// @spotforge/app-config — öffentliche Einstiegspunkte (RN-tauglich, ohne I/O).
 //
-// AppDefinition-Schema + defineApp-Helper. Siehe README.md.
+// AppDefinition-Schema, defineApp-Helper und Laufzeit-Validierung. Siehe README.
+// Der Build-Zeit-Loader (Varianten-Auflösung, Asset-Existenz, `node:`-Importe)
+// lebt separat unter `@spotforge/app-config/loader`.
 
 export * from "./app-definition";
-
-// Geplant: export { validateAppDefinition } from "./validate";
+export * from "./schema"; // appDefinitionSchema
+export * from "./validate"; // validateAppDefinition, assertAppDefinition, AppDefinitionError, …

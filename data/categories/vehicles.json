@@ -7,8 +7,8 @@
     { "key": "power",        "label": "PS",               "unit": "PS",   "trumpfable": true,  "higherIsBetter": true },
     { "key": "acceleration", "label": "0–100 km/h",        "unit": "s",    "trumpfable": true,  "higherIsBetter": false },
     { "key": "topSpeed",     "label": "Höchstgeschwindigkeit", "unit": "km/h", "trumpfable": true, "higherIsBetter": true },
-    { "key": "weight",       "label": "Gewicht",           "unit": "kg",   "trumpfable": false, "higherIsBetter": false },
-    { "key": "price",        "label": "Preis",             "unit": "EUR",  "trumpfable": false, "higherIsBetter": true },
+    { "key": "weight",       "label": "Gewicht",           "unit": "kg",   "trumpfable": true,  "higherIsBetter": false },
+    { "key": "price",        "label": "Preis",             "unit": "EUR",  "trumpfable": true,  "higherIsBetter": true },
     { "key": "year",         "label": "Baujahr",           "unit": "Jahr", "trumpfable": false, "higherIsBetter": true }
   ]
 }

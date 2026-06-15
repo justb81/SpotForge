@@ -9,7 +9,7 @@ alles Spielmechanische – importiert von App *und* Backend.
 - **Seltenheits-Algorithmus:** `f(Realwelt-Seltenheit × App-Häufigkeit ×
   Standort-Bonus)` → C/U/R/E/L (GDD §5.3).
 - **Trumpf-Battle-Engine:** Stich-Auflösung, Deck-Verwaltung, Spielmodi
-  (Klassisch, Kategorie-Mix, Speed Spotting, Team) (GDD §6).
+  (Klassisch, Speed Spotting, Team) (GDD §6).
 - **Spezialfähigkeiten:** Turbo, Schild, Wildcard, Fusion, Scout (GDD §6.3).
 - **Upgrade-Logik:** Duplikate → Stufen → Foil (GDD §7.3).
 

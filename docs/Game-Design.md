@@ -55,7 +55,7 @@ SPOT → FORGE → COLLECT → BATTLE/TRADE
 |---|---|---|---|
 | 🚗 **Fahrzeuge** | Auto | PKW, Motorräder, LKW, Busse | PS, 0–100 km/h, Höchstgeschwindigkeit, Gewicht, Preis |
 | ✈️ **Luftfahrt** | Flugzeug | Jets, Propeller, Hubschrauber | Reichweite, Höchstgeschwindigkeit, Passagiere, Triebwerke, Gewicht |
-| 🦁 **Tiere** | Tier | Wildtiere, Haustiere, Vögel, Insekten | Gewicht, Geschwindigkeit, Lebensspanne, Beißkraft, Gefährdungsstatus |
+| 🦁 **Tiere** | Tier | Wildtiere, Haustiere, Vögel, Insekten | Gewicht, Geschwindigkeit, Lebensspanne, Körperlänge, Schutzstatus |
 | 🌿 **Pflanzen** | Pflanze | Bäume, Blumen, Sträucher | Wuchshöhe, Alter, Giftigkeit, Verbreitungsgebiet, Seltenheit |
 | 🏗️ **Baumaschinen** | Bagger | Kräne, Bagger, Bulldozer, Walzen | Gewicht, Hubkraft, PS, Preis, Arbeitsbreite |
 | 🚢 **Wasserfahrzeuge** | Schiff | Containerschiffe, Boote, U-Boote | Verdrängung, PS, Reichweite, Kapazität, Baujahr |
@@ -66,12 +66,19 @@ SPOT → FORGE → COLLECT → BATTLE/TRADE
 
 ### 4.2 Kartenattribute nach Kategorie
 
-Jede Karte trägt **6 Kern-Attribute** (3 für Trumpf nutzbar, 3 informativ) und **2 Spezialattribute** für besondere Spielmechaniken:
+Die spielbaren Attribute jeder Kategorie sind **deklarativ** in `data/categories/<id>.json` definiert (Source of Truth, abgebildet auf `CategoryDefinition`/`AttributeDefinition` in `game-core`). Pro Kategorie gibt es mehrere **Kern-Attribute**; jedes ist markiert als
 
-- **Seltenheit** (Common / Uncommon / Rare / Epic / Legendary) – algorithmisch bestimmt durch Realwelt-Seltenheit
+- **trumpffähig** – im Trumpf-Duell wählbar (§6), oder
+- **informativ** – nur Anzeige/Sammelreiz, nie kampfentscheidend,
+
+je mit Einheit und Vergleichsrichtung (`higherIsBetter`). **Anzahl und Trumpf-Auswahl variieren je Kategorie** – es gibt keine feste Quote; jedes einigermaßen kompetitive Merkmal sollte trumpffähig sein.
+
+Unabhängig vom Kategorieschema trägt jede Karte **kategorie-neutrale Sonderwerte** (im `Card`-Modell, nicht im Attributschema):
+
+- **Seltenheit** (Common / Uncommon / Rare / Epic / Legendary) – algorithmisch bestimmt (§5.3); **nur durch Real-World-Spotting** erreichbar (§9.3), nicht durch Upgrades
 - **Erstellungsdatum & GPS-Region** – für Geo-Events nutzbar
 - **Spotted-By** – Creator-Tag des Entdeckers
-- **Boost-Werte** – durch Upgrades veränderbar (siehe Progressionssystem)
+- **Level/Foil-Boost** – Attributwerte durch Upgrades steigerbar (§7.3); ändert **nicht** die Seltenheit
 
 ***
 
@@ -139,22 +146,19 @@ Das Basis-Gameplay folgt dem bewährten Top-Trumps-Prinzip[^13][^14]:
 
 ### 6.2 Erweiterte Modi
 
+> Alle Modi spielen **innerhalb einer Kategorie** (White-Label: je App eine Kategorie, siehe [ADR 0002](./adr/0002-multi-app-single-codebase.md)). Es gibt bewusst keinen kategorieübergreifenden Modus.
+
 **Modus 1: Klassisch (1v1 Turnier)**
 - Jeder Spieler baut sein Deck aus gespotteten Karten
 - Standardregeln nach dem Top-Trumps-Prinzip[^13]
 - Rangliste mit wöchentlichen Seasons
 
-**Modus 2: Kategorie-Mix Battle**
-- Decks können Karten aus allen Kategorien enthalten
-- Kategorie-Boosts: Tiere gegen Baumaschinen – der Spieler wählt das passendste Attribut strategisch
-- Sonderfähigkeit: „Kategorie-Wechsel" (einmal pro Spiel ein alternatives Attribut nutzen)
-
-**Modus 3: Speed Spotting Battle (Async PvP)**
+**Modus 2: Speed Spotting Battle (Async PvP)**
 - Beide Spieler haben 24 Stunden Zeit, 5 neue Karten zu spotten
 - Beste 5 Karten treten gegeneinander an
 - Ziel: Wer hat die selteneren Karten gespottet?
 
-**Modus 4: Team Expedition**
+**Modus 3: Team Expedition**
 - 2vs2 oder 3vs3
 - Gemeinsames Deck aus allen Mitglieder-Karten
 - Koordinierter Attribut-Einsatz
@@ -344,7 +348,6 @@ Diese Lore ist bewusst optional – das Kernspiel funktioniert vollständig ohne
 - Clan-System
 
 ### Phase 3 – Community (6 Monate post-Launch)
-- Kategorie-Mix Battle
 - Marktplatz
 - Geo-Events (regionale Challenges)
 - Web-Dashboard für Sammlungen
@@ -388,7 +391,6 @@ Diese Lore ist bewusst optional – das Kernspiel funktioniert vollständig ohne
 | **Echte Trumpf-Duelle** | WildcardDex hat Battles nur im Abo[^5]; CarDex[^2] und RealDex[^7] haben keine Battles |
 | **Lokale KI (Privacy-first)** | Alle Konkurrenten senden Fotos an Cloud-Server |
 | **Reale Fakten als Karten-Stats** | Karten spiegeln echte Messwerte wider, keine fiktiven Werte |
-| **Cross-Kategorie-Battles** | Ein Löwe vs. ein Ferrari – welches Attribut gewinnt? |
 | **Creator-Ownership** | Wer eine Karte spottet, ist der „Entdecker" – mit Tag auf der Karte |
 
 ***

@@ -1,11 +1,9 @@
 #!/usr/bin/env node
-// Bezieht die GEBÜNDELTEN ML-Modell-Artefakte gemäß models.manifest.json
-// (schemaVersion 2) und verifiziert sie per SHA-256. Die Binaries liegen nicht
-// im Git (data/models/* ist ignoriert); dieser Schritt läuft vor dem Bundle
+// Bezieht ALLE ML-Modell-Artefakte gemäß models.manifest.json (schemaVersion 3)
+// und verifiziert sie per SHA-256. Jedes Modell wird fest ins APK gebündelt
+// (je Variante) – es gibt kein Nachladen/OTA. Die Binaries liegen nicht im Git
+// (data/models/* ist ignoriert); dieser Schritt läuft vor dem Bundle
 // (CI vor `expo prebuild`, lokal vor `dev`).
-//
-// Nur Einträge mit `distribution: "bundled"` werden hier geladen – `ota`-Modelle
-// bezieht der Lifecycle (packages/ai-engine) zur Laufzeit auf dem Gerät.
 //
 // Verwendung:  node tools/fetch-models/index.mjs   (bzw. `pnpm fetch-models`)
 // Bereits vorhandene, prüfsummen-gültige Dateien werden übersprungen.
@@ -59,16 +57,15 @@ async function fetchArtifact(label, artifact) {
 }
 
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-if (manifest.schemaVersion !== 2) {
-  throw new Error(`models.manifest.json: schemaVersion ${manifest.schemaVersion} != 2.`);
+if (manifest.schemaVersion !== 3) {
+  throw new Error(`models.manifest.json: schemaVersion ${manifest.schemaVersion} != 3.`);
 }
 
-const bundled = manifest.models.filter((m) => m.distribution === "bundled");
-if (bundled.length === 0) {
-  console.log("Keine gebündelten Modelle im Manifest – nichts zu tun.");
+if (manifest.models.length === 0) {
+  console.log("Keine Modelle im Manifest – nichts zu tun.");
 }
 
-for (const model of bundled) {
+for (const model of manifest.models) {
   await fetchArtifact(`${model.id} (model)`, model.artifacts.model);
   if (model.artifacts.labels) {
     await fetchArtifact(`${model.id} (labels)`, model.artifacts.labels);

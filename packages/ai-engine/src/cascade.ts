@@ -2,9 +2,12 @@
  * Zwei-Stufen-**Kaskade** für die On-Device-Klassifikation: ein günstiges
  * **Gate** klärt grob „gehört das überhaupt in den Scope?" (z.B. „ist das ein
  * Fahrzeug?"), und erst bei Annahme wird das schwere **Feinmodell** (Marke+
- * Modell) **lazy** geladen und ausgeführt.
+ * Modell) ausgeführt.
  *
- * Vorteile: das große Feinmodell belegt Speicher/Akku nur, wenn das Gate
+ * **Beide Modelle sind fest im APK gebündelt** (je Variante) – es wird nichts
+ * nachgeladen. Das Feinmodell wird lediglich **bei Bedarf in den Speicher
+ * initialisiert** (aus dem gebündelten Asset), nämlich erst beim ersten
+ * akzeptierten Gate: So belegt das große Modell Speicher/Akku nur, wenn das Gate
  * akzeptiert, und der Guardrail (Reject von Nicht-Scope-Objekten) greift **vor**
  * dem teuren Schritt.
  *
@@ -65,24 +68,25 @@ export interface CascadeOptions {
   /** Annahme-Kriterium (Allowlist + Schwelle). */
   gateConfig: GateConfig;
   /**
-   * Lazy-Loader des Feinmodells: wird **erst beim ersten akzeptierten Gate**
-   * aufgerufen und danach gecached (auch parallele Aufrufe teilen die Promise).
+   * Initialisiert das **gebündelte** Feinmodell in den Speicher (kein Netz). Wird
+   * **erst beim ersten akzeptierten Gate** aufgerufen und danach gecached (auch
+   * parallele Aufrufe teilen die Promise).
    */
-  loadFine: () => Promise<Classifier>;
+  initFine: () => Promise<Classifier>;
 }
 
 /**
- * Baut eine {@link CascadeClassifier} aus Gate + Lazy-Feinmodell. Das Feinmodell
- * wird nur geladen, wenn das Gate mindestens einmal akzeptiert – ein Reject
- * lässt es ungeladen.
+ * Baut eine {@link CascadeClassifier} aus Gate + Feinmodell. Das (gebündelte)
+ * Feinmodell wird nur in den Speicher initialisiert, wenn das Gate mindestens
+ * einmal akzeptiert – ein Reject lässt es uninitialisiert.
  */
 export function createCascadeClassifier({
   gate,
   gateConfig,
-  loadFine,
+  initFine,
 }: CascadeOptions): CascadeClassifier {
   let finePromise: Promise<Classifier> | undefined;
-  const ensureFine = () => (finePromise ??= loadFine());
+  const ensureFine = () => (finePromise ??= initFine());
 
   return {
     async classify(input: ClassifierInput): Promise<CascadeResult> {

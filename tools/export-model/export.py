@@ -6,7 +6,7 @@ Erzeugt aus einem Export-Config (``models/<id>.json``) reproduzierbar:
 * ``<id>.pte``            – das ExecuTorch-Modell (XNNPACK, optional int8),
 * ``<id>.labels.json``    – geordnete Labels (Index = Logit-Position),
 * ``<id>.metadata.json``  – Quelle, Revision, Version, SHA-256, Normalisierung,
-* ``<id>.manifest.json``  – fertiger ``ota``-Eintrag fürs Modell-Manifest.
+* ``<id>.manifest.json``  – fertiger Eintrag fürs Modell-Manifest (gebündelt).
 
 Zwei Export-Backends (Config-Feld ``format``):
 
@@ -229,10 +229,7 @@ def main() -> int:
         "id": model_name,
         "name": cfg["name"],
         "version": cfg["version"],
-        "distribution": "ota",
         "category": cfg["category"],
-        "runtime": "react-native-executorch@0.9",
-        "compat": {"appMin": "0.1.0"},
         "preprocessor": preprocessor,
         "artifacts": {
             "model": {"url": f"{base}/{model_out.name}", "dest": f"data/models/{model_out.name}", "sha256": model_sha, "bytes": model_bytes},

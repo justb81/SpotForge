@@ -1,4 +1,4 @@
-# ADR 0008 – Modell-Export-Pipeline, Versionierung & OTA-Lifecycle
+# ADR 0008 – Modell-Export-Pipeline & Versionierung (fest gebündelt je Variante)
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-06-14
@@ -8,13 +8,18 @@
 
 Der PoC (#50) liefert mit dem gebündelten **ImageNet-EfficientNet** nur grobe
 Klassen. Für CarForge brauchen wir eine **modell-genaue Fahrzeug-Erkennung**
-(Marke + Modell) als Grundlage für reale Stats (#10), plus einen Weg, das Modell
-**reproduzierbar herzustellen** und **nach Release zu aktualisieren**, ohne ein
-App-Update.
+(Marke + Modell) als Grundlage für reale Stats (#10) plus einen Weg, das Modell
+**reproduzierbar herzustellen**.
+
+**Festlegung:** Jede Variante bündelt ihr(e) Modell(e) **fest ins APK**. Es gibt
+**kein Nachladen und kein OTA** der Modelle – nichts wird zur Laufzeit
+heruntergeladen oder aktualisiert. Ein neues Modell heißt: neuer Export, neues
+Manifest, neuer App-Build. Das hält den Offline-/Privacy-Betrieb trivial garantiert
+und vermeidet Lifecycle-Komplexität (Versions-/Kompatibilitätsmatrix, Teil-Updates).
 
 Offene Punkte waren: Wie entsteht das `.pte` reproduzierbar? Wo wird es gehostet
-(Binary nicht im Git)? Wie werden Modelle versioniert und kompatibel gehalten?
-Wie kommen Updates aufs Gerät, ohne den Offline-Betrieb zu gefährden?
+(Binary nicht im Git)? Wie werden Modell-Artefakte versioniert und integritäts-
+gesichert ins Bundle gezogen?
 
 ## Entscheidung
 
@@ -31,22 +36,24 @@ Wie kommen Updates aufs Gerät, ohne den Offline-Betrieb zu gefährden?
    Zusatz-Infra. Das Modell-Manifest referenziert es per URL + SHA-256. Binaries
    bleiben aus dem Git (`data/models/*` ignoriert).
 
-3. **Manifest-Schema v2** (`tools/fetch-models/models.manifest.json`). Pro Modell:
-   `id`, `version` (semver), `distribution` (`bundled` | `ota`), `category`,
-   `runtime`, `compat.appMin`, `preprocessor` und `artifacts` (Modell + optional
-   Labels, je mit `sha256`). `bundled` lädt `fetch-models` vor dem Build; `ota`
-   bezieht der Lifecycle zur Laufzeit.
+3. **Manifest-Schema v3** (`tools/fetch-models/models.manifest.json`). Pro Modell:
+   `id`, `version` (semver), `category`, `preprocessor` und `artifacts` (Modell +
+   optional Labels, je mit `url`, `dest`, `sha256`, `bytes`). `fetch-models` zieht
+   **alle** Einträge vor dem Build ins Bundle und verifiziert die SHA-256. Kein
+   `distribution`/`compat`/`runtime` mehr – es gibt nur den gebündelten Weg.
 
-4. **OTA-Lifecycle (`packages/ai-engine/models`).** Reine, testbare Logik
-   (Versionsvergleich, Kompatibilität, Update-Auswahl, SHA-verifizierter
-   Download mit injizierter I/O). Das gebündelte Modell bleibt der
-   **Offline-Fallback** und wird nicht entfernt; ein OTA-Update schaltet erst
-   nach erfolgreicher Verifikation um.
+4. **Fest gebündelt je Variante – kein Lifecycle.** Es gibt **kein**
+   OTA-/Download-Modul. Die für eine Variante vorgesehenen Modelle werden vor dem
+   Build via `fetch-models` bezogen und als Metro-Asset in das APK gebündelt. Ein
+   Modellwechsel ist ein **App-Build**, kein Laufzeit-Vorgang.
 
 5. **Zwei-Stufen-Kaskade (`packages/ai-engine/cascade.ts`).** Ein günstiges,
    **breites Gate-Modell** klärt zuerst „gehört das in den Scope?" (für CarForge:
    „ist das ein Fahrzeug?") und lehnt Nicht-Scope-Objekte ab; erst bei Annahme
-   wird das schwere **Feinmodell** (Marke+Modell) **lazy** geladen.
+   wird das schwere **Feinmodell** (Marke+Modell) ausgeführt. **Beide Modelle sind
+   fest gebündelt**; das Feinmodell wird lediglich **bei Bedarf in den Speicher
+   initialisiert** (aus dem gebündelten Asset, kein Netz), erst beim ersten
+   akzeptierten Gate.
    - **Ein generisches Gate für ganz SpotForge (White-Label).** Dasselbe breite
      Modell (ImageNet) dient als Gate für **alle** Apps; jede App liefert über
      ihre `AppDefinition` nur ihre **Allowlist** (Auto-App → Fahrzeug-Synsets,
@@ -55,37 +62,37 @@ Wie kommen Updates aufs Gerät, ohne den Offline-Betrieb zu gefährden?
    - Bewusst ein *breites* Modell statt eines schmalen Fahrzeugtyp-Modells: nur
      ein breites Modell kann Nicht-Fahrzeuge zuverlässig ablehnen (ein
      Typ-Modell ohne Negativ-Klasse würde z.B. eine Katze als „Auto" einstufen).
-   - Das Gate ist eine eigene, separat versionier-/OTA-bare Stufe; die
-     Verkettung (Gate-Allowlist aus der `AppDefinition`) übernimmt `forgeCard`
-     (#8).
+   - Das Gate ist eine eigene, separat versionierbare Modell-Stufe (eigener
+     Manifest-Eintrag); die Verkettung (Gate-Allowlist aus der `AppDefinition`)
+     übernimmt `forgeCard` (#8).
 
 ## Begründung
 
 - **Reproduzierbarkeit:** Quelle + Config + Pipeline ergeben deterministisch das
   ausgelieferte Artefakt; SHA-256 sichert Integrität an jeder Stelle.
-- **Keine Zusatz-Infra:** GitHub Releases existieren bereits; kein eigener
-  CDN/Bucket nötig, um zu starten. Ein Wechsel auf CDN/HF ist später nur eine
-  URL-Änderung im Manifest.
-- **Privacy/Offline bleiben gewahrt:** Bündeln ist der Default-Fallback; OTA ist
-  additiv und verifiziert.
-- **Generisch (White-Label):** Pipeline und Lifecycle sind kategorie-neutral;
-  eine neue App liefert nur eine andere Export-Config + Manifest-Einträge.
+- **Keine Zusatz-Infra:** GitHub Releases existieren bereits als Bezugsquelle für
+  den Build-Schritt; kein eigener CDN/Bucket nötig.
+- **Privacy/Offline trivial garantiert:** Da nichts zur Laufzeit lädt, gibt es
+  keinen Netzpfad und keine Update-Logik, die den Offline-Betrieb gefährden könnte.
+- **Generisch (White-Label):** Export-Pipeline und Manifest sind kategorie-neutral;
+  eine neue App liefert nur eine andere Export-Config + Manifest-Einträge und
+  bündelt ihre eigenen Modelle.
 
 ## Konsequenzen
 
-- `tools/fetch-models` und sein Manifest sind auf Schema v2 umgestellt; der
-  PoC-EfficientNet-Eintrag ist migriert (`distribution: "bundled"`).
+- `tools/fetch-models` und sein Manifest sind auf Schema v3 (nur gebündelt)
+  umgestellt; der EfficientNet-Eintrag (generisches Gate) ist migriert.
 - `createClassifier` unterscheidet eingebautes ImageNet-Basismodell
   (`fromModelName`) und eigene Modelle (`fromCustomModel` mit Label-Satz +
   Normalisierung) und liefert Top-k-Kandidaten.
 - **Feinmodell CarForge:** `Jordo23/vehicle-classifier` (EfficientNet-B4, 8.949
   Klassen „Make Model Year", VMMRdb, MIT) – fertig, kein Training. Export über
-  das `timm`-Backend; als `ota`-Modell ausgeliefert.
-- **Mensch-/Geräte-Aufgaben (nicht agent-automatisierbar, bleiben in #9 offen):**
-  VMMRdb-Provenienz rechtlich gegenchecken, int8-Kalibrierung mit echten Bildern,
-  Verifikation von Erkennungsqualität und Inferenz-Latenz **auf echtem Gerät**,
-  finales Größen-/Performance-Budget, sowie die konkrete Gate-Allowlist +
-  Verkettung in `forgeCard` (#8).
+  das `timm`-Backend; **fest ins CarForge-APK gebündelt**.
+- **Mensch-/Geräte-Aufgaben (nicht agent-automatisierbar, als Folge-Issues von
+  #9):** VMMRdb-Provenienz rechtlich gegenchecken (#61), int8-Kalibrierung mit
+  echten Bildern (#62), Verifikation von Erkennungsqualität, Inferenz-Latenz und
+  Bundle-Budget **auf echtem Gerät** (#63). Die konkrete Gate-Allowlist +
+  Verkettung der Kaskade gehört in `forgeCard` (#8).
 - `classificationHint` (AppDefinition) wirkt auf ein Fix-Label-Modell nicht
   (keine Freitext-Steuerung möglich); seine Einbindung gehört in die
   `forgeCard`-Orchestrierung (#8) und ist dort zu lösen.

@@ -2,13 +2,10 @@ import { describe, expect, it } from "vitest";
 import { MANIFEST_SCHEMA_VERSION, parseManifest } from "./manifest";
 
 const validEntry = {
-  id: "cars-stanford-vit",
-  name: "Stanford Cars ViT",
+  id: "cars-jordo23",
+  name: "Jordo23 Vehicle Classifier",
   version: "1.0.0",
-  distribution: "ota",
   category: "vehicles",
-  runtime: "react-native-executorch@0.9",
-  compat: { appMin: "0.1.0" },
   preprocessor: { normMean: [0.5, 0.5, 0.5], normStd: [0.5, 0.5, 0.5] },
   artifacts: {
     model: { url: "https://example/model.pte", dest: "data/models/m.pte", sha256: "abc", bytes: 1 },
@@ -25,7 +22,7 @@ describe("parseManifest", () => {
   it("parst einen gültigen Eintrag", () => {
     const m = parseManifest({ schemaVersion: MANIFEST_SCHEMA_VERSION, models: [validEntry] });
     expect(m.models).toHaveLength(1);
-    expect(m.models[0]?.id).toBe("cars-stanford-vit");
+    expect(m.models[0]?.id).toBe("cars-jordo23");
     expect(m.models[0]?.preprocessor?.normMean).toEqual([0.5, 0.5, 0.5]);
     expect(m.models[0]?.artifacts.labels?.url).toBe("https://example/labels.json");
   });
@@ -33,7 +30,6 @@ describe("parseManifest", () => {
   it("akzeptiert preprocessor=null und fehlende Labels (eingebautes Modell)", () => {
     const builtin = {
       ...validEntry,
-      distribution: "bundled",
       preprocessor: null,
       artifacts: { model: validEntry.artifacts.model },
     };
@@ -46,20 +42,20 @@ describe("parseManifest", () => {
     expect(() => parseManifest({ schemaVersion: 1, models: [] })).toThrow(/schemaVersion/);
   });
 
-  it("wirft bei ungültiger distribution", () => {
+  it("wirft bei fehlenden Artefakten", () => {
+    const { artifacts: _omit, ...withoutArtifacts } = validEntry;
+    void _omit;
+    expect(() =>
+      parseManifest({ schemaVersion: MANIFEST_SCHEMA_VERSION, models: [withoutArtifacts] }),
+    ).toThrow(/artifacts/);
+  });
+
+  it("wirft bei leerer Kategorie", () => {
     expect(() =>
       parseManifest({
         schemaVersion: MANIFEST_SCHEMA_VERSION,
-        models: [{ ...validEntry, distribution: "cdn" }],
+        models: [{ ...validEntry, category: "" }],
       }),
-    ).toThrow(/distribution/);
-  });
-
-  it("wirft bei fehlendem compat.appMin", () => {
-    const { compat: _omit, ...withoutCompat } = validEntry;
-    void _omit;
-    expect(() =>
-      parseManifest({ schemaVersion: MANIFEST_SCHEMA_VERSION, models: [withoutCompat] }),
-    ).toThrow(/compat\.appMin/);
+    ).toThrow(/category/);
   });
 });

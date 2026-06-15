@@ -1,15 +1,12 @@
 {
-  "$comment": "Modell-Manifest (schemaVersion 2). Source of Truth für jedes ausgelieferte Modell-Artefakt: Bezugsquelle, SHA-256, Version, Kompatibilität. Binaries liegen NICHT im Git (data/models/* ist ignoriert). 'bundled' = vor dem Build via tools/fetch-models geladen & gebündelt (Offline-Fallback); 'ota' = zur Laufzeit per packages/ai-engine bezogen. Fahrzeug-spezifische Modelle erzeugt tools/export-model (#9) und hostet sie als GitHub-Release-Asset.",
-  "schemaVersion": 2,
+  "$comment": "Modell-Manifest (schemaVersion 3). Source of Truth für jedes ausgelieferte Modell-Artefakt: Bezugsquelle, SHA-256, Version, Kategorie. Alle Modelle werden je Variante FEST ins APK gebündelt – kein Nachladen/OTA. tools/fetch-models lädt die Artefakte vor dem Build hierher (data/models/* ist gitignored). Fahrzeug-spezifische Modelle erzeugt tools/export-model (#9) und hostet sie als GitHub-Release-Asset.",
+  "schemaVersion": 3,
   "models": [
     {
       "id": "imagenet-efficientnet-v2-s",
-      "name": "EfficientNet-V2-S (ImageNet, int8/XNNPACK) – PoC-Basismodell",
+      "name": "EfficientNet-V2-S (ImageNet, int8/XNNPACK) – generisches Gate-Modell",
       "version": "1.0.0",
-      "distribution": "bundled",
       "category": "imagenet",
-      "runtime": "react-native-executorch@0.9",
-      "compat": { "appMin": "0.1.0" },
       "preprocessor": null,
       "artifacts": {
         "model": {

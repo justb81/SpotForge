@@ -46,26 +46,26 @@ describe("evaluateGate", () => {
 });
 
 describe("createCascadeClassifier", () => {
-  it("lädt das Feinmodell nicht, wenn das Gate ablehnt", async () => {
-    const loadFine = vi.fn(async () => fixedClassifier(result([["x", 1]])));
+  it("initialisiert das Feinmodell nicht, wenn das Gate ablehnt", async () => {
+    const initFine = vi.fn(async () => fixedClassifier(result([["x", 1]])));
     const cascade = createCascadeClassifier({
       gate: fixedClassifier(result([["tabby cat", 0.99]])),
       gateConfig: gateCfg,
-      loadFine,
+      initFine,
     });
 
     const out = await cascade.classify({ imageUri: "img" });
     expect(out.decision.accepted).toBe(false);
     expect(out.fine).toBeUndefined();
-    expect(loadFine).not.toHaveBeenCalled();
+    expect(initFine).not.toHaveBeenCalled();
   });
 
-  it("lädt & nutzt das Feinmodell, wenn das Gate akzeptiert", async () => {
+  it("initialisiert & nutzt das Feinmodell, wenn das Gate akzeptiert", async () => {
     const fine = fixedClassifier(result([["VW Golf VII 2013", 0.7]]));
     const cascade = createCascadeClassifier({
       gate: fixedClassifier(result([["sports car", 0.8]])),
       gateConfig: gateCfg,
-      loadFine: vi.fn(async () => fine),
+      initFine: vi.fn(async () => fine),
     });
 
     const out = await cascade.classify({ imageUri: "img" });
@@ -73,16 +73,16 @@ describe("createCascadeClassifier", () => {
     expect(out.fine?.label).toBe("VW Golf VII 2013");
   });
 
-  it("lädt das Feinmodell nur einmal (lazy + gecached)", async () => {
-    const loadFine = vi.fn(async () => fixedClassifier(result([["x", 1]])));
+  it("initialisiert das Feinmodell nur einmal (bei Bedarf, gecached)", async () => {
+    const initFine = vi.fn(async () => fixedClassifier(result([["x", 1]])));
     const cascade = createCascadeClassifier({
       gate: fixedClassifier(result([["pickup", 0.9]])),
       gateConfig: gateCfg,
-      loadFine,
+      initFine,
     });
 
     await cascade.classify({ imageUri: "a" });
     await cascade.classify({ imageUri: "b" });
-    expect(loadFine).toHaveBeenCalledTimes(1);
+    expect(initFine).toHaveBeenCalledTimes(1);
   });
 });

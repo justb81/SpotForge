@@ -1,26 +1,23 @@
 /**
  * Typen und Parser für das **Modell-Manifest** (`tools/fetch-models/models.manifest.json`,
- * `schemaVersion: 2`). Das Manifest ist die Source of Truth für jedes
- * ausgelieferte Modell-Artefakt: Bezugsquelle, Prüfsumme, Version und
- * Kompatibilität.
+ * `schemaVersion: 3`). Das Manifest ist die Source of Truth für jedes
+ * **gebündelte** Modell-Artefakt: Bezugsquelle, Prüfsumme, Version und Kategorie.
  *
- * `distribution`:
- * - `bundled` – wird vor dem Build geladen (`tools/fetch-models`) und als Asset
- *   gebündelt; der **Offline-Fallback**.
- * - `ota` – wird zur Laufzeit im Hintergrund bezogen (siehe `lifecycle.ts`) und
- *   ersetzt das gebündelte Modell, ohne es zu entfernen.
+ * Alle Modelle werden **fest ins APK gebündelt** (je Variante) – kein Nachladen,
+ * kein OTA. `tools/fetch-models` zieht die Artefakte anhand dieses Manifests
+ * **vor dem Build** und verifiziert die SHA-256.
  *
- * Rein und seiteneffektfrei (keine React-Native-/Node-Abhängigkeit), damit
- * sowohl vom Runtime-Lifecycle als auch unter vitest nutzbar.
+ * Rein und seiteneffektfrei (keine React-Native-/Node-Abhängigkeit), damit der
+ * Build-Schritt und vitest dieselbe Definition nutzen.
  */
 
-export const MANIFEST_SCHEMA_VERSION = 2;
+export const MANIFEST_SCHEMA_VERSION = 3;
 
 /** Eine bezieh- und prüfbare Datei (Modell-Binary oder Label-Satz). */
 export interface ModelArtifact {
-  /** Bezugs-URL (z.B. GitHub-Release-Asset). */
+  /** Bezugs-URL (z.B. GitHub-Release-Asset), aus der vor dem Build gebündelt wird. */
   url: string;
-  /** Zielpfad relativ zur Repo-Wurzel (für gebündelte Artefakte). */
+  /** Zielpfad relativ zur Repo-Wurzel (wohin `fetch-models` das Artefakt legt). */
   dest: string;
   /** Erwartete SHA-256 (hex, lowercase). */
   sha256: string;
@@ -28,28 +25,16 @@ export interface ModelArtifact {
   bytes: number;
 }
 
-/** Kompatibilitätsfenster eines Modells. */
-export interface ModelCompat {
-  /** Minimale App-Version (semver „x.y.z"), die dieses Modell laden darf. */
-  appMin: string;
-}
-
 /** Ein Modell-Eintrag im Manifest. */
 export interface ModelManifestEntry {
-  /** Stabile Kennung (z.B. `cars-stanford-vit`). */
+  /** Stabile Kennung (z.B. `cars-jordo23`). */
   id: string;
   /** Anzeigename / Kurzbeschreibung. */
   name: string;
   /** Modell-Version (semver „x.y.z"); steigt bei jedem Re-Export. */
   version: string;
-  /** Auslieferungsweg. */
-  distribution: "bundled" | "ota";
-  /** Kategorie-Bezug (`CategoryId` oder `imagenet` für das PoC-Basismodell). */
+  /** Kategorie-Bezug (`CategoryId` oder `imagenet` für das generische Gate-Modell). */
   category: string;
-  /** Runtime-Marker, z.B. `react-native-executorch@0.9`. */
-  runtime: string;
-  /** Kompatibilitätsfenster. */
-  compat: ModelCompat;
   /**
    * Per-Kanal-Normalisierung; `null` = Library/Runtime stellt sie selbst
    * (eingebaute Modelle).
@@ -92,14 +77,6 @@ function parseEntry(raw: unknown, index: number): ModelManifestEntry {
     throw new Error(`Manifest: models[${index}] ist kein Objekt.`);
   }
   const id = requireString(raw.id, `models[${index}].id`);
-  const distribution = raw.distribution;
-  if (distribution !== "bundled" && distribution !== "ota") {
-    throw new Error(`Manifest: ${id}.distribution muss 'bundled' oder 'ota' sein.`);
-  }
-  const compat = raw.compat;
-  if (!isRecord(compat) || typeof compat.appMin !== "string") {
-    throw new Error(`Manifest: ${id}.compat.appMin fehlt.`);
-  }
   const artifacts = raw.artifacts;
   if (!isRecord(artifacts)) {
     throw new Error(`Manifest: ${id}.artifacts fehlt.`);
@@ -108,10 +85,7 @@ function parseEntry(raw: unknown, index: number): ModelManifestEntry {
     id,
     name: requireString(raw.name, `${id}.name`),
     version: requireString(raw.version, `${id}.version`),
-    distribution,
     category: requireString(raw.category, `${id}.category`),
-    runtime: requireString(raw.runtime, `${id}.runtime`),
-    compat: { appMin: compat.appMin },
     preprocessor: parsePreprocessor(raw.preprocessor, id),
     artifacts: {
       model: parseArtifact(artifacts.model, `${id}.artifacts.model`),

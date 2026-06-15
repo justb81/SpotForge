@@ -8,7 +8,7 @@ wir nutzen fertige Modelle von HuggingFace.
 Die Pipeline läuft **außerhalb** des Mobile-Bundles (CI/lokal, Python) – das
 fertige `.pte` ist **nicht** im Git, sondern wird als **GitHub-Release-Asset**
 gehostet und vom Modell-Manifest (`tools/fetch-models/models.manifest.json`) per
-URL + SHA-256 bezogen (gebündelt) bzw. zur Laufzeit per OTA aktualisiert.
+URL + SHA-256 bezogen und **fest ins APK gebündelt** (kein Nachladen/OTA).
 
 ## Modell-Kontrakt
 
@@ -19,8 +19,8 @@ URL + SHA-256 bezogen (gebündelt) bzw. zur Laufzeit per OTA aktualisiert.
   Resize/Normalisierung/Softmax übernimmt das native Runtime.
 
 Normalisierung (`normMean`/`normStd`) und Labels reisen **mit dem Modell** (gleiche
-Version) – siehe Manifest-Eintrag/`labels.json` –, nicht im App-Code. Das ist
-Voraussetzung für saubere OTA-Updates.
+Version) – siehe Manifest-Eintrag/`labels.json` –, nicht im App-Code. So ist das
+gebündelte Modell reproduzierbar und in sich konsistent.
 
 ## Zwei Export-Backends (`format`)
 
@@ -57,7 +57,7 @@ python tools/export-model/export.py \
 ```
 
 Erzeugt in `--out`: `<model>.pte`, `<id>.labels.json`, `<id>.metadata.json`
-(inkl. SHA-256) und `<id>.manifest.json` (fertiger `ota`-Eintrag fürs Manifest).
+(inkl. SHA-256) und `<id>.manifest.json` (fertiger Eintrag fürs Manifest).
 
 ## CI / Release
 
@@ -67,9 +67,8 @@ fertigen Manifest-Eintrag in der Job-Summary aus. Ablauf danach:
 
 1. Workflow mit `config` + `release_tag` starten.
 2. Aus der Job-Summary den Manifest-Eintrag in
-   `tools/fetch-models/models.manifest.json` übernehmen (für `distribution:
-   "bundled"` ggf. `distribution` umstellen).
-3. Commit/PR; `pnpm fetch-models` zieht gebündelte Artefakte vor dem Build.
+   `tools/fetch-models/models.manifest.json` übernehmen.
+3. Commit/PR; `pnpm fetch-models` zieht die Artefakte vor dem Build ins Bundle.
 
 ## Beispiel: CarForge (Marke + Modell)
 
@@ -81,8 +80,8 @@ Fakten-Lookup (#10); Top-5 ist hier praxisrelevanter als Top-1 (→ Top-k-UX).
 Dieses Feinmodell ist die zweite Stufe einer **Kaskade** (siehe
 `packages/ai-engine/cascade.ts`): zuerst klärt ein breites **Gate**-Modell
 „ist das überhaupt ein Fahrzeug?" (und lehnt Nicht-Autos ab – ein schmales
-Fahrzeugtyp-Modell könnte das nicht), erst dann wird dieses Feinmodell **lazy**
-geladen.
+Fahrzeugtyp-Modell könnte das nicht), erst dann wird dieses (ebenfalls gebündelte)
+Feinmodell **bei Bedarf** in den Speicher initialisiert.
 
 **Offene Mensch-/Geräte-Aufgaben (#9):** VMMRdb-Provenienz rechtlich gegenchecken,
 int8-Kalibrierung mit echten Bildern, Verifikation von Erkennungsqualität/Latenz

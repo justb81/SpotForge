@@ -33,9 +33,11 @@ forgeCard(photo, { guardrails, prompts })
 
 ## Zwei-Stufen-Kaskade (`cascade.ts`)
 
-- `createCascadeClassifier({ gate, gateConfig, loadFine })` — ein breites
+- `createCascadeClassifier({ gate, gateConfig, initFine })` — ein breites
   **Gate** klärt „gehört das in den Scope?" (z.B. „ist das ein Fahrzeug?"); erst
-  bei Annahme wird das schwere **Feinmodell** (Marke+Modell) **lazy** geladen.
+  bei Annahme wird das schwere **Feinmodell** (Marke+Modell) ausgeführt. Beide
+  Modelle sind **fest gebündelt**; `initFine` initialisiert das Feinmodell nur
+  **bei Bedarf** in den Speicher (aus dem Bundle, kein Netz).
 - `evaluateGate(result, { allow, minConfidence })` — Allowlist + Schwelle;
   lehnt Nicht-Scope-Objekte ab (Guardrail vor dem teuren Schritt).
 - Kategorie-neutral: die Allowlist kommt aus der `AppDefinition` (verdrahtet in
@@ -44,17 +46,15 @@ forgeCard(photo, { guardrails, prompts })
   Modell (ImageNet) ist das Gate für **alle** Apps; jede App liefert nur ihre
   Allowlist (Auto-App → Fahrzeug-Synsets, Tier-App → Tier-Synsets).
 
-## Modell-Lifecycle (`models/`)
+## Modell-Manifest (`models/`)
 
-- `parseManifest` — typisierte Sicht auf das Modell-Manifest (Schema v2).
-- `compareVersions` / `isModelCompatible` / `selectUpdate` — Versions- &
-  Kompatibilitätslogik für OTA-Updates.
-- `applyUpdate` — SHA-verifizierter Hintergrund-Bezug eines `ota`-Modells über
-  **injizierte I/O** (`ModelStorageIO`); das gebündelte Modell bleibt der
-  Offline-Fallback. Reine Logik, ohne RN-Import → unter vitest testbar.
+- `parseManifest` — typisierte, streng validierte Sicht auf das Modell-Manifest
+  (Schema v3). Reine Logik, ohne RN-Import → unter vitest testbar.
 
-Modelle werden per `tools/export-model` exportiert und als GitHub-Release-Asset
-gehostet ([ADR 0008](../../docs/adr/0008-modell-export-pipeline-und-lifecycle.md)).
+Modelle werden per `tools/export-model` exportiert, als GitHub-Release-Asset
+gehostet und vor dem Build via `tools/fetch-models` **fest ins APK gebündelt** (je
+Variante; kein Nachladen/OTA, siehe
+[ADR 0008](../../docs/adr/0008-modell-export-pipeline-und-lifecycle.md)).
 
 ## Grenzen
 
@@ -68,11 +68,12 @@ kein Foto-Upload (on-device).
 
 ## Status
 
-**Klassifikation + Modell-Lifecycle (#9):** `Classifier`-Vertrag
+**Klassifikation + Modell-Bündelung (#9):** `Classifier`-Vertrag
 (`classify({ imageUri }) → { label, confidence, candidates }`, Top-k, entkoppelt
 von den Domänentypen) plus `createClassifier(model, options?)` für eingebautes
 ImageNet-Basismodell **und** eigene Modelle (`fromCustomModel` mit Label-Satz +
-Normalisierung). Dazu Manifest-Parser und OTA-Lifecycle (`models/`).
+Normalisierung). Dazu die Zwei-Stufen-Kaskade und der Manifest-Parser (`models/`);
+Modelle werden fest gebündelt (kein OTA).
 
 Offen: `FactLookup`, `CardArtGenerator` und die `forgeCard`-Orchestrierung
 (#8/#10/#11). Produktionsreifes Fahrzeugmodell + Geräte-Verifikation sind

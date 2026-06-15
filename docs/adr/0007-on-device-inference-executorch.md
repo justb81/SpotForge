@@ -59,8 +59,8 @@ gepflegt von Software Mansion) – New-Architecture-/Expo-nativ.
   Gelegenheit nachzuziehen.
 - Modellformat ist `.pte` (statt `.onnx`/`.ort`); `tools/fetch-models`,
   `data/models` und Metro-`assetExts` sind entsprechend umgestellt.
-- Card-Art-Generierung (#11) und der Modell-Lifecycle/OTA (#9) bauen ebenfalls
-  auf ExecuTorch auf.
+- Card-Art-Generierung (#11) und die Fahrzeug-Klassifikation/Modell-Export (#9)
+  bauen ebenfalls auf ExecuTorch auf.
 - Abhängigkeiten: `react-native-executorch`,
   `react-native-executorch-expo-resource-fetcher`, `expo-file-system`,
   `expo-asset`. Der ONNX-spezifische pnpm-Patch entfiel.

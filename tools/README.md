@@ -4,11 +4,11 @@ Build-, Codegen- und Seed-Skripte für das Monorepo.
 
 ## Skripte
 
-- **fetch-models** — lädt die **gebündelten** Modell-Artefakte gemäß
-  `fetch-models/models.manifest.json` (Schema v2) nach `data/models` und
+- **fetch-models** — lädt **alle** Modell-Artefakte gemäß
+  `fetch-models/models.manifest.json` (Schema v3) nach `data/models` und
   verifiziert sie per SHA-256 (`pnpm fetch-models`). Idempotent; läuft in CI vor
-  dem Bundle. `ota`-Modelle lädt der Lifecycle (`packages/ai-engine`) zur
-  Laufzeit. ✅ implementiert.
+  dem Bundle. Modelle werden fest ins APK gebündelt (kein Nachladen/OTA).
+  ✅ implementiert.
 - **export-model** — exportiert ein HuggingFace-Bildklassifikationsmodell nach
   ExecuTorch `.pte` (`torch.export → XNNPACK`, via `optimum-executorch`) plus
   Labels + Metadaten + fertigem Manifest-Eintrag. Python; läuft in CI

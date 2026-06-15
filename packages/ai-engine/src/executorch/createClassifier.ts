@@ -27,7 +27,8 @@ export interface BuiltinImageNetModel {
 /**
  * Ein eigen-exportiertes Modell (#9), z.B. fahrzeug-spezifisch
  * (`tools/export-model`). Labels reisen **mit dem Modell** (gleiche Version),
- * statt im App-Code zu stehen – Voraussetzung für OTA-Updates.
+ * statt im App-Code zu stehen – so ist das gebündelte Modell reproduzierbar und
+ * in sich konsistent.
  *
  * Modell-Kontrakt (von `react-native-executorch` gefordert): Input
  * `float32[1,3,H,W]` (RGB, nach `(pixel − mean) / std`), Output `float32[1,C]`

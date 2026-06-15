@@ -75,7 +75,7 @@ variants/
 data/
   categories/  Kategorien-/Attributschema (Source of Truth; vehicles.json = Referenz)
   facts/       Seeds für die Offline-Fakten-DB (SQLite + FTS5; .db nicht im Git)
-  models/      ML-Modell-Artefakte (per CDN/OTA; nicht im Git)
+  models/      ML-Modell-Artefakte (fest gebündelt je Variante; nicht im Git)
 docs/          Game-Design.md, architecture.md, repo-structure.md, adr/
 tools/         Build-/Codegen-/Seed-Skripte
 ```

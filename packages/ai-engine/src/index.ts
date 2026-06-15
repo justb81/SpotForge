@@ -10,7 +10,7 @@ export type {
 } from "./classifier";
 export { selectTopK } from "./select-top-k";
 
-// Zwei-Stufen-Kaskade (Gate → Lazy-Feinmodell).
+// Zwei-Stufen-Kaskade (Gate → Feinmodell, beide gebündelt).
 export { evaluateGate, createCascadeClassifier } from "./cascade";
 export type {
   GateConfig,
@@ -30,22 +30,9 @@ export type {
   CreateClassifierOptions,
 } from "./executorch/createClassifier";
 
-// Modell-Lifecycle (Versionierung, Kompatibilität, OTA-Updates).
+// Modell-Manifest (Source of Truth für die gebündelten Modell-Artefakte).
 export { MANIFEST_SCHEMA_VERSION, parseManifest } from "./models/manifest";
-export type {
-  ModelManifest,
-  ModelManifestEntry,
-  ModelArtifact,
-  ModelCompat,
-} from "./models/manifest";
-export { compareVersions, isModelCompatible, selectUpdate, applyUpdate } from "./models/lifecycle";
-export type {
-  InstalledModel,
-  UpdateContext,
-  UpdatePlan,
-  ModelStorageIO,
-  AppliedUpdate,
-} from "./models/lifecycle";
+export type { ModelManifest, ModelManifestEntry, ModelArtifact } from "./models/manifest";
 
 // Geplante Verträge (noch nicht implementiert):
 //

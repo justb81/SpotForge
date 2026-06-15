@@ -281,13 +281,15 @@ Suche:            MeiliSearch (Karten-Marktplatz-Suche)
 ### 10.3 On-Device-KI-Stack
 
 ```
-Framework:        ONNX Runtime Mobile
-Klassifikation:   YOLOv11-nano (Objekt-Erkennung) 
-                  MobileNetV4-Small (Fein-Klassifikation)
+Framework:        ExecuTorch (react-native-executorch, .pte)  [ADR 0007]
+Klassifikation:   Zwei-Stufen-Kaskade – breites ImageNet-Gate
+                  (EfficientNet-V2-S) + Feinmodell Marke/Modell
+                  (Jordo23, EfficientNet-B4)                  [ADR 0008]
 Card-Art:         LCM (Latent Consistency Model) quantisiert
                   oder Stable Diffusion v2.1 (4-bit quantized)
 Offline-DB:       SQLite + FTS5 (Full-Text-Search für Fakten)
-Model-Updates:    Background-Download via Expo OTA / CDN
+Modelle:          fest ins APK gebündelt je Variante – kein
+                  Nachladen/OTA                               [ADR 0008]
 ```
 
 ### 10.4 Datenschutz & Offline-First

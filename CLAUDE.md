@@ -251,8 +251,10 @@ Aus dem Car-Spotting-PoC (#48–#51) hart erkauft:
 
 ## Spielmechanik-Kurzreferenz (Details im GDD)
 
-- **Seltenheit:** `f(Realwelt-Seltenheit × App-Häufigkeit × Standort-Bonus)` →
-  C/U/R/E/L (GDD §5.3).
+- **Seltenheit:** `f(Realwelt-Seltenheit × lokale Spotting-Dichte)` → C/U/R/E/L
+  (GDD §5.3, ADR 0009). Der Standort steckt in der lokalen Spotting-Dichte
+  (gerundetes Standort-Raster + variantenspezifischer Ähnlichkeits-Schlüssel);
+  Berechnung beim Forgen server-autoritativ.
 - **Trumpf-Battle:** Attribut wählen, höherer Wert gewinnt den Stich;
   deterministisch über injizierten Seed (Client = Server).
 - **Spezialfähigkeiten** ab Rare: Turbo, Schild, Wildcard, Fusion, Scout (§6.3).

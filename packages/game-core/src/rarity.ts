@@ -78,10 +78,13 @@ function clamp01(value: number): number {
 
 /**
  * Eingaben des Seltenheits-Algorithmus (GDD §5.3):
- * `Seltenheit = f(Realwelt-Seltenheit × App-Häufigkeit × Standort-Bonus)`.
+ * `Seltenheit = f(Realwelt-Seltenheit × App-Häufigkeit)`.
  *
- * Alle numerischen Felder sind normalisiert auf [0,1] und werden vor der
- * Berechnung geklemmt (nicht-endliche Werte → 0).
+ * Der „Standort-Bonus" der ursprünglichen GDD-Formel ist **kein eigener
+ * Faktor** mehr: er steckt in {@link RarityInput.appSpottingFrequency}, die als
+ * **lokale Spotting-Dichte** definiert ist (siehe ADR 0009). Beide numerischen
+ * Felder sind normalisiert auf [0,1] und werden vor der Berechnung geklemmt
+ * (nicht-endliche Werte → 0).
  */
 export interface RarityInput {
   /**
@@ -90,15 +93,14 @@ export interface RarityInput {
    */
   realWorldRarity: number;
   /**
-   * Globale In-App-Spotting-Häufigkeit ∈ [0,1]: 0 = praktisch nie gespottet,
-   * 1 = sehr häufig gespottet. Häufiger = häufiger ⇒ **senkt** die Seltenheit.
+   * Lokale In-App-Spotting-Dichte ∈ [0,1]: 0 = an diesem Ort noch nie ein
+   * ähnliches Objekt geforgt, 1 = sehr dicht geforgt. Je dichter ähnliche
+   * Karten (variantenspezifischer Ähnlichkeits-Schlüssel) im Standort-Raster
+   * beieinander liegen, desto höher ⇒ desto **häufiger** ⇒ **senkt** die
+   * Seltenheit. Die Herleitung aus Zähler + Raster ist server-seitig (ADR 0009);
+   * `computeRarity` selbst bekommt den fertigen [0,1]-Wert.
    */
   appSpottingFrequency: number;
-  /**
-   * Standort-Bonus ∈ [0,1] (optional, Default 0): hebt die Seltenheit für
-   * untypische Fundorte (z.B. ein Wüstentier in Deutschland). 0 = kein Bonus.
-   */
-  locationBonus?: number;
   /**
    * Manuelle Kuratierung: erzwingt eine feste Stufe und übergeht die
    * Berechnung (z.B. ein Prototyp-Rennwagen als {@link Rarity.Legendary}).
@@ -111,17 +113,14 @@ export interface RarityInput {
  * ∈ [0,1] (0 = häufigstes, 1 = seltenstes Objekt) gemäß GDD §5.3.
  *
  * Im Sinne der GDD-Formel multiplikativ: die Realwelt-Seltenheit wird mit der
- * In-App-Knappheit `(1 − App-Häufigkeit)` multipliziert; der Standort-Bonus
- * hebt das Ergebnis proportional zum verbleibenden Spielraum, bleibt also
- * innerhalb [0,1]. Rein & deterministisch (kein I/O, keine Zufälligkeit).
+ * In-App-Knappheit `(1 − lokale Spotting-Dichte)` multipliziert. Rein &
+ * deterministisch (kein I/O, keine Zufälligkeit).
  */
 export function rarityPercentile(input: RarityInput): number {
   const realWorld = clamp01(input.realWorldRarity);
   const appFrequency = clamp01(input.appSpottingFrequency);
-  const locationBonus = clamp01(input.locationBonus ?? 0);
 
-  const base = realWorld * (1 - appFrequency);
-  return base + locationBonus * (1 - base);
+  return realWorld * (1 - appFrequency);
 }
 
 /**

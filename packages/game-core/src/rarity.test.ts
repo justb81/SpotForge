@@ -64,23 +64,13 @@ describe("RARITY_PERCENTILE_BANDS", () => {
 });
 
 describe("rarityPercentile (GDD §5.3)", () => {
-  it("multipliziert Realwelt-Seltenheit mit In-App-Knappheit (1 − Häufigkeit)", () => {
+  it("multipliziert Realwelt-Seltenheit mit In-App-Knappheit (1 − lokale Dichte)", () => {
     expect(rarityPercentile({ realWorldRarity: 0.9, appSpottingFrequency: 0 })).toBeCloseTo(0.9);
     expect(rarityPercentile({ realWorldRarity: 0.8, appSpottingFrequency: 0.5 })).toBeCloseTo(0.4);
   });
 
-  it("häufige In-App-Objekte sinken zum Common-Band, selbst bei hoher Realwelt-Seltenheit", () => {
+  it("dichte In-App-Standorte sinken zum Common-Band, selbst bei hoher Realwelt-Seltenheit", () => {
     expect(rarityPercentile({ realWorldRarity: 1, appSpottingFrequency: 1 })).toBe(0);
-  });
-
-  it("Standort-Bonus hebt proportional zum verbleibenden Spielraum (bleibt in [0,1])", () => {
-    // base = 0.5 → 0.5 + 0.5 × (1 − 0.5) = 0.75
-    expect(
-      rarityPercentile({ realWorldRarity: 0.5, appSpottingFrequency: 0, locationBonus: 0.5 }),
-    ).toBeCloseTo(0.75);
-    expect(
-      rarityPercentile({ realWorldRarity: 0.9, appSpottingFrequency: 0, locationBonus: 1 }),
-    ).toBe(1);
   });
 
   it("klemmt nicht-endliche und out-of-range-Eingaben", () => {
@@ -91,11 +81,11 @@ describe("rarityPercentile (GDD §5.3)", () => {
 
 describe("computeRarity (GDD §5.3)", () => {
   it("bildet die GDD-Beispiele ab", () => {
-    // VW Golf: häufig in der Realwelt und sehr oft gespottet → Common.
+    // VW Golf: häufig in der Realwelt und dicht geforgt → Common.
     expect(computeRarity({ realWorldRarity: 0.1, appSpottingFrequency: 0.9 })).toBe(Rarity.Common);
-    // Ferrari LaFerrari: selten in der Realwelt, kaum gespottet → Rare.
+    // Ferrari LaFerrari: selten in der Realwelt, kaum geforgt → Rare.
     expect(computeRarity({ realWorldRarity: 0.9, appSpottingFrequency: 0.05 })).toBe(Rarity.Rare);
-    // Bugatti Veyron: extrem selten, fast nie gespottet → Epic.
+    // Bugatti Veyron: extrem selten, fast nie geforgt → Epic.
     expect(computeRarity({ realWorldRarity: 0.98, appSpottingFrequency: 0.02 })).toBe(Rarity.Epic);
   });
 
@@ -111,14 +101,15 @@ describe("computeRarity (GDD §5.3)", () => {
   });
 
   it("ist deterministisch (gleiche Eingabe → gleiche Stufe)", () => {
-    const input = { realWorldRarity: 0.7, appSpottingFrequency: 0.3, locationBonus: 0.2 };
+    const input = { realWorldRarity: 0.7, appSpottingFrequency: 0.3 };
     expect(computeRarity(input)).toBe(computeRarity(input));
   });
 
-  it("ein Standort-Bonus kann eine Karte in ein höheres Band heben", () => {
-    const factors = { realWorldRarity: 0.82, appSpottingFrequency: 0 };
-    const without = computeRarity(factors); // base 0.82 → Rare
-    const withBonus = computeRarity({ ...factors, locationBonus: 0.9 }); // → 0.982 → Epic
-    expect(compareRarity(withBonus, without)).toBeGreaterThan(0);
+  it("steigende lokale Dichte senkt die Seltenheit (Forge-Reihenfolge am selben Ort)", () => {
+    // Gleiches Objekt, immer dichter geforgt → spätere Karten werden häufiger.
+    const realWorldRarity = 0.95;
+    const first = computeRarity({ realWorldRarity, appSpottingFrequency: 0.02 });
+    const later = computeRarity({ realWorldRarity, appSpottingFrequency: 0.95 });
+    expect(compareRarity(later, first)).toBeLessThan(0);
   });
 });

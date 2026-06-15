@@ -1,0 +1,70 @@
+name: Model Export
+
+# Exportiert ein On-Device-Klassifikationsmodell nach ExecuTorch .pte (#9) und
+# hängt das Ergebnis an ein GitHub Release – die Hosting-Quelle fürs
+# Modell-Manifest (tools/fetch-models/models.manifest.json). Das .pte gehört
+# nicht ins Git. Manuell auszulösen; der Export ist schwergewichtig (Torch).
+on:
+  workflow_dispatch:
+    inputs:
+      config:
+        description: "Export-Config unter tools/export-model/models/"
+        type: string
+        default: cars-jordo23.json
+      release_tag:
+        description: "GitHub-Release-Tag für die Asset-URLs (z.B. model-cars-stanford-vit-v1.0.0)"
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install export tooling
+        run: pip install -r tools/export-model/requirements.txt
+
+      - name: Export model → .pte + labels + manifest entry
+        run: |
+          python tools/export-model/export.py \
+            --config "tools/export-model/models/${{ github.event.inputs.config }}" \
+            --out dist/models \
+            --release-tag "${{ github.event.inputs.release_tag }}" \
+            --repo "${{ github.repository }}"
+
+      - name: Upload artifacts (workflow)
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-export
+          path: dist/models/*
+
+      - name: Manifest-Eintrag in die Job-Summary
+        run: |
+          {
+            echo '### Modell-Manifest-Eintrag'
+            echo 'In `tools/fetch-models/models.manifest.json` übernehmen:'
+            echo '```json'
+            cat dist/models/*.manifest.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # .pte + labels.json als Release-Assets hosten (Bezugsquelle fürs Manifest).
+      - name: Publish to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.inputs.release_tag }}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "$TAG" \
+              --notes "On-Device-Modell-Export (#9), erzeugt von tools/export-model."
+          fi
+          gh release upload "$TAG" dist/models/*.pte dist/models/*.labels.json --clobber

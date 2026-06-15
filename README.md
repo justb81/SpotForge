@@ -43,7 +43,7 @@ spotforge/
 ├── data/
 │   ├── categories/    Kategorien- & Attributschema (Source of Truth)
 │   ├── facts/         Seed-Daten für die Offline-Fakten-DB (SQLite)
-│   └── models/        ML-Modell-Artefakte (per CDN bezogen, nicht im Git)
+│   └── models/        ML-Modell-Artefakte (gebündelt je Variante, nicht im Git)
 ├── docs/              Architektur & Architecture Decision Records (ADR)
 └── tools/             Build-/Codegen-/Seed-Skripte
 ```

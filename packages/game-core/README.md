@@ -36,7 +36,8 @@ Domänentypen (#2) stehen: `Card`, `CategoryDefinition` + `AttributeDefinition`,
 (Platzhalter). Der Seltenheits-Algorithmus (#4) ist umgesetzt: `computeRarity`
 verdichtet `RarityInput` (Realwelt-Seltenheit × lokale Spotting-Dichte, plus
 manuelle Kuratierung) über `rarityPercentile` zu einer Stufe – rein &
-deterministisch. Die **lokale Spotting-Dichte** (Standort-Raster +
-variantenspezifischer Ähnlichkeits-Schlüssel) wird server-seitig berechnet und
-als fertiger [0,1]-Wert reingereicht (ADR 0009). Es folgen Trumpf-Engine und
-Upgrade-Logik.
+deterministisch. Die **lokale Spotting-Dichte** liefert `spottingDensity` aus
+einem adaptiven Standort-Raster (ADR 0009): die räumlichen Zähler je Stufe
+(grob→fein) ermittelt der Server, die Auswahl-Policy (`spottingDensity`,
+`SpottingDensityConfig`) bleibt eine reine Funktion hier. Es folgen Trumpf-Engine
+und Upgrade-Logik.

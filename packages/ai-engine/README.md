@@ -11,7 +11,8 @@ dieselbe Engine die Auto-App, eine Tier-App usw. bedient.
 
 ```
 forgeCard(photo, { guardrails, prompts })
-  → classifier.classify(photo)              // Kategorie + Unterkategorie + Objekt-ID
+  → classifier.classify(photo)              // rohe Label-Kandidaten { label, confidence, candidates } (#9, domänenfrei)
+  → Label → Kategorie/Unterkategorie/Objekt-ID  // Domänen-Mapping in forgeCard (#8)
   → guardrails: in allowed? über minConfidence?  // sonst rejectMessage, keine Karte
   → factLookup.find(objectId)               // reale Fakten aus der Offline-DB (+ factPrompt)
   → game-core.buildCard(facts)              // Stats, Seltenheit, ggf. Spezialfähigkeit

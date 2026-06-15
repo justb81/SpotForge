@@ -33,5 +33,7 @@ Keine internen. Konsumiert das Kategorienschema aus `data/categories`.
 
 Domänentypen (#2) stehen: `Card`, `CategoryDefinition` + `AttributeDefinition`,
 `Rarity` (inkl. `rarityFromPercentile` für die GDD-§5.3-Bänder) und `Ability`
-(Platzhalter). Es folgen Trumpf-Engine, Upgrade-Logik und der zusammengesetzte
-Seltenheits-Algorithmus `f(Realwelt × App-Häufigkeit × Standort)`.
+(Platzhalter). Der Seltenheits-Algorithmus (#4) ist umgesetzt: `computeRarity`
+verdichtet `RarityInput` (Realwelt-Seltenheit × In-App-Häufigkeit ×
+Standort-Bonus, plus manuelle Kuratierung) über `rarityPercentile` zu einer
+Stufe – rein & deterministisch. Es folgen Trumpf-Engine und Upgrade-Logik.

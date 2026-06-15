@@ -70,3 +70,70 @@ export function rarityFromPercentile(percentile: number): Rarity {
   }
   return result;
 }
+
+/** Klemmt auf [0,1]; nicht-endliche Werte (NaN/±∞) werden zu 0. */
+function clamp01(value: number): number {
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
+}
+
+/**
+ * Eingaben des Seltenheits-Algorithmus (GDD §5.3):
+ * `Seltenheit = f(Realwelt-Seltenheit × App-Häufigkeit × Standort-Bonus)`.
+ *
+ * Alle numerischen Felder sind normalisiert auf [0,1] und werden vor der
+ * Berechnung geklemmt (nicht-endliche Werte → 0).
+ */
+export interface RarityInput {
+  /**
+   * Realwelt-Seltenheit ∈ [0,1]: 0 = allgegenwärtig (z.B. VW Golf),
+   * 1 = extrem selten (z.B. Bugatti Veyron). Stammt aus der Fakten-DB.
+   */
+  realWorldRarity: number;
+  /**
+   * Globale In-App-Spotting-Häufigkeit ∈ [0,1]: 0 = praktisch nie gespottet,
+   * 1 = sehr häufig gespottet. Häufiger = häufiger ⇒ **senkt** die Seltenheit.
+   */
+  appSpottingFrequency: number;
+  /**
+   * Standort-Bonus ∈ [0,1] (optional, Default 0): hebt die Seltenheit für
+   * untypische Fundorte (z.B. ein Wüstentier in Deutschland). 0 = kein Bonus.
+   */
+  locationBonus?: number;
+  /**
+   * Manuelle Kuratierung: erzwingt eine feste Stufe und übergeht die
+   * Berechnung (z.B. ein Prototyp-Rennwagen als {@link Rarity.Legendary}).
+   */
+  curatedRarity?: Rarity;
+}
+
+/**
+ * Verdichtet die {@link RarityInput}-Faktoren zu einem Seltenheits-Perzentil
+ * ∈ [0,1] (0 = häufigstes, 1 = seltenstes Objekt) gemäß GDD §5.3.
+ *
+ * Im Sinne der GDD-Formel multiplikativ: die Realwelt-Seltenheit wird mit der
+ * In-App-Knappheit `(1 − App-Häufigkeit)` multipliziert; der Standort-Bonus
+ * hebt das Ergebnis proportional zum verbleibenden Spielraum, bleibt also
+ * innerhalb [0,1]. Rein & deterministisch (kein I/O, keine Zufälligkeit).
+ */
+export function rarityPercentile(input: RarityInput): number {
+  const realWorld = clamp01(input.realWorldRarity);
+  const appFrequency = clamp01(input.appSpottingFrequency);
+  const locationBonus = clamp01(input.locationBonus ?? 0);
+
+  const base = realWorld * (1 - appFrequency);
+  return base + locationBonus * (1 - base);
+}
+
+/**
+ * Reiner, deterministischer Seltenheits-Algorithmus (GDD §5.3): bildet die
+ * {@link RarityInput}-Faktoren auf eine {@link Rarity} ab. Identisch in App
+ * (offline) und Backend (autoritativ) nutzbar.
+ *
+ * Ist {@link RarityInput.curatedRarity} gesetzt, wird diese Stufe direkt
+ * zurückgegeben (manuell kuratierte Legendaries u.ä.); andernfalls bestimmt
+ * {@link rarityPercentile} → {@link rarityFromPercentile} die Stufe.
+ */
+export function computeRarity(input: RarityInput): Rarity {
+  if (input.curatedRarity !== undefined) return input.curatedRarity;
+  return rarityFromPercentile(rarityPercentile(input));
+}

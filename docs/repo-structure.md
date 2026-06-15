@@ -48,9 +48,10 @@ parametrisiert und liefert die gemeinsamen Text-Defaults.
 `Card`, `Category`, `Attribute`, `Rarity`, Seltenheitsalgorithmus,
 Trumpf-Battle-Engine, Upgrade-Logik. Single Source of Truth für die Regeln.
 
-### `packages/ai-engine` — On-Device-KI-Pipeline (generisch)
-Klassifikation → Guardrail-Prüfung → Fakten-Lookup → Karten-Generierung →
-Card-Art. Guardrails und Prompts kommen aus der `AppDefinition`.
+### `packages/ai-engine` — On-Device-Spot-Pipeline (generisch)
+Klassifikation (Zwei-Stufen-Kaskade) → Guardrail-Prüfung → **Draft-Karte**. Reale
+Stats und Seltenheit kommen beim **Forgen** vom Server (Online-Schmiede, ADR 0010).
+Guardrails und Prompts kommen aus der `AppDefinition`.
 
 ### `packages/api-client` — typisierter Backend-Client
 REST + WebSocket, teilt DTO-Typen mit dem Backend (inkl. `appId`-Kontext).

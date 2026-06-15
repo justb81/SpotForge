@@ -121,6 +121,9 @@ importers:
 
   packages/ai-engine:
     dependencies:
+      '@spotforge/app-config':
+        specifier: workspace:*
+        version: link:../app-config
       '@spotforge/game-core':
         specifier: workspace:*
         version: link:../game-core

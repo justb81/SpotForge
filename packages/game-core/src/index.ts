@@ -7,7 +7,7 @@ export * from "./attribute"; // AttributeDefinition, AttributeKey, AttributeValu
 export * from "./rarity"; // Rarity, RARITY_ORDER, rarityRank, compareRarity, rarityFromPercentile, RarityInput, rarityPercentile, computeRarity
 export * from "./spotting-density"; // SpottingDensityConfig, spottingDensity (lokale Dichte → appSpottingFrequency)
 export * from "./ability"; // Ability, AbilityKind, ABILITY_KINDS
-export * from "./card"; // Card, CardLevel, FOIL_LEVEL, isFoil, getAttributeValue
+export * from "./card"; // Card, CardStatus, CardLevel, FOIL_LEVEL, isFoil, getAttributeValue, PLACEHOLDER_RARITY, BuildDraftInput, buildDraft
 
 // Geplante Bereiche (noch nicht implementiert):
 //   export * from "./battle";  // Trumpf-Engine, Spielmodi

@@ -148,6 +148,16 @@ ergänzen.
   Inferenz über **ExecuTorch** (`react-native-executorch`) statt ONNX Runtime
   Mobile – ONNX-RN unterstützt die von Expo SDK 56 erzwungene New Architecture
   (Bridgeless) nicht. Modelle als gebündelte `.pte`.
+- **[ADR 0008](./docs/adr/0008-modell-export-pipeline-und-lifecycle.md):** Modell-
+  Export & Versionierung – Modelle **fest je Variante ins APK gebündelt** (kein
+  Nachladen/OTA); reproduzierbarer Export + Manifest.
+- **[ADR 0009](./docs/adr/0009-standortbasierte-spotting-haeufigkeit.md):**
+  Seltenheit = `realWorldRarity × (1 − lokale Spotting-Dichte)`; „Standort-Bonus"
+  entfällt, Dichte über adaptives Raster; Zähler server-autoritativ.
+- **[ADR 0010](./docs/adr/0010-online-schmiede-und-draft-lebenszyklus.md):**
+  **Spot offline → Forge online.** Spotten erzeugt on-device einen **Draft**; das
+  **Forgen** ist server-autoritativ (World Data + Seltenheit + Freigabe neuer
+  Karten), Lebenszyklus `draft → forged`.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).
@@ -255,6 +265,9 @@ Aus dem Car-Spotting-PoC (#48–#51) hart erkauft:
 
 ## Spielmechanik-Kurzreferenz (Details im GDD)
 
+- **Spot → Forge:** Spotten erzeugt **offline** einen **Draft** (Gate-Check +
+  Marke/Modell); das **Forgen** ist **online** und server-autoritativ (World Data +
+  Seltenheit + Freigabe neuer Karten), Status `draft → forged` (GDD §5.4, ADR 0010).
 - **Seltenheit:** `f(Realwelt-Seltenheit × lokale Spotting-Dichte)` → C/U/R/E/L
   (GDD §5.3, ADR 0009). Die lokale Spotting-Dichte kommt aus einem adaptiven
   Standort-Raster (0/1/2 Nachkommastellen, Drill-down ab Schwelle `N`) +

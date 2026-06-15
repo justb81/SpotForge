@@ -23,6 +23,8 @@ export interface AppDefinition {
   category: {
     primary: CategoryId;
     guardrails: CategoryGuardrails;
+    /** Modell-seitiges Gate (rohe Klassifikations-Labels), siehe {@link CategoryGate}. */
+    gate: CategoryGate;
   };
 
   /** Prompts für die On-Device-KI (@spotforge/ai-engine). */
@@ -71,6 +73,19 @@ export interface CategoryGuardrails {
   minConfidence: number;
   /** Mehrsprachige Meldung, wenn ein Objekt außerhalb des Scopes gespottet wird. */
   rejectMessage: LocalizedText;
+}
+
+/**
+ * Modell-seitiges **Gate** (ADR 0010, GDD §5.1): welche **rohen Klassifikations-
+ * Labels** des breiten Gate-Modells als „im Scope" gelten. Anders als
+ * {@link CategoryGuardrails.allowed} (Domänen-Kategorien) sind das die konkreten
+ * Label-Strings des Gate-Modells – für die Auto-App z.B. die ImageNet-Fahrzeug-
+ * klassen. Die Annahme-Schwelle teilt sich das Gate mit
+ * {@link CategoryGuardrails.minConfidence}.
+ */
+export interface CategoryGate {
+  /** Erlaubte rohe Gate-Labels (mind. eines), exakt im Vokabular des Gate-Modells. */
+  allow: string[];
 }
 
 export interface AiPrompts {

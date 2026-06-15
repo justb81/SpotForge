@@ -21,9 +21,11 @@ Artefakte hierher und verifiziert die Prüfsumme – in CI **vor dem Bundle** un
 lokal vor `pnpm dev`. `ota`-Modelle bezieht der Lifecycle
 (`packages/ai-engine/models`) zur Laufzeit (siehe [ADR 0008]).
 
-**Basismodell (#50):** `efficientnet_v2_s_int8.pte` (EfficientNet-V2-S, ImageNet,
-int8/XNNPACK; ExecuTorch-Export von Software Mansion) wird **gebündelt**
-ausgeliefert und von `react-native-executorch` geladen.
+**Generisches Gate-Modell (#50):** `efficientnet_v2_s_int8.pte` (EfficientNet-V2-S,
+ImageNet, int8/XNNPACK; ExecuTorch-Export von Software Mansion) wird **gebündelt**
+ausgeliefert. Es dient als **breite Gate-Stufe für alle SpotForge-Apps** („gehört
+das in den Scope?"); jede App liefert ihre Allowlist über die `AppDefinition`
+(siehe `packages/ai-engine/cascade.ts`, [ADR 0008]).
 
 **Fahrzeug-Modelle (#9):** entstehen per eigenem ExecuTorch-Export
 (`tools/export-model`: `torch.export → XNNPACK → .pte`, HF via

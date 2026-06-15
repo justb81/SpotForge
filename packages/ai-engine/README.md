@@ -40,6 +40,9 @@ forgeCard(photo, { guardrails, prompts })
   lehnt Nicht-Scope-Objekte ab (Guardrail vor dem teuren Schritt).
 - Kategorie-neutral: die Allowlist kommt aus der `AppDefinition` (verdrahtet in
   `forgeCard` #8) — hier steht keine fest kodierte Kategorie.
+- **Ein generisches Gate für ganz SpotForge (White-Label):** dasselbe breite
+  Modell (ImageNet) ist das Gate für **alle** Apps; jede App liefert nur ihre
+  Allowlist (Auto-App → Fahrzeug-Synsets, Tier-App → Tier-Synsets).
 
 ## Modell-Lifecycle (`models/`)
 

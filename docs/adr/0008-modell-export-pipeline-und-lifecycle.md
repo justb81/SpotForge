@@ -46,13 +46,18 @@ Wie kommen Updates aufs Gerät, ohne den Offline-Betrieb zu gefährden?
 5. **Zwei-Stufen-Kaskade (`packages/ai-engine/cascade.ts`).** Ein günstiges,
    **breites Gate-Modell** klärt zuerst „gehört das in den Scope?" (für CarForge:
    „ist das ein Fahrzeug?") und lehnt Nicht-Scope-Objekte ab; erst bei Annahme
-   wird das schwere **Feinmodell** (Marke+Modell) **lazy** geladen. Das Gate ist
-   eine eigene, separat versionier-/OTA-bare Stufe. Bewusst ein *breites* Modell
-   (ImageNet) statt eines schmalen Fahrzeugtyp-Modells: nur ein breites Modell
-   kann Nicht-Fahrzeuge zuverlässig ablehnen (ein Typ-Modell ohne Negativ-Klasse
-   würde z.B. eine Katze als „Auto" einstufen). Die Allowlist (erlaubte
-   Gate-Labels) kommt aus der `AppDefinition` – der ai-engine-Code bleibt
-   kategorie-neutral; die Verkettung übernimmt `forgeCard` (#8).
+   wird das schwere **Feinmodell** (Marke+Modell) **lazy** geladen.
+   - **Ein generisches Gate für ganz SpotForge (White-Label).** Dasselbe breite
+     Modell (ImageNet) dient als Gate für **alle** Apps; jede App liefert über
+     ihre `AppDefinition` nur ihre **Allowlist** (Auto-App → Fahrzeug-Synsets,
+     spätere Tier-App → Tier-Synsets). So bleibt der ai-engine-Code
+     kategorie-neutral und das Gate-Modell wird einmal gepflegt/gebündelt.
+   - Bewusst ein *breites* Modell statt eines schmalen Fahrzeugtyp-Modells: nur
+     ein breites Modell kann Nicht-Fahrzeuge zuverlässig ablehnen (ein
+     Typ-Modell ohne Negativ-Klasse würde z.B. eine Katze als „Auto" einstufen).
+   - Das Gate ist eine eigene, separat versionier-/OTA-bare Stufe; die
+     Verkettung (Gate-Allowlist aus der `AppDefinition`) übernimmt `forgeCard`
+     (#8).
 
 ## Begründung
 

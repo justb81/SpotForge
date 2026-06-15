@@ -1,0 +1,13 @@
+{
+  "id": "animals",
+  "name": "Tiere",
+  "emoji": "🦁",
+  "examples": ["Wildtiere", "Haustiere", "Vögel", "Insekten"],
+  "attributes": [
+    { "key": "weight",       "label": "Gewicht",         "unit": "kg",    "trumpfable": true, "higherIsBetter": true },
+    { "key": "speed",        "label": "Geschwindigkeit", "unit": "km/h",  "trumpfable": true, "higherIsBetter": true },
+    { "key": "lifespan",     "label": "Lebensspanne",    "unit": "Jahre", "trumpfable": true, "higherIsBetter": true },
+    { "key": "length",       "label": "Körperlänge",     "unit": "cm",    "trumpfable": true, "higherIsBetter": true },
+    { "key": "endangerment", "label": "Schutzstatus",    "unit": "Stufe", "trumpfable": true, "higherIsBetter": true }
+  ]
+}

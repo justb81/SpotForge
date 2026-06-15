@@ -49,6 +49,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Validate categories
+        run: pnpm validate-categories
+
       - name: Test
         run: pnpm test
 

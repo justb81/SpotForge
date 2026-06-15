@@ -15,7 +15,8 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "fetch-models": "node tools/fetch-models/index.mjs"
+    "fetch-models": "node tools/fetch-models/index.mjs",
+    "validate-categories": "node tools/validate-categories/index.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

@@ -176,6 +176,10 @@ festhalten (durchnummeriert).
 - Code soll dem umgebenden Stil entsprechen (Kommentar-Dichte, Naming, Idiome).
 - Commit-/PR-Sprache: Code/Doku überwiegend Deutsch (Projektkontext); technische
   Bezeichner Englisch.
+- **Issue-Closing-Keywords immer Englisch.** GitHub schließt verlinkte Issues
+  nur bei englischen Schlüsselwörtern automatisch: `Closes #N` / `Fixes #N` /
+  `Resolves #N`. Deutsche Formulierungen („Schließt #4") werden **nicht**
+  erkannt – im PR-Text daher stets das englische Keyword verwenden.
 - Branch-Konvention dieses Projekts: Entwicklung auf dem zugewiesenen
   `claude/*`-Feature-Branch; nicht direkt auf `main` pushen.
 - Build/Tasks (sobald implementiert): `pnpm dev | build | test | lint | typecheck`

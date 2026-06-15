@@ -19,11 +19,12 @@ Wie kommen Updates aufs Gerät, ohne den Offline-Betrieb zu gefährden?
 ## Entscheidung
 
 1. **Export-Pipeline (`tools/export-model`).** Ein Python-Tool exportiert ein
-   HuggingFace-Bildklassifikationsmodell per `optimum-executorch`
-   (`torch.export → XNNPACK → .pte`). Eine Export-Config (`models/<id>.json`)
-   fixiert Quellmodell + Revision; Labels und Normalisierung werden aus den
-   HF-Config-Dateien gelesen und reisen **mit dem Modell** (gleiche Version).
-   Läuft in CI (`model-export.yml`), nicht im Mobile-Bundle.
+   **fertiges** HuggingFace-Modell nach `.pte` (`torch.export → XNNPACK`) – zwei
+   Backends: `optimum` (transformers via `optimum-executorch`) und `timm`
+   (Checkpoint `.pth` direkt gelowert). **Kein eigenes Training.** Eine
+   Export-Config (`models/<id>.json`) fixiert Quellmodell + Revision; Labels und
+   Normalisierung reisen **mit dem Modell** (gleiche Version). Läuft in CI
+   (`model-export.yml`), nicht im Mobile-Bundle.
 
 2. **Hosting via GitHub Release.** Das `.pte` (und `labels.json`) wird als
    **Release-Asset** dieses Repos veröffentlicht – reproduzierbar, ohne
@@ -41,6 +42,17 @@ Wie kommen Updates aufs Gerät, ohne den Offline-Betrieb zu gefährden?
    Download mit injizierter I/O). Das gebündelte Modell bleibt der
    **Offline-Fallback** und wird nicht entfernt; ein OTA-Update schaltet erst
    nach erfolgreicher Verifikation um.
+
+5. **Zwei-Stufen-Kaskade (`packages/ai-engine/cascade.ts`).** Ein günstiges,
+   **breites Gate-Modell** klärt zuerst „gehört das in den Scope?" (für CarForge:
+   „ist das ein Fahrzeug?") und lehnt Nicht-Scope-Objekte ab; erst bei Annahme
+   wird das schwere **Feinmodell** (Marke+Modell) **lazy** geladen. Das Gate ist
+   eine eigene, separat versionier-/OTA-bare Stufe. Bewusst ein *breites* Modell
+   (ImageNet) statt eines schmalen Fahrzeugtyp-Modells: nur ein breites Modell
+   kann Nicht-Fahrzeuge zuverlässig ablehnen (ein Typ-Modell ohne Negativ-Klasse
+   würde z.B. eine Katze als „Auto" einstufen). Die Allowlist (erlaubte
+   Gate-Labels) kommt aus der `AppDefinition` – der ai-engine-Code bleibt
+   kategorie-neutral; die Verkettung übernimmt `forgeCard` (#8).
 
 ## Begründung
 
@@ -61,11 +73,14 @@ Wie kommen Updates aufs Gerät, ohne den Offline-Betrieb zu gefährden?
 - `createClassifier` unterscheidet eingebautes ImageNet-Basismodell
   (`fromModelName`) und eigene Modelle (`fromCustomModel` mit Label-Satz +
   Normalisierung) und liefert Top-k-Kandidaten.
+- **Feinmodell CarForge:** `Jordo23/vehicle-classifier` (EfficientNet-B4, 8.949
+  Klassen „Make Model Year", VMMRdb, MIT) – fertig, kein Training. Export über
+  das `timm`-Backend; als `ota`-Modell ausgeliefert.
 - **Mensch-/Geräte-Aufgaben (nicht agent-automatisierbar, bleiben in #9 offen):**
-  Auswahl/Fine-Tune eines produktionsreifen Fahrzeugmodells, Verifikation von
-  Erkennungsqualität und Inferenz-Latenz **auf echtem Gerät**, finales
-  Größen-/Performance-Budget. Das Stanford-Cars-ViT ist der erste, bewusst
-  begrenzte (Daten ~bis 2012) Beispiel-Export.
+  VMMRdb-Provenienz rechtlich gegenchecken, int8-Kalibrierung mit echten Bildern,
+  Verifikation von Erkennungsqualität und Inferenz-Latenz **auf echtem Gerät**,
+  finales Größen-/Performance-Budget, sowie die konkrete Gate-Allowlist +
+  Verkettung in `forgeCard` (#8).
 - `classificationHint` (AppDefinition) wirkt auf ein Fix-Label-Modell nicht
   (keine Freitext-Steuerung möglich); seine Einbindung gehört in die
   `forgeCard`-Orchestrierung (#8) und ist dort zu lösen.

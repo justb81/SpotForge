@@ -31,6 +31,16 @@ forgeCard(photo, { guardrails, prompts })
 - `Fallback` — unbekanntes/abgelehntes Objekt → Guardrail-Meldung bzw.
   Community-Meldung + manuelle Kategorisierung.
 
+## Zwei-Stufen-Kaskade (`cascade.ts`)
+
+- `createCascadeClassifier({ gate, gateConfig, loadFine })` — ein breites
+  **Gate** klärt „gehört das in den Scope?" (z.B. „ist das ein Fahrzeug?"); erst
+  bei Annahme wird das schwere **Feinmodell** (Marke+Modell) **lazy** geladen.
+- `evaluateGate(result, { allow, minConfidence })` — Allowlist + Schwelle;
+  lehnt Nicht-Scope-Objekte ab (Guardrail vor dem teuren Schritt).
+- Kategorie-neutral: die Allowlist kommt aus der `AppDefinition` (verdrahtet in
+  `forgeCard` #8) — hier steht keine fest kodierte Kategorie.
+
 ## Modell-Lifecycle (`models/`)
 
 - `parseManifest` — typisierte Sicht auf das Modell-Manifest (Schema v2).

@@ -10,7 +10,7 @@ on:
       config:
         description: "Export-Config unter tools/export-model/models/"
         type: string
-        default: cars-stanford-vit.json
+        default: cars-jordo23.json
       release_tag:
         description: "GitHub-Release-Tag für die Asset-URLs (z.B. model-cars-stanford-vit-v1.0.0)"
         type: string

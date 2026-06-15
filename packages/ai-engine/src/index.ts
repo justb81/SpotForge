@@ -10,6 +10,16 @@ export type {
 } from "./classifier";
 export { selectTopK } from "./select-top-k";
 
+// Zwei-Stufen-Kaskade (Gate → Lazy-Feinmodell).
+export { evaluateGate, createCascadeClassifier } from "./cascade";
+export type {
+  GateConfig,
+  GateDecision,
+  CascadeResult,
+  CascadeClassifier,
+  CascadeOptions,
+} from "./cascade";
+
 export { createClassifier } from "./executorch/createClassifier";
 export type {
   ModelSource,

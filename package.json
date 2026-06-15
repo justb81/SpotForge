@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "fetch-models": "node tools/fetch-models/index.mjs",
-    "validate-categories": "node tools/validate-categories/index.mjs"
+    "validate-categories": "node tools/validate-categories/index.mjs",
+    "validate-variants": "tsx tools/validate-variants/index.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
@@ -26,6 +27,7 @@
     "eslint": "^10.0.0",
     "globals": "^17.6.0",
     "prettier": "^3.3.0",
+    "tsx": "^4.19.0",
     "turbo": "^2.1.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.10.0",

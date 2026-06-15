@@ -52,6 +52,9 @@ jobs:
       - name: Validate categories
         run: pnpm validate-categories
 
+      - name: Validate variants
+        run: pnpm validate-variants
+
       - name: Test
         run: pnpm test
 

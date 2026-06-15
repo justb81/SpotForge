@@ -29,6 +29,9 @@ importers:
       prettier:
         specifier: ^3.3.0
         version: 3.8.3
+      tsx:
+        specifier: ^4.19.0
+        version: 4.22.4
       turbo:
         specifier: ^2.1.0
         version: 2.9.16
@@ -136,6 +139,13 @@ importers:
       '@spotforge/game-core':
         specifier: workspace:*
         version: link:../game-core
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.1
 
   packages/app-shell:
     dependencies:

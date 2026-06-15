@@ -67,10 +67,42 @@ Die App (`apps/mobile`) lädt die aktive Variante zur Build-Zeit über
 `APP_VARIANT`. Validierung stellt sicher, dass eine Variante vollständig ist,
 bevor gebaut wird.
 
+## Validierung & Loader
+
+`validateAppDefinition(input, options?)` prüft eine Definition gegen ein
+zod-Schema: Pflichtfelder, gültige `CategoryId`s, `minConfidence` ∈ [0, 1],
+Guardrail-Konsistenz (primäre Kategorie ∈ `allowed`) und – mit injizierter
+Existenzprüfung – das Vorhandensein der Asset-Dateien. Es sammelt **alle**
+Probleme als `{ path, message }`. `assertAppDefinition(...)` wirft daraus einen
+`AppDefinitionError` mit klarer Mehrzeilen-Meldung.
+
+```ts
+import { validateAppDefinition, assertAppDefinition } from "@spotforge/app-config";
+
+const result = validateAppDefinition(input);
+if (!result.valid) console.error(result.issues);
+```
+
+Der **Loader** löst `APP_VARIANT` → `variants/<name>/app.definition` auf, lädt
+und validiert die Variante (inkl. Asset-Existenz). Er nutzt `node:`-APIs und ist
+daher **nicht** vom RN-tauglichen Paket-Einstieg re-exportiert, sondern liegt
+unter dem Subpfad `@spotforge/app-config/loader` (nur Build-Zeit/Node):
+
+```ts
+import { loadVariant } from "@spotforge/app-config/loader";
+
+const { definition } = await loadVariant(process.env.APP_VARIANT ?? "cars");
+```
+
+`pnpm validate-variants` validiert alle Varianten auf der Platte und bricht den
+CI-Build mit klarer Meldung ab, wenn eine unvollständig/ungültig ist.
+
 ## Abhängigkeiten
 
-`@spotforge/game-core` (für `CategoryId`).
+`@spotforge/game-core` (für `CategoryId`/`CATEGORY_IDS`), `zod` (Schema). Der
+Loader zusätzlich Node-Built-ins (`node:fs`/`node:path`/`node:url`).
 
 ## Status
 
-Schema + `defineApp`-Helper definiert; Laufzeit-Validierung folgt.
+Schema, `defineApp`-Helper, Laufzeit-Validierung und Build-Zeit-Loader
+implementiert; Tests gegen `variants/cars`.

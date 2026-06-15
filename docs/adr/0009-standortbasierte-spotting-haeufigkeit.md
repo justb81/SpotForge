@@ -33,8 +33,9 @@ Zwei Beobachtungen treiben das Design:
    `realWorldRarity` (aus der Fakten-DB) bleibt als zweiter Faktor erhalten.
 
 **2. Lokale Spotting-Dichte.** Jede Karte trägt den **gerundeten** Fundort
-   (long/lat auf **1 Nachkommastelle**, z.B. `48.1 / 9.5`; Raster ≈ 82 km² bei
-   ~48° N — bewusst grob, DSGVO-konform/„nur grobe Standortdaten"). Je dichter
+   (long/lat auf **2 Nachkommastellen**, z.B. `48.12 / 9.51`; Raster ≈ 0,8 km²
+   bei ~48° N — stadtteilgenau; exakte Koordinaten werden nicht gespeichert).
+   Je dichter
    **ähnliche** Karten im selben Raster (innerhalb eines kategorie-spezifischen
    `locationFrequencyRadius`) bereits geforgt wurden, desto höher die Dichte ⇒
    desto häufiger ⇒ desto **geringer** die Seltenheit neuer Karten dort.
@@ -66,8 +67,10 @@ Zwei Beobachtungen treiben das Design:
 - **GDD-treu, aber präzise:** Behält Realwelt-Seltenheit × Häufigkeit bei und
   füllt die undefinierte Lücke „Standort-Bonus" mit einer konkreten,
   messbaren Größe.
-- **Privacy-first:** 1-Nachkommastellen-Raster ist gröber als die meisten
-  Stadt-PLZ; feinere Koordinaten werden nicht gespeichert.
+- **Privacy-first:** Es werden ausschließlich auf 2 Nachkommastellen gerundete
+  Koordinaten (~0,8 km², stadtteilgenau) gespeichert, nie die exakte Position.
+  Granular genug, um Spot-Cluster (Museum/Händlerhof) zu erfassen, ohne
+  Bewegungsprofile auf Adressebene zu ermöglichen.
 - **White-Label-konform:** Ähnlichkeits-Schlüssel und `locationFrequencyRadius`
   sind Konfiguration, kein gemeinsamer Code.
 

@@ -225,12 +225,14 @@ Aus dem Car-Spotting-PoC (#48–#51) hart erkauft:
   bis 1.24.3), crashen dann mit **„Cannot read property 'install' of null"** beim
   Import. → On-Device-KI läuft über **ExecuTorch** ([ADR 0007](./docs/adr/0007-on-device-inference-executorch.md)).
   Neue native Libs vorab auf Bridgeless-Tauglichkeit prüfen.
-- **On-Device-Test geht nur über ein echtes Gerät** – die Agent-Umgebung kann
-  keine App ausführen. Test-APK baut **`.github/workflows/poc-android-apk.yml`**
-  (ohne Expo-Cloud: `expo prebuild` + `gradlew assembleRelease`) als
-  herunterladbares Actions-Artefakt; jeder Build trägt eine eindeutige Version
-  (`0.1.0-build.<run>`), damit Sideload-Updates sauber durchlaufen. Akzeptanz-
-  kriterien „auf echtem Gerät" verifiziert der Mensch, nicht der Agent.
+- **APK direkt im Agent bauen.** Die Umgebung hat Android SDK (`ANDROID_HOME`,
+  `ANDROID_SDK_ROOT`) + System-Gradle vorinstalliert. Fehlende SDK-Komponenten
+  per `sdkmanager` nachrüsten (z.B. `"build-tools;35.0.0" "platforms;android-35"`),
+  dann `expo prebuild --platform android --no-install` + `gradlew assembleRelease`
+  direkt ausführen. Das APK anschließend per `adb install` oder Artefakt-Download
+  sideloaden. Kein Emulator verfügbar – Akzeptanzkriterien auf echtem Gerät
+  verifiziert der **Mensch**. `.github/workflows/poc-android-apk.yml` bleibt
+  für automatisierte CI-Builds erhalten.
 - **Standalone-Release crasht still?** Kein Metro-Overlay vorhanden → eine
   Error-Boundary, die Fehler **auf den Bildschirm** schreibt, ist Gold wert.
   Crasht es nativ **vor** dem Rendern (Splash → zu), hilft nur `adb logcat`.

@@ -1,14 +1,13 @@
 name: PoC Android APK
 
 # Baut – ohne Expo-Cloud/EAS – ein eigenständiges, installierbares Android-APK
-# direkt im Runner und stellt es als herunterladbares Workflow-Artefakt bereit.
-# Gedacht zum schnellen Testen des Car-Spotting-PoC (#48–#51) auf einem echten
-# Gerät: APK aus dem Run laden, sideloaden, offline starten.
+# direkt im CI-Runner und stellt es als herunterladbares Workflow-Artefakt bereit.
+# Gedacht zum schnellen Testen auf einem echten Gerät: APK aus dem Run laden,
+# sideloaden, offline starten.
 #
-# Profil `cars-preview`: JS-Bundle ist eingebettet (kein Metro-Dev-Server nötig),
-# die nativen Module (ONNX in #50, Kamera in #49) sind enthalten. Release wird
-# – wie im Expo-Bare-Template – mit dem Debug-Keystore signiert; das genügt zum
-# Sideloaden, ist aber kein Store-Build (dafür bleibt EAS via mobile-build.yml).
+# JS-Bundle ist eingebettet (kein Metro-Dev-Server nötig), alle nativen Module
+# (ExecuTorch, Kamera) sind enthalten. Release wird mit dem Debug-Keystore
+# signiert – genügt zum Sideloaden, kein Store-Build (dafür EAS via mobile-build.yml).
 on:
   workflow_dispatch:
     inputs:
@@ -37,11 +36,11 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
 
-      - name: Setup Java (JDK 17)
+      - name: Setup Java (JDK 21)
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -49,15 +48,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Bezieht das gebündelte ONNX-Modell (#50). Muss VOR dem Bundle laufen, da
-      # App.tsx es per statischem require einbindet (Binary liegt nicht im Git).
+      # Bezieht die gebündelten ExecuTorch-Modelle (.pte). Muss VOR dem Bundle
+      # laufen, da App.tsx sie per statischem require einbindet (nicht im Git).
       - name: Fetch ML models
         run: pnpm fetch-models
 
       # Erzeugt das native android/-Projekt aus app.config/Plugins. --no-install,
-      # weil die JS-Abhängigkeiten oben bereits via pnpm installiert sind.
-      # Hinweis: Schlägt das Autolinking der nativen Module unter pnpm fehl,
-      # ist `node-linker=hoisted` (root .npmrc) der dokumentierte Fallback.
+      # weil JS-Abhängigkeiten bereits via pnpm installiert sind.
+      # Schlägt pnpm-Autolinking für native Module fehl → `node-linker=hoisted`
+      # in root .npmrc als Fallback setzen.
       - name: Expo prebuild (android)
         working-directory: apps/mobile
         env:

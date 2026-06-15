@@ -29,6 +29,6 @@ Client *und* Server benötigt (Offline-Battle vs. autoritative PvP-Validierung).
 ## Konsequenzen
 
 - Disziplin bei Modulgrenzen nötig (`game-core` bleibt frameworkfrei).
-- ONNX-Runtime-Integration erfolgt über native RN-Module in `ai-engine`.
+- On-Device-Inferenz über **ExecuTorch** (`.pte`) als native RN-Module in `ai-engine`; Details in [ADR 0007](./0007-on-device-inference-executorch.md).
 - Falls später native Performance kritisch wird, kann die App via Expo
   Dev-Client / Bare-Workflow native Module einbinden, ohne die Domäne zu berühren.

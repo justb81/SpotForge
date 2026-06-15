@@ -31,4 +31,7 @@ Keine internen. Konsumiert das Kategorienschema aus `data/categories`.
 
 ## Status
 
-Gerüst – öffentliche Typ-Signaturen werden als Nächstes definiert.
+Domänentypen (#2) stehen: `Card`, `CategoryDefinition` + `AttributeDefinition`,
+`Rarity` (inkl. `rarityFromPercentile` für die GDD-§5.3-Bänder) und `Ability`
+(Platzhalter). Es folgen Trumpf-Engine, Upgrade-Logik und der zusammengesetzte
+Seltenheits-Algorithmus `f(Realwelt × App-Häufigkeit × Standort)`.

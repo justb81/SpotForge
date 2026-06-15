@@ -95,7 +95,7 @@ Foto-Input
 [Karten-Generator] → Layout + Stats + Seltenheits-Algorithmus
     │
     ▼
-[Card-Art-Generator] ← leichtgewichtiges diffusion-basiertes Modell (ONNX)
+[Card-Art-Generator] ← leichtgewichtiges diffusion-basiertes Modell (ExecuTorch/.pte)
     │
     ▼
 Fertige Sammelkarte → lokale Kartenbibliothek
@@ -105,7 +105,7 @@ Fertige Sammelkarte → lokale Kartenbibliothek
 
 - **Klassifikationsmodell:** YOLO v11 nano oder MobileNetV4 (< 50 MB, < 2s Inference)
 - **Fakten-Datenbank:** Offline-SQLite mit regelmäßigen Sync-Updates (WLAN)
-- **Card-Art:** ONNX-Runtime mit komprimiertem Stable-Diffusion-Modell (< 200 MB)
+- **Card-Art:** ExecuTorch (`.pte`) mit komprimiertem Stable-Diffusion-Modell (< 200 MB)
 - **Seltenheits-Algorithmus:** Berücksichtigt Realwelt-Seltenheit + globale Spotting-Häufigkeit in der App
 - **Fallback:** Bei unbekanntem Objekt → Community-Meldung + manuelle Kategorisierung
 

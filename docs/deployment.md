@@ -126,7 +126,8 @@ APP_VARIANT=cars pnpm --filter @spotforge/mobile dev
 
 Gemäß White-Label-Prinzip (kein Code):
 
-1. `variants/<name>/` mit `app.definition.ts` + `assets/` anlegen.
+1. `variants/<name>/` mit `app.definition.ts` + `branding.config.ts` (Theme/Assets,
+   nur Abweichungen von `variants/_default`, ADR 0011) + `assets/` anlegen.
 2. In `eas.json` die drei Profile `<name>-production|preview|development` ergänzen
    (analog zu `cars-*`), jeweils mit `env.APP_VARIANT=<name>`.
 3. `eas init` für die neue Variante (eigene EAS-Projekt-ID).

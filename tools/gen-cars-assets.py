@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Leitet alle CarForge-Grafiken aus der Marken-Quelle `carforge.png` ab.
+"""Leitet die CarForge-Marken-Grafiken aus der Quelle `carforge.png` ab.
 
 Einzige Quelle ist `variants/cars/assets/carforge.png` (weißes Logo auf
-Schwarz). Daraus werden Icon, Splash, In-App-Logo, Hintergrund und die fünf
-Seltenheits-Kartenrahmen erzeugt – kategorie-spezifisch, daher in der Variante.
+Schwarz). Daraus werden Icon, Splash, In-App-Logo und Hintergrund erzeugt. Die
+kategorie-neutralen Seltenheits-Kartenrahmen liegen NICHT hier, sondern als
+generische Baseline in `packages/ui/assets/frames/` (siehe
+`tools/gen-ui-frames.py`).
 
 Aufruf:  python3 tools/gen-cars-assets.py
 """
@@ -20,12 +22,6 @@ SRC = os.path.join(ASSETS, "carforge.png")
 BG = (14, 14, 14)          # #0E0E0E background
 SURFACE = (28, 28, 30)     # #1C1C1E surface
 PRIMARY = (225, 6, 0)      # #E10600 Racing-Rot
-ACCENT = (255, 212, 0)     # #FFD400 gelb
-
-
-def hx(c: str) -> tuple[int, int, int]:
-    c = c.lstrip("#")
-    return tuple(int(c[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
 
 
 def lighten(c, f):
@@ -150,99 +146,13 @@ def make_background(logo):
     base.convert("RGB").save(os.path.join(ASSETS, "background.png"))
 
 
-# ---------------------------------------------------------------- card frames
-RARITIES = {
-    "common":    hx("#B8BEC9"),
-    "uncommon":  hx("#36D399"),
-    "rare":      hx("#3B9DFF"),
-    "epic":      hx("#B061FF"),
-    "legendary": ACCENT,
-}
-TIER = {"common": 0, "uncommon": 1, "rare": 2, "epic": 3, "legendary": 4}
-
-
-def rounded_mask(size, box, radius):
-    m = Image.new("L", size, 0)
-    ImageDraw.Draw(m).rounded_rectangle(box, radius=radius, fill=255)
-    return m
-
-
-def make_frame(name, color):
-    W, H = 750, 1050
-    tier = TIER[name]
-    margin = 16
-    border = 22 + tier * 3            # höhere Seltenheit -> kräftigerer Rahmen
-    radius = 46
-    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-
-    # 1) Glow (stärker mit Seltenheit)
-    glow_strength = 90 + tier * 38
-    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(glow).rounded_rectangle(
-        [margin, margin, W - margin, H - margin],
-        radius=radius, outline=color + (255,), width=border + 10,
-    )
-    glow = glow.filter(ImageFilter.GaussianBlur(16 + tier * 4))
-    glow.putalpha(glow.split()[3].point(lambda p: int(p * glow_strength / 255)))
-    out.alpha_composite(glow)
-
-    # 2) Rahmen-Ring (metallischer Vertikalverlauf)
-    outer = rounded_mask((W, H), [margin, margin, W - margin, H - margin], radius)
-    inner = rounded_mask(
-        (W, H),
-        [margin + border, margin + border, W - margin - border, H - margin - border],
-        max(8, radius - border // 2),
-    )
-    ring = Image.new("L", (W, H), 0)
-    ring.paste(outer, (0, 0))
-    ring.paste(Image.new("L", (W, H), 0), (0, 0), inner)
-    grad = vgrad((W, H), lighten(color, 0.55), darken(color, 0.35)).convert("RGBA")
-    out.paste(grad, (0, 0), ring)
-
-    # 3) Bevel-Linien (heller außen, dunkler innen)
-    d = ImageDraw.Draw(out)
-    d.rounded_rectangle(
-        [margin, margin, W - margin, H - margin], radius=radius,
-        outline=lighten(color, 0.7) + (200,), width=2,
-    )
-    d.rounded_rectangle(
-        [margin + border, margin + border, W - margin - border, H - margin - border],
-        radius=max(8, radius - border // 2),
-        outline=darken(color, 0.55) + (220,), width=2,
-    )
-
-    # 4) Eck-/Mittel-Edelsteine (Rauten) als Seltenheits-Akzent
-    def gem(cx, cy, r):
-        pts = [(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)]
-        d.polygon(pts, fill=lighten(color, 0.5) + (255,),
-                  outline=darken(color, 0.4) + (255,))
-        d.polygon([(cx, cy - r // 2), (cx + r // 2, cy), (cx, cy + r // 2),
-                   (cx - r // 2, cy)], fill=(255, 255, 255, 230))
-
-    gr = 16 + tier * 2
-    cy_top = margin + border // 2
-    cy_bot = H - margin - border // 2
-    gem(W // 2, cy_top, gr)
-    gem(W // 2, cy_bot, gr)
-    # ab Rare zusätzliche Eck-Akzente
-    if tier >= 2:
-        for cx in (margin + border // 2, W - margin - border // 2):
-            gem(cx, cy_top, gr - 4)
-            gem(cx, cy_bot, gr - 4)
-
-    out.save(os.path.join(ASSETS, "frames", f"{name}.png"))
-
-
 def main():
-    os.makedirs(os.path.join(ASSETS, "frames"), exist_ok=True)
     logo = load_logo()
     make_icon(logo)
     make_logo(logo)
     make_splash(logo)
     make_background(logo)
-    for name, color in RARITIES.items():
-        make_frame(name, color)
-    print("CarForge-Grafiken erzeugt.")
+    print("CarForge-Marken-Grafiken erzeugt.")
 
 
 if __name__ == "__main__":

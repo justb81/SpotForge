@@ -51,19 +51,7 @@ function makeAppDef(): AppDefinition {
       gate: { allow: ["sports car", "pickup"] },
     },
     ai: { cardArtPrompt: "art {objectName}", factPrompt: "facts {objectName}" },
-    theme: {
-      colors: {
-        primary: "#E10600",
-        secondary: "#1A1A1A",
-        background: "#0E0E0E",
-        surface: "#1C1C1E",
-        text: "#FFFFFF",
-        accent: "#FFD400",
-      },
-      typography: { fontFamily: "Inter" },
-    },
     content: {},
-    assets: { icon: "i.png", splash: "s.png", logo: "l.png" },
   };
 }
 

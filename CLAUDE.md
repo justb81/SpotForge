@@ -63,7 +63,7 @@ apps/
   mobile/      generischer Expo-Host – baut JEDE App via APP_VARIANT
   backend/     zentraler, mandantenfähiger Fastify-Server (appId-skopiert)
 packages/
-  app-config/  AppDefinition-Schema (Guardrails, Prompts, Theme, Texte, Assets) – HERZSTÜCK
+  app-config/  AppDefinition (Guardrails, Prompts, Texte) + Branding (Theme/Assets) + Loader – HERZSTÜCK
   app-shell/   die komplette generische App (Screens/Flows), kategorie-neutral
   game-core/   reine Spiel- & Kartendomäne (Card, Rarity, Trumpf-Engine)
   ai-engine/   On-Device-Pipeline (generisch; nimmt Guardrails/Prompts)
@@ -71,7 +71,8 @@ packages/
   ui/          themebares Design-System & Kartenrendering
   config/      geteilte tsconfig / eslint / prettier
 variants/
-  cars/        CarForge – erste & einzige App (nur app.definition.ts + assets/)
+  _default/    generische Branding-Basis (Theme + Kartenrahmen); keine eigene App
+  cars/        CarForge – erste & einzige App (app.definition.ts + branding.config.ts + assets/)
 data/
   categories/  Kategorien-/Attributschema (Source of Truth; vehicles.json = Referenz)
   facts/       Seeds für die Offline-Fakten-DB (SQLite + FTS5; .db nicht im Git)
@@ -117,8 +118,10 @@ game-core ───────▶ (nichts – Wurzel)
 
 1. `variants/<name>/app.definition.ts` mit `defineApp({ … })` aus
    `@spotforge/app-config` anlegen (Identität, Kategorie + Guardrails,
-   KI-Prompts, Theme, Text-Overrides, Asset-Pfade).
-2. Assets nach `variants/<name>/assets/`.
+   KI-Prompts, Text-Overrides).
+2. `variants/<name>/branding.config.ts` mit `defineBranding({ … })` anlegen –
+   **nur Abweichungen** von `variants/_default` (Theme + marken-spezifische Assets;
+   Kartenrahmen werden geerbt). Assets nach `variants/<name>/assets/` (ADR 0011).
 3. Build-Profil in `apps/mobile/eas.json` ergänzen (`"env": { "APP_VARIANT": "<name>" }`).
 4. `APP_VARIANT=<name> pnpm dev` bzw. `eas build --profile <name>`.
 
@@ -158,6 +161,10 @@ ergänzen.
   **Spot offline → Forge online.** Spotten erzeugt on-device einen **Draft**; das
   **Forgen** ist server-autoritativ (World Data + Seltenheit + Freigabe neuer
   Karten), Lebenszyklus `draft → forged`.
+- **[ADR 0011](./docs/adr/0011-branding-config-und-basis-variante.md):** Theme &
+  Assets als **Branding-Config** aus der `AppDefinition` herausgelöst;
+  `variants/_default` als generische Basis, per Deep-Merge von Varianten
+  überschrieben (`resolveBranding`).
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

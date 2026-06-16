@@ -3,12 +3,25 @@
 // TypeScript geschriebene Variantendefinition zur Config-Zeit nicht laden.
 import "tsx/cjs";
 import type { ExpoConfig } from "expo/config";
+import { resolveBranding } from "@spotforge/app-config";
 
 // Welche App gebaut wird, bestimmt APP_VARIANT (Default: cars, die einzige
 // aktuelle Variante). Die Variante ist reine Konfiguration unter variants/.
 const variant = process.env.APP_VARIANT ?? "cars";
 
 const { default: app } = require(`../../variants/${variant}/app.definition`);
+
+// Branding (Theme + Assets, ADR 0011): Basis-Variante `_default` ⊕ Variante. Die
+// Verzeichnis-Präfixe sind relativ zu apps/mobile, damit die aufgelösten Asset-
+// Pfade direkt von Expo/Metro genutzt werden können.
+const { default: baseBranding } = require(`../../variants/_default/branding.config`);
+const { default: variantBranding } = require(`../../variants/${variant}/branding.config`);
+const branding = resolveBranding({
+  base: baseBranding,
+  baseDir: `../../variants/_default`,
+  variant: variantBranding,
+  variantDir: `../../variants/${variant}`,
+});
 
 // Eindeutige Version je Test-Build: die CI-Run-Nummer fließt in versionName und
 // versionCode, damit sich aufeinanderfolgende APKs unterscheiden und sauber
@@ -27,10 +40,10 @@ const config: ExpoConfig = {
   slug: app.identity.slug,
   scheme: app.identity.scheme,
   version,
-  icon: `../../variants/${variant}/${app.assets.icon}`.replace("/./", "/"),
+  icon: branding.assets.icon,
   splash: {
-    image: `../../variants/${variant}/${app.assets.splash}`.replace("/./", "/"),
-    backgroundColor: app.theme.colors.background,
+    image: branding.assets.splash,
+    backgroundColor: branding.theme.colors.background,
   },
   ios: { bundleIdentifier: app.identity.ios.bundleIdentifier, buildNumber: String(buildNumber) },
   android: { package: app.identity.android.package, versionCode: Math.max(buildNumber, 1) },
@@ -45,9 +58,9 @@ const config: ExpoConfig = {
       },
     ],
   ],
-  // Variante + vollständige Definition zur Laufzeit verfügbar machen. App.tsx
-  // liest die Definition aus extra und reicht sie an die generische app-shell.
-  extra: { appVariant: variant, appDefinition: app },
+  // Variante + Definition + aufgelöstes Branding zur Laufzeit verfügbar machen.
+  // App.tsx liest beides aus extra und reicht es an die generische app-shell.
+  extra: { appVariant: variant, appDefinition: app, appBranding: branding },
 };
 
 export default config;

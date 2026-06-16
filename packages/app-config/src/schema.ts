@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { CATEGORY_IDS } from "@spotforge/game-core";
 import type { AppDefinition } from "./app-definition";
+import type { Branding } from "./branding";
 
 /** Pflicht-String mit aussagekräftiger Meldung. */
 const nonEmpty = (feld: string) => z.string().min(1, `${feld} darf nicht leer sein`);
@@ -111,9 +112,7 @@ export const appDefinitionSchema = z
       gate: gateSchema,
     }),
     ai: aiPromptsSchema,
-    theme: themeTokensSchema,
     content: contentOverridesSchema,
-    assets: assetManifestSchema,
   })
   .refine((def) => def.category.guardrails.allowed.includes(def.category.primary), {
     message: "category.guardrails.allowed muss die primäre Kategorie (category.primary) enthalten",
@@ -128,4 +127,19 @@ type Expect<T extends true> = T;
 type IsAssignable<From, To> = [From] extends [To] ? true : false;
 type _SchemaOutputIsAppDefinition = Expect<
   IsAssignable<z.infer<typeof appDefinitionSchema>, AppDefinition>
+>;
+
+/**
+ * Schema des **aufgelösten** {@link Branding} (Theme + Assets), wie es
+ * {@link resolveBranding} liefert. Prüft die strukturelle Vollständigkeit
+ * (alle Theme-Farben, Pflicht-Assets icon/splash/logo); die Existenz der
+ * Asset-Dateien prüft `validateBranding` mit injizierter Prüfung.
+ */
+export const brandingSchema = z.object({
+  theme: themeTokensSchema,
+  assets: assetManifestSchema,
+});
+
+type _BrandingSchemaOutputIsBranding = Expect<
+  IsAssignable<z.infer<typeof brandingSchema>, Branding>
 >;

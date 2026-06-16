@@ -3,10 +3,11 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "rea
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
 import type { Classifier, ClassificationResult } from "@spotforge/ai-engine";
+import { useTheme } from "@spotforge/ui";
 import { SpotCamera } from "../camera/SpotCamera";
 
 export interface SpotScreenProps {
-  /** Aktive Variante – liefert Theme, Texte und Guardrails. */
+  /** Aktive Variante – liefert Texte und Guardrails (das Theme kommt aus dem ThemeProvider). */
   definition: AppDefinition;
   /** Bevorzugte Anzeige-Sprache; Default: {@link DEFAULT_LOCALE}. */
   locale?: LocaleCode;
@@ -23,7 +24,8 @@ type Mode = "idle" | "capturing" | "processing" | "preview";
  * Label & Konfidenz). Vollständig offline, kein Login/Onboarding.
  */
 export function SpotScreen({ definition, locale = DEFAULT_LOCALE, classifier }: SpotScreenProps) {
-  const { theme, identity, content } = definition;
+  const { identity, content } = definition;
+  const theme = useTheme();
   const { minConfidence, rejectMessage } = definition.category.guardrails;
   // Mehrsprachige Overrides in die aktive Sprache auflösen; fehlende Schlüssel
   // fallen auf den mitgegebenen Default zurück.

@@ -67,22 +67,6 @@ export default defineApp({
       "Provide factual specifications for the vehicle {objectName}: horsepower (PS), 0-100 km/h time, top speed (km/h), weight (kg), price (EUR), model year.",
   },
 
-  theme: {
-    colors: {
-      primary: "#E10600", // Racing-Rot
-      secondary: "#1A1A1A",
-      background: "#0E0E0E",
-      surface: "#1C1C1E",
-      text: "#FFFFFF",
-      accent: "#FFD400",
-    },
-    typography: {
-      fontFamily: "Inter",
-      headingFontFamily: "Inter",
-    },
-    radius: 16,
-  },
-
   content: {
     "spot.cta": { de: "Auto spotten", en: "Spot a car" },
     "forge.title": { de: "Karte schmieden", en: "Forge card" },
@@ -90,17 +74,5 @@ export default defineApp({
     "battle.title": { de: "Duell", en: "Duel" },
   },
 
-  assets: {
-    icon: "./assets/icon.png",
-    splash: "./assets/splash.png",
-    logo: "./assets/logo.png",
-    background: "./assets/background.png",
-    cardFrames: {
-      common: "./assets/frames/common.png",
-      uncommon: "./assets/frames/uncommon.png",
-      rare: "./assets/frames/rare.png",
-      epic: "./assets/frames/epic.png",
-      legendary: "./assets/frames/legendary.png",
-    },
-  },
+  // Theme & Assets: siehe ./branding.config.ts (ADR 0011).
 });

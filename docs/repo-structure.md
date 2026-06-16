@@ -12,9 +12,11 @@ Grundsatzentscheidung: [ADR 0002](./adr/0002-multi-app-single-codebase.md).
 1. **Eine Codebase, viele Apps.** Der gesamte App-Code ist generisch und
    kategorie-neutral (`packages/app-shell`). Eine konkrete App entsteht aus einer
    `AppDefinition` (`variants/<name>/`) – **kein neuer Code pro App**.
-2. **Konfiguration statt Code.** Alles per-App Variable – Kategorie-Guardrails,
-   KI-Prompts, Styling, Text-Overrides, Grafiken – steckt in der `AppDefinition`
-   (`packages/app-config`). Eine neue App = neuer `variants/`-Ordner + Build-Profil.
+2. **Konfiguration statt Code.** Alles per-App Variable steckt in der
+   Konfiguration (`packages/app-config`): Kategorie-Guardrails, KI-Prompts und
+   Text-Overrides in der `AppDefinition` (`app.definition.ts`); Styling/Grafiken
+   als **Branding** (`branding.config.ts`, mit `variants/_default` als Basis,
+   ADR 0011). Eine neue App = neuer `variants/`-Ordner + Build-Profil.
 3. **Eine Domäne, zwei Laufzeiten.** Trumpf-Logik und Kartenschema laufen
    identisch in App (Offline) und Server (Anti-Cheat) → `packages/game-core`,
    nie kopiert.
@@ -63,7 +65,10 @@ Komponenten konsumieren Theme-Tokens und Asset-Pfade aus der `AppDefinition`.
 Basis-`tsconfig`, ESLint/Prettier.
 
 ### `variants/<name>` — eine App (nur Konfiguration)
-`app.definition.ts` + `assets/`. Aktuell: `cars` (CarForge). Kein Code.
+`app.definition.ts` (funktional) + `branding.config.ts` (Theme/Assets, nur
+Abweichungen) + `assets/`. `variants/_default` liefert die generische Branding-
+Basis (Theme + Kartenrahmen) und ist keine eigene App (ADR 0011). Aktuell: `cars`
+(CarForge). Kein Code.
 
 ### `data/categories` · `data/facts` · `data/models`
 Kategorien-/Attributschema, Offline-Fakten-DB-Seeds, ML-Modell-Artefakte.

@@ -30,14 +30,12 @@ export interface AppDefinition {
   /** Prompts für die On-Device-KI (@spotforge/ai-engine). */
   ai: AiPrompts;
 
-  /** Visuelle Theme-Tokens (@spotforge/ui). */
-  theme: ThemeTokens;
-
   /** Text-Overrides; fehlende Schlüssel fallen auf gemeinsame Defaults zurück. */
   content: ContentOverrides;
 
-  /** Grafiken; Pfade relativ zum Variantenverzeichnis. */
-  assets: AssetManifest;
+  // Theme & Assets sind bewusst NICHT Teil der AppDefinition (ADR 0011): sie
+  // leben als Branding (@spotforge/app-config `branding.ts`) in einer eigenen
+  // Config je Variante, mit `variants/_default` als generischer Basis.
 }
 
 /**
@@ -97,38 +95,12 @@ export interface AiPrompts {
   factPrompt: string;
 }
 
-export interface ThemeTokens {
-  colors: {
-    primary: string;
-    secondary: string;
-    background: string;
-    surface: string;
-    text: string;
-    accent: string;
-  };
-  typography: {
-    fontFamily: string;
-    headingFontFamily?: string;
-  };
-  /** Basis-Eckenradius in px. */
-  radius?: number;
-}
-
 /**
  * Text-Overrides als flache Map vom i18n-Schlüssel auf einen mehrsprachigen
  * Text. Jeder Override muss für alle {@link LocaleCode}s übersetzt sein. Nicht
  * gesetzte Schlüssel nutzen die gemeinsamen Defaults aus @spotforge/app-shell.
  */
 export type ContentOverrides = Record<string, LocalizedText>;
-
-export interface AssetManifest {
-  icon: string;
-  splash: string;
-  logo: string;
-  /** Seltenheits-Kartenrahmen (C/U/R/E/L) – Pfade relativ zur Variante. */
-  cardFrames?: Partial<Record<"common" | "uncommon" | "rare" | "epic" | "legendary", string>>;
-  background?: string;
-}
 
 /**
  * Identitäts-Helper: gibt die Definition unverändert zurück, erzwingt aber

@@ -11,19 +11,17 @@ Geteiltes, **themebares** Design-System und Kartenrendering für die App.
 - **Kartenlayout (`CardView`):** Seltenheits-Frame, Foil-Effekt (Level 3),
   Spotted-By-Tag und Attribut-Anzeige einer `Card`.
 
-## Kartenrahmen (verbindlich + überschreibbar)
+## Kartenrahmen
 
-`packages/ui/assets/frames/{common,uncommon,rare,epic,legendary}.png` sind die
-**generische Baseline für alle Apps** (rein rarity-gefärbt, kategorie-neutral;
-reproduzierbar über [`tools/gen-ui-frames.py`](../../tools/gen-ui-frames.py)).
-Eine Variante überschreibt einzelne Stufen optional über
-`AppDefinition.assets.cardFrames`.
+`CardView` bekommt eine **vollständige** `frames`-Map (`ResolvedCardFrames`) als
+Prop. Die generischen Default-Rahmen sind **keine** ui-Assets, sondern Teil des
+Brandings der Basis-Variante `variants/_default/assets/frames/` (ADR 0011);
+Varianten überschreiben einzelne Stufen über ihre `branding.config.ts`. Der
+Build-Host löst das Branding auf (`resolveBranding`) und reicht die fertige Map
+durch – `ui` bleibt rein und liest selbst keine Assets aus `variants/`.
 
-`resolveCardFrames(overrides?)` legt die Overrides über die Defaults und liefert
-eine **vollständige** Frame-Map (jede Stufe gebunden). Der Host ruft das einmal
-beim Variant-Wiring auf und reicht das Ergebnis als `frames`-Prop an `CardView` –
-die App hat dadurch zur Build-Zeit immer alle Frames verbindlich gebunden, ohne
-Laufzeit-Fallback.
+`mergeCardFrames(defaults, overrides?)` ist die reine Hilfsfunktion, mit der der
+Host eine vollständige Map aus Defaults + Overrides bildet.
 
 ## Grenzen
 

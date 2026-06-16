@@ -37,6 +37,18 @@ describe("loadVariant", () => {
     expect(loaded.definition.identity.displayName).toBe("CarForge");
   });
 
+  it("löst das Branding (Basis ⊕ Variante) inkl. geerbter Frames auf", async () => {
+    const loaded = await loadVariant("cars", { variantsDir });
+    // Theme-Override der Variante:
+    expect(loaded.branding.theme.colors.primary).toBe("#E10600");
+    // Marken-Asset der Variante (absoluter Pfad im cars-Verzeichnis):
+    expect(loaded.branding.assets.icon).toMatch(/variants[/\\]cars[/\\]assets[/\\]icon\.png$/);
+    // Aus der Basis _default geerbter Kartenrahmen:
+    expect(loaded.branding.assets.cardFrames?.legendary).toMatch(
+      /variants[/\\]_default[/\\]assets[/\\]frames[/\\]legendary\.png$/,
+    );
+  });
+
   it("propagiert Fehler unbekannter Varianten", async () => {
     await expect(loadVariant("gibt-es-nicht", { variantsDir })).rejects.toThrow(/nicht gefunden/);
   });

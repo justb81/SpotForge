@@ -25,7 +25,7 @@ export type { RarityStyle } from "./card/rarity-style";
 export { toStatDisplays, formatStatValue } from "./card/stat";
 export type { StatDisplay } from "./card/stat";
 
-// Frame-Auflösung
+// Frame-Auflösung (reine Merge-Logik; die generischen Default-Frame-Assets liegen
+// in der Basis-Variante variants/_default, der Build-Host reicht die fertige Map).
 export { mergeCardFrames } from "./card/frames";
 export type { CardFrameSources, ResolvedCardFrames } from "./card/frames";
-export { resolveCardFrames, GENERIC_CARD_FRAMES } from "./card/generic-frames";

@@ -8,12 +8,16 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import type { AppDefinition } from "./app-definition";
-import { AppDefinitionError, validateAppDefinition } from "./validate";
+import { resolveBranding, type Branding, type BrandingInput } from "./branding";
+import { AppDefinitionError, validateAppDefinition, validateBranding } from "./validate";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url)); // packages/app-config/src
 
 /** Standard-Wurzel der Varianten: `<repo>/variants`. */
 export const DEFAULT_VARIANTS_DIR = resolve(moduleDir, "../../../variants");
+
+/** Name der Basis-Variante, die die generischen Branding-Defaults liefert (ADR 0011). */
+export const BASE_VARIANT_DIR = "_default";
 
 /** Erlaubte Variantennamen – verhindert Pfad-Traversal und uneindeutige Namen. */
 const VARIANT_NAME = /^[a-z0-9][a-z0-9-]*$/;
@@ -33,8 +37,10 @@ export interface ResolvedVariant {
 }
 
 export interface LoadedVariant extends ResolvedVariant {
-  /** Die validierte Definition der Variante. */
+  /** Die validierte (funktionale) Definition der Variante. */
   definition: AppDefinition;
+  /** Das aufgelöste Branding (Basis ⊕ Variante), mit absoluten Asset-Pfaden. */
+  branding: Branding;
 }
 
 /**
@@ -73,20 +79,54 @@ export async function loadVariant(
   options: ResolveVariantOptions = {},
 ): Promise<LoadedVariant> {
   const resolved = resolveVariant(name, options);
-  const moduleExports: unknown = await import(pathToFileURL(resolved.definitionPath).href);
-  const definition = extractDefinition(moduleExports);
+  const definition = extractDefault(await import(pathToFileURL(resolved.definitionPath).href));
 
-  const result = validateAppDefinition(definition, {
-    assets: { root: resolved.dir, exists: existsSync, resolve },
-  });
+  const result = validateAppDefinition(definition);
   if (!result.valid) {
     throw new AppDefinitionError(result.issues, name);
   }
-  return { ...resolved, definition: result.definition };
+
+  const branding = await loadBranding(name, resolved.dir, options);
+  return { ...resolved, definition: result.definition, branding };
+}
+
+/**
+ * Lädt das Branding der Variante: `variants/_default/branding.config.ts` als
+ * Basis, darüber `variants/<name>/branding.config.ts`. Löst beide gegen ihre
+ * Verzeichnisse auf (absolute Asset-Pfade), merged und validiert das Ergebnis
+ * (Struktur + Existenz der Dateien).
+ */
+async function loadBranding(
+  name: string,
+  variantDir: string,
+  options: ResolveVariantOptions,
+): Promise<Branding> {
+  const variantsDir = options.variantsDir ?? DEFAULT_VARIANTS_DIR;
+  const baseDir = resolve(variantsDir, BASE_VARIANT_DIR);
+
+  const base = await loadBrandingModule(baseDir, `Basis-Variante '${BASE_VARIANT_DIR}'`);
+  const variant = await loadBrandingModule(variantDir, `Variante '${name}'`);
+
+  const branding = resolveBranding({ base, baseDir, variant, variantDir });
+
+  const result = validateBranding(branding, { exists: existsSync });
+  if (!result.valid) {
+    throw new AppDefinitionError(result.issues, name, "Branding");
+  }
+  return result.branding;
+}
+
+/** Lädt eine `branding.config.ts` aus einem Verzeichnis (Default-Export). */
+async function loadBrandingModule(dir: string, subject: string): Promise<BrandingInput> {
+  const path = resolve(dir, "branding.config.ts");
+  if (!existsSync(path)) {
+    throw new Error(`${subject} ist unvollständig: ${path} fehlt (erwartet branding.config.ts).`);
+  }
+  return extractDefault(await import(pathToFileURL(path).href)) as BrandingInput;
 }
 
 /** Holt den Default-Export aus dem geladenen Modul (Fallback: Modul selbst). */
-function extractDefinition(moduleExports: unknown): unknown {
+function extractDefault(moduleExports: unknown): unknown {
   if (moduleExports !== null && typeof moduleExports === "object" && "default" in moduleExports) {
     return (moduleExports as { default: unknown }).default;
   }

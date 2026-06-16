@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Erzeugt die generischen Seltenheits-Kartenrahmen für @spotforge/ui.
+"""Erzeugt die generischen Seltenheits-Kartenrahmen der Basis-Variante.
 
 Die Rahmen sind kategorie-neutral (rein rarity-gefärbt, kein Logo) und bilden die
-verbindliche Baseline für ALLE Apps – eine Variante überschreibt einzelne Stufen
-optional über `AppDefinition.assets.cardFrames`. Ausgabe:
-`packages/ui/assets/frames/{common,uncommon,rare,epic,legendary}.png` (750×1050,
-transparente Mitte; Seltenheitsfarbe + Glow steigen mit der Stufe).
+Branding-Baseline für ALLE Apps (ADR 0011) – eine Variante überschreibt einzelne
+Stufen optional über ihre `branding.config.ts`. Ausgabe:
+`variants/_default/assets/frames/{common,uncommon,rare,epic,legendary}.png`
+(750×1050, transparente Mitte; Seltenheitsfarbe + Glow steigen mit der Stufe).
 
 Aufruf:  python3 tools/gen-ui-frames.py
 """
@@ -15,7 +15,7 @@ import os
 from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "packages", "ui", "assets", "frames")
+OUT = os.path.join(ROOT, "variants", "_default", "assets", "frames")
 
 
 def hx(c: str) -> tuple[int, int, int]:

@@ -1,15 +1,14 @@
-import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import carsDefinition from "../../../variants/cars/app.definition";
 import type { AppDefinition } from "./app-definition";
-import { AppDefinitionError, assertAppDefinition, validateAppDefinition } from "./index";
-
-const carsDir = resolve(dirname(fileURLToPath(import.meta.url)), "../../../variants/cars");
-/** Echte Existenzprüfung gegen die cars-Assets auf der Platte. */
-const realAssets = { root: carsDir, exists: existsSync, resolve };
+import type { Branding } from "./branding";
+import {
+  AppDefinitionError,
+  assertAppDefinition,
+  validateAppDefinition,
+  validateBranding,
+} from "./index";
 
 /** Tiefe Kopie der cars-Definition als Basis für (un)gültige Varianten. */
 function cloneCars(): AppDefinition {
@@ -17,8 +16,34 @@ function cloneCars(): AppDefinition {
 }
 
 /** Pfade aller gemeldeten Probleme. */
-function issuePaths(result: ReturnType<typeof validateAppDefinition>): string[] {
+function issuePaths(
+  result: { valid: true } | { valid: false; issues: { path: string }[] },
+): string[] {
   return result.valid ? [] : result.issues.map((issue) => issue.path);
+}
+
+/** Ein strukturell vollständiges, aufgelöstes Branding (absolute Asset-Pfade). */
+function validBranding(): Branding {
+  return {
+    theme: {
+      colors: {
+        primary: "#E10600",
+        secondary: "#1A1A1A",
+        background: "#0E0E0E",
+        surface: "#1C1C1E",
+        text: "#FFFFFF",
+        accent: "#FFD400",
+      },
+      typography: { fontFamily: "Inter" },
+      radius: 16,
+    },
+    assets: {
+      icon: "/abs/variants/cars/assets/icon.png",
+      splash: "/abs/variants/cars/assets/splash.png",
+      logo: "/abs/variants/cars/assets/logo.png",
+      cardFrames: { legendary: "/abs/variants/_default/assets/frames/legendary.png" },
+    },
+  };
 }
 
 describe("validateAppDefinition", () => {
@@ -31,18 +56,14 @@ describe("validateAppDefinition", () => {
     }
   });
 
-  it("akzeptiert die cars-Variante inklusive vorhandener Asset-Dateien", () => {
-    const result = validateAppDefinition(carsDefinition, { assets: realAssets });
-    expect(result.valid).toBe(true);
-  });
-
   it("meldet fehlende Pflichtfelder bei leerer Eingabe", () => {
     const result = validateAppDefinition({});
     expect(result.valid).toBe(false);
     const paths = issuePaths(result);
-    expect(paths).toEqual(
-      expect.arrayContaining(["id", "identity", "category", "ai", "theme", "content", "assets"]),
-    );
+    expect(paths).toEqual(expect.arrayContaining(["id", "identity", "category", "ai", "content"]));
+    // theme/assets sind kein Teil der AppDefinition mehr (ADR 0011).
+    expect(paths).not.toContain("theme");
+    expect(paths).not.toContain("assets");
   });
 
   it("lehnt eine unbekannte CategoryId ab", () => {
@@ -74,14 +95,6 @@ describe("validateAppDefinition", () => {
     }
   });
 
-  it("lehnt ungültige Theme-Farben ab", () => {
-    const bad = cloneCars();
-    bad.theme.colors.primary = "rot";
-    const result = validateAppDefinition(bad);
-    expect(result.valid).toBe(false);
-    expect(issuePaths(result)).toContain("theme.colors.primary");
-  });
-
   it("meldet einen fehlenden mehrsprachigen Text", () => {
     const bad = cloneCars();
     delete (bad.category.guardrails.rejectMessage as { en?: string }).en;
@@ -89,28 +102,39 @@ describe("validateAppDefinition", () => {
     expect(result.valid).toBe(false);
     expect(issuePaths(result)).toContain("category.guardrails.rejectMessage.en");
   });
+});
+
+describe("validateBranding", () => {
+  it("akzeptiert ein vollständiges Branding (Existenzprüfung positiv)", () => {
+    const result = validateBranding(validBranding(), { exists: () => true });
+    expect(result.valid).toBe(true);
+  });
+
+  it("lehnt ungültige Theme-Farben ab", () => {
+    const bad = validBranding();
+    bad.theme.colors.primary = "rot";
+    const result = validateBranding(bad);
+    expect(result.valid).toBe(false);
+    expect(issuePaths(result)).toContain("theme.colors.primary");
+  });
+
+  it("meldet fehlende Pflicht-Assets strukturell", () => {
+    const bad = validBranding();
+    delete (bad.assets as { icon?: string }).icon;
+    const result = validateBranding(bad);
+    expect(result.valid).toBe(false);
+    expect(issuePaths(result)).toContain("assets.icon");
+  });
 
   it("meldet fehlende Asset-Dateien mit klarem Pfad", () => {
-    const result = validateAppDefinition(carsDefinition, {
-      assets: { root: "/nicht/vorhanden", exists: () => false, resolve },
-    });
+    const result = validateBranding(validBranding(), { exists: () => false });
     expect(result.valid).toBe(false);
     const paths = issuePaths(result);
     expect(paths).toContain("assets.icon");
-    expect(paths).toContain("assets.background");
+    expect(paths).toContain("assets.cardFrames.legendary");
     if (!result.valid) {
       expect(result.issues[0]?.message).toMatch(/nicht gefunden/);
     }
-  });
-
-  it("prüft optionale cardFrames-Overrides einer Variante auf Existenz", () => {
-    const withFrames = cloneCars();
-    withFrames.assets.cardFrames = { legendary: "./assets/frames/legendary.png" };
-    const result = validateAppDefinition(withFrames, {
-      assets: { root: "/nicht/vorhanden", exists: () => false, resolve },
-    });
-    expect(result.valid).toBe(false);
-    expect(issuePaths(result)).toContain("assets.cardFrames.legendary");
   });
 });
 

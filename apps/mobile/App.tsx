@@ -1,8 +1,7 @@
 import { Component, type ReactNode, useEffect, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
-import type { AppDefinition } from "@spotforge/app-config";
+import type { AppDefinition, Branding } from "@spotforge/app-config";
 import { SpotForgeApp } from "@spotforge/app-shell";
-import { ThemeProvider } from "@spotforge/ui";
 import type { Classifier } from "@spotforge/ai-engine";
 import { initExecutorch } from "react-native-executorch";
 import { ExpoResourceFetcher } from "react-native-executorch-expo-resource-fetcher";
@@ -44,9 +43,11 @@ class StartupErrorBoundary extends Component<{ children: ReactNode }, { error?: 
 }
 
 function Root() {
-  // Die aktive Variante wird zur Build-Zeit von app.config.ts aufgelöst und ihre
-  // vollständige AppDefinition in expoConfig.extra hinterlegt.
+  // Die aktive Variante wird zur Build-Zeit von app.config.ts aufgelöst; ihre
+  // AppDefinition und das aufgelöste Branding (Basis ⊕ Variante, ADR 0011) liegen
+  // in expoConfig.extra.
   const definition = Constants.expoConfig?.extra?.appDefinition as AppDefinition | undefined;
+  const branding = Constants.expoConfig?.extra?.appBranding as Branding | undefined;
 
   // ExecuTorch initialisieren und den On-Device-Klassifikator aus dem gebündelten
   // Modell bereitstellen. Bis er bereit ist, zeigt der Spot-Screen einen
@@ -80,14 +81,14 @@ function Root() {
     };
   }, []);
 
-  if (!definition) {
+  if (!definition || !branding) {
     return (
       <SafeAreaView style={styles.errorRoot}>
         <ScrollView contentContainerStyle={styles.errorContent}>
-          <Text style={styles.errorTitle}>AppDefinition fehlt</Text>
+          <Text style={styles.errorTitle}>AppDefinition/Branding fehlt</Text>
           <Text style={styles.errorVersion}>v{APP_VERSION}</Text>
           <Text style={styles.errorText}>
-            Constants.expoConfig.extra.appDefinition ist im Build nicht verfügbar.
+            Constants.expoConfig.extra.appDefinition/appBranding ist im Build nicht verfügbar.
           </Text>
         </ScrollView>
       </SafeAreaView>
@@ -106,13 +107,7 @@ function Root() {
     );
   }
 
-  // Theme-Tokens der Variante app-weit für das @spotforge/ui-Design-System
-  // bereitstellen (ThemeProvider/useTheme, u.a. für das Kartenrendering).
-  return (
-    <ThemeProvider theme={definition.theme}>
-      <SpotForgeApp definition={definition} classifier={classifier} />
-    </ThemeProvider>
-  );
+  return <SpotForgeApp definition={definition} theme={branding.theme} classifier={classifier} />;
 }
 
 export default function App() {

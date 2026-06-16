@@ -55,9 +55,10 @@ JS-Iteration weiterhin via `pnpm dev`/Metro gegen den Dev-Build.
 Zum schnellen Testen auf einem echten Gerät baut der Workflow
 [`poc-android-apk.yml`](../../.github/workflows/poc-android-apk.yml) ohne
 Expo-Cloud ein eigenständiges, **offline lauffähiges** APK (`expo prebuild` +
-`gradlew assembleRelease`, Profil `cars-preview`) und legt es als
-herunterladbares Workflow-Artefakt ab. Manuell auslösbar oder bei jedem Push auf
-einen `claude/poc-**`-Branch.
+`gradlew assembleRelease`, Variante über den `variant`-Input, Default `cars`) und
+legt es als herunterladbares Workflow-Artefakt ab. **Manueller Workflow
+(`workflow_dispatch`): auf jedem Branch auslösbar** – in der Actions-UI den Branch
+wählen oder per API mit beliebigem `ref` starten.
 
 ## Status
 

@@ -5,6 +5,10 @@ name: PoC Android APK
 # Gedacht zum schnellen Testen auf einem echten Gerät: APK aus dem Run laden,
 # sideloaden, offline starten.
 #
+# **Manueller Workflow (workflow_dispatch): auf JEDEM Branch auslösbar** – in der
+# Actions-UI den Branch wählen oder per API mit beliebigem `ref` starten. Kein
+# automatischer Trigger; der Build läuft nur auf Anforderung.
+#
 # JS-Bundle ist eingebettet (kein Metro-Dev-Server nötig), alle nativen Module
 # (ExecuTorch, Kamera) sind enthalten. Release wird mit dem Debug-Keystore
 # signiert – genügt zum Sideloaden, kein Store-Build (dafür EAS via mobile-build.yml).
@@ -15,8 +19,6 @@ on:
         description: "App-Variante (Ordner unter variants/)"
         type: string
         default: cars
-  push:
-    branches: ["claude/poc-**"]
 
 env:
   VARIANT: ${{ github.event.inputs.variant || 'cars' }}

@@ -95,12 +95,7 @@ export default defineApp({
     splash: "./assets/splash.png",
     logo: "./assets/logo.png",
     background: "./assets/background.png",
-    cardFrames: {
-      common: "./assets/frames/common.png",
-      uncommon: "./assets/frames/uncommon.png",
-      rare: "./assets/frames/rare.png",
-      epic: "./assets/frames/epic.png",
-      legendary: "./assets/frames/legendary.png",
-    },
+    // Keine eigenen `cardFrames`: CarForge nutzt die generischen Rahmen aus
+    // @spotforge/ui. Eigene Grafiken könnten einzelne Stufen hier überschreiben.
   },
 });

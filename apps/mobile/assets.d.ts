@@ -6,3 +6,10 @@ declare module "*.pte" {
   const asset: number;
   export default asset;
 }
+
+// Bilder werden von Metro ebenso als Asset (Registry-ID) eingebunden – u.a. die
+// gebündelten generischen Kartenrahmen aus @spotforge/ui.
+declare module "*.png" {
+  const asset: number;
+  export default asset;
+}

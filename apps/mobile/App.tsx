@@ -2,6 +2,7 @@ import { Component, type ReactNode, useEffect, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
 import type { AppDefinition } from "@spotforge/app-config";
 import { SpotForgeApp } from "@spotforge/app-shell";
+import { ThemeProvider } from "@spotforge/ui";
 import type { Classifier } from "@spotforge/ai-engine";
 import { initExecutorch } from "react-native-executorch";
 import { ExpoResourceFetcher } from "react-native-executorch-expo-resource-fetcher";
@@ -105,7 +106,13 @@ function Root() {
     );
   }
 
-  return <SpotForgeApp definition={definition} classifier={classifier} />;
+  // Theme-Tokens der Variante app-weit für das @spotforge/ui-Design-System
+  // bereitstellen (ThemeProvider/useTheme, u.a. für das Kartenrendering).
+  return (
+    <ThemeProvider theme={definition.theme}>
+      <SpotForgeApp definition={definition} classifier={classifier} />
+    </ThemeProvider>
+  );
 }
 
 export default function App() {

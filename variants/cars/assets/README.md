@@ -1,7 +1,10 @@
 # variants/cars/assets
 
-Grafiken für CarForge. Icon, Splash, Logo, Hintergrund und die
-Seltenheits-Kartenrahmen (`frames/`), referenziert in `../app.definition.ts`.
+Marken-Grafiken für CarForge: Icon, Splash, Logo und Hintergrund, referenziert in
+`../app.definition.ts`. Die Seltenheits-Kartenrahmen sind **nicht** hier – sie
+sind kategorie-neutral und liegen als generische Baseline in
+[`packages/ui/assets/frames/`](../../../packages/ui/assets/frames); CarForge nutzt
+sie unverändert.
 
 Alle Grafiken werden aus der einzigen Markenquelle `carforge.png` (weißes
 CarForge-Logo auf Schwarz) abgeleitet. Generator:
@@ -15,5 +18,3 @@ Dateien:
 - `splash.png` – Splash (transparent; Expo füllt mit `theme.background`)
 - `logo.png` – In-App-Logo (weiß, transparent)
 - `background.png` – Hintergrund (Portrait, Verlauf + Auto-Wasserzeichen)
-- `frames/{common,uncommon,rare,epic,legendary}.png` – Kartenrahmen (750×1050,
-  transparente Mitte; Seltenheitsfarbe + Glow steigen mit der Stufe)

@@ -97,10 +97,20 @@ describe("validateAppDefinition", () => {
     expect(result.valid).toBe(false);
     const paths = issuePaths(result);
     expect(paths).toContain("assets.icon");
-    expect(paths).toContain("assets.cardFrames.legendary");
+    expect(paths).toContain("assets.background");
     if (!result.valid) {
       expect(result.issues[0]?.message).toMatch(/nicht gefunden/);
     }
+  });
+
+  it("prüft optionale cardFrames-Overrides einer Variante auf Existenz", () => {
+    const withFrames = cloneCars();
+    withFrames.assets.cardFrames = { legendary: "./assets/frames/legendary.png" };
+    const result = validateAppDefinition(withFrames, {
+      assets: { root: "/nicht/vorhanden", exists: () => false, resolve },
+    });
+    expect(result.valid).toBe(false);
+    expect(issuePaths(result)).toContain("assets.cardFrames.legendary");
   });
 });
 

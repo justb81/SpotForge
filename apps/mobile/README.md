@@ -18,7 +18,7 @@ App-Code liegt in `@spotforge/app-shell`; hier wird er nur mit der aktiven
   und reicht sie an `<SpotForgeApp/>`.
 
 ```bash
-# Einmalig: gebündeltes ONNX-Modell beziehen (liegt nicht im Git, #50)
+# Einmalig: gebündeltes ExecuTorch-Modell beziehen (liegt nicht im Git, #50)
 pnpm fetch-models
 
 # Auto-App lokal starten (Default-Variante)
@@ -62,11 +62,13 @@ einen `claude/poc-**`-Branch.
 ## Status
 
 Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`
-mit der aktiven `AppDefinition`, initialisiert ExecuTorch und reicht den aus dem
-gebündelten `.pte` erzeugten On-Device-Klassifikator durch. **PoC-Loop (#48–#51):**
-Dev-Build + Test-APK-Pipeline, Kamera-Capture und EfficientNet-Klassifikation
-(react-native-executorch). Echte Icon-/Splash-Assets der Variante sind noch
-Platzhalter (`variants/cars/assets/`).
+mit der aktiven `AppDefinition` und reicht die zur Laufzeit/Build-Zeit aufgelösten
+Bausteine herein: die aus dem gebündelten `.pte` gebaute **Kaskade** (Gate →
+Feinmodell, EfficientNet via react-native-executorch), die statisch gebündelten
+**Seltenheits-Frames** (`variants/_default/assets/frames/`) und das **Attribut-
+Schema** der Kategorie (`data/categories/<id>.json`). Damit fährt die Shell den
+Offline-Loop Spot → Draft → Bearbeiten. Echte Icon-/Splash-Assets der Variante
+sind noch Platzhalter (`variants/cars/assets/`).
 
 ## Abhängigkeiten
 

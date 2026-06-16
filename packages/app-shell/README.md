@@ -38,11 +38,23 @@ Bundle-IDs. Alles Variable kommt aus `@spotforge/app-config`.
 
 ## Status
 
-Gerüst. PoC #48: `SpotScreen` als Spot-Screen-Shell; `SpotForgeApp` startet
-direkt dort, ohne Login/Onboarding. PoC #49: `SpotCamera` (Live-Vorschau,
-Permission-Handling, Auslöser via `expo-camera`). **PoC #51:** `SpotScreen`
-orchestriert den vollen Loop idle→capture→processing→preview, reicht die Foto-URI
-an den vom Host injizierten `Classifier` (#50, ExecuTorch – Vorverarbeitung
-intern) und zeigt Label + Konfidenz; bei Konfidenz unter
-`guardrails.minConfidence` erscheint die `rejectMessage` der Variante.
-Vollständig offline.
+Gerüst. **Spot-/Draft-Flow (offline, ADR 0010):** `SpotForgeApp` startet ohne
+Login/Onboarding direkt im `SpotScreen`, der den Loop
+idle → capture → processing → Ergebnis fährt:
+
+- `SpotCamera` (Live-Vorschau, Permission-Handling, Auslöser via `expo-camera`)
+  liefert die Foto-URI.
+- `createSpotter` verdrahtet `ai-engine.createSpot` mit der vom Host injizierten
+  Kaskade (Gate → Feinmodell) und den Guardrails der Variante. Drei Ergebnisse:
+  - **`draft`** → positive Rückmeldung + Karten-Vorschau (`@spotforge/ui` `CardView`).
+    Der Draft lässt sich **bestätigen/korrigieren** (Marke/Modell) und mit
+    **Attribut-Vorschlägen** versehen (`DraftPanel` + `DraftEditor`, reine Edit-Logik
+    in `draft/draft-edit.ts`).
+  - **`rejected`** → `rejectMessage` der Variante samt erkannter Klasse.
+  - **`unrecognized`** → **manuelle Kategorisierung** (`UnrecognizedPanel`): der
+    Spieler benennt das Objekt selbst → `buildManualDraft` (Freigabe/Kuratierung: #77).
+
+Der Host injiziert `cascade`, das aufgelöste `frames`-Set und das `attributes`-
+Schema der Kategorie. Das **Forgen** (Online-Einreichung an die Schmiede + Reveal
+mit autoritativer Seltenheit) ist der **Online**-Schritt und ein eigenes Issue;
+es ist bewusst nicht Teil der app-shell. Vollständig offline.

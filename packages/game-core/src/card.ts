@@ -124,3 +124,60 @@ export function buildDraft(input: BuildDraftInput): Card {
       : {}),
   };
 }
+
+/**
+ * Die **autoritativen** Werte, mit denen ein Draft beim Forgen finalisiert wird –
+ * server-seitig aus World Data + Seltenheit bestimmt (ADR 0010, #76). Rein
+ * serialisierbar, damit App und Server denselben Übergang rechnen.
+ */
+export interface ForgeInput {
+  /** Autoritative Attributwerte (ersetzen die provisorischen Draft-Vorschläge). */
+  attributes: AttributeValues;
+  /** Server-autoritative Seltenheit (ersetzt {@link PLACEHOLDER_RARITY}). */
+  rarity: Rarity;
+  /** Spezialfähigkeiten ab Rare (#6); ohne Angabe bleiben es die des Drafts. */
+  abilities?: Ability[];
+  /** Card-Art-Bild (#11); ohne Angabe bleibt ein evtl. am Draft gesetztes erhalten. */
+  artUri?: string;
+}
+
+/**
+ * Finalisiert einen **Draft** zur fertigen `forged`-Karte (ADR 0010). Rein &
+ * deterministisch (kein I/O): die autoritativen `attributes`/`rarity` kommen vom
+ * Aufrufer (Online-Schmiede, #76), die Identitäts-/Herkunftsfelder
+ * (`id`, `categoryId`, `objectName`, `spottedBy`, `createdAt`, `geoRegion`,
+ * `photoUri`) werden vom Draft übernommen. Client und Server rechnen denselben
+ * Übergang.
+ *
+ * Invarianten (ADR 0010):
+ * - Der Übergang `draft → forged` ist **einmalig**: ein bereits geforgter Draft
+ *   wird abgelehnt.
+ * - Eine `forged`-Karte ist **vollständig**: sie trägt mindestens einen
+ *   Attributwert (kein leeres Stat-Set).
+ * - Die provisorischen Draft-Felder (`proposedAttributes`) fallen weg; die
+ *   Wahrheit steht danach in {@link Card.attributes}.
+ *
+ * @throws {Error} wenn `draft.status !== "draft"` oder `forge.attributes` leer ist.
+ */
+export function forgeCard(draft: Card, forge: ForgeInput): Card {
+  if (draft.status !== "draft") {
+    throw new Error(`forgeCard: erwartet einen Draft, erhielt Status "${draft.status}".`);
+  }
+  if (Object.keys(forge.attributes).length === 0) {
+    throw new Error("forgeCard: eine forged-Karte braucht mindestens einen Attributwert.");
+  }
+
+  // Bewusst ohne `proposedAttributes`: provisorische Vorschläge sind nach dem
+  // Forgen obsolet, die Wahrheit steht in `attributes`. `identity` trägt ein evtl.
+  // am Draft gesetztes `artUri` bereits; `forge.artUri` überschreibt es.
+  const { proposedAttributes: _proposed, ...identity } = draft;
+
+  return {
+    ...identity,
+    status: "forged",
+    attributes: forge.attributes,
+    rarity: forge.rarity,
+    abilities: forge.abilities ?? draft.abilities,
+    ...(forge.artUri !== undefined ? { artUri: forge.artUri } : {}),
+  };
+}

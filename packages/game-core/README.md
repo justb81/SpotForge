@@ -41,8 +41,10 @@ deterministisch. Die **lokale Spotting-Dichte** liefert `spottingDensity` aus
 einem adaptiven Standort-Raster (ADR 0009): die räumlichen Zähler je Stufe
 (grob→fein) ermittelt der Server, die Auswahl-Policy (`spottingDensity`,
 `SpottingDensityConfig`) bleibt eine reine Funktion hier. Der **Karten-Lebenszyklus**
-(#74, ADR 0010) ist angelegt: `Card.status` (`draft`/`forged`), Draft-Felder
-(`photoUri`, `proposedAttributes`, `artUri`) und `buildDraft` (reine Assembly eines
-Drafts mit Platzhalter-Seltenheit `PLACEHOLDER_RARITY`). Die server-autoritative
-Finalisierung (`forgeCard`) folgt mit der Online-Schmiede (#76). Es folgen
+(#74, ADR 0010) ist vollständig: `Card.status` (`draft`/`forged`), Draft-Felder
+(`photoUri`, `proposedAttributes`, `artUri`), `buildDraft` (reine Assembly eines
+Drafts mit Platzhalter-Seltenheit `PLACEHOLDER_RARITY`) **und** `forgeCard` (reine
+Finalisierung mit autoritativen Attributen/Seltenheit, einmaliger Übergang
+`draft → forged`). Beide Funktionen sind client-/server-identisch nutzbar; die
+Online-Schmiede (#76) ruft `forgeCard` server-autoritativ auf. Es folgen
 Trumpf-Engine und Upgrade-Logik.

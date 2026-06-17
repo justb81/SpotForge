@@ -184,6 +184,46 @@ Pro Gerät/Build eine Tabelle ausfüllen (Datum, App-Version, Commit/Run-ID ange
 
 ---
 
+## Ergebnisse — Geräte-Erstlauf (2026-06-17)
+
+Erste Verifikation auf echtem Gerät (Mensch) + Off-Device-Gegenprobe.
+
+**Performance (Mid-Range-Android):**
+- Reject (Gate-only): **~200–400 ms**. Budget ≤ 250 ms war zu eng — B0-Compute ist
+  trivial, der Overhead ist Bilddekodierung/Resize. → Budget an Realwert anheben.
+- Accept (Gate→Fein, fp32-B4): Fein **~500–700 ms**, Gesamt **~0,7–1,1 s**. Budget
+  ≤ 800 ms zu eng → auf ~1100 ms anheben.
+- Bundle: ~155 MB Modelle, APK ~200 MB — **innerhalb** Budget (≤ 170 MB Modelle).
+- ⇒ Performance ist tragfähig; nur die Latenz-Budgets an die Messwerte justieren.
+
+**Accuracy:**
+- **Gate: in allen Testfällen korrekt.** ✅
+- **Feinmodell: Top-1 nur wenige %** auf realen Spots (europäische Marken, Baujahr
+  überwiegend ≥ 2017).
+
+**Ursachenanalyse (verifiziert, nicht geraten):**
+- Ausgeschlossen: Labels = Checkpoint-`class_mapping` (100 % Match / 8949),
+  Normalisierung+Input = README (ImageNet/380px), Gewichte laden `strict`,
+  Gate-Pipeline identisch & korrekt → die Pipeline ist solide.
+- **Off-Device-Gegenprobe** (Quell-PyTorch-Modell, README-Vorverarbeitung, reale
+  US-Auto-Fotos / Stanford Cars): **Top-1 ~90 %, Marke+Modell in Top-5 = 10/10**.
+  Das Modell ist also **stark** — „zu schwach" ist widerlegt.
+- **Schluss: Markt-/Abdeckungslücke.** VMMRdb ist **US-Markt, ≤ 2016**; die
+  getesteten Fahrzeuge sind **europäisch & ab MJ 2017** → außerhalb der
+  Modell-Klassen. Kein Code-Bug; On-Device-Preprocessing ist für diese Fahrzeuge
+  irrelevant (die passende Klasse existiert nicht).
+
+**Konkrete Folgeentscheidung (#63-Akzeptanzkriterium):**
+- Das Feinmodell **Jordo23/VMMRdb ist für den DE/EU-Launch ungeeignet**
+  (Markt-Mismatch). Benötigt wird ein Feinmodell mit **europäischer Abdeckung &
+  aktuellen Baujahren** — alternativ eine Neubewertung der Ziel-Granularität
+  (Marke / Marke+Modell ohne Jahr). → Folge-Issue (Modellauswahl).
+- Latenz-Budgets an die Messwerte justieren (Reject ~400 ms, Accept ~1100 ms).
+- Cascade-Design (Gate→Fein), Instrumentierung und Bündelung bleiben gültig — nur
+  das **Feinmodell-Artefakt** ist auszutauschen.
+
+---
+
 ## Bei Budget-Überschreitung
 
 Konkrete Folgeentscheidung dokumentieren (Akzeptanzkriterium #63). Mögliche Hebel:

@@ -35,11 +35,11 @@ Postgres-Spezifika sind die Wechselkosten.
 ### A) PostgreSQL (self-hosted Container/Resource)
 Coolify-Standard mit automatisierten Backups. RLS, voller SQL-Funktionsumfang,
 reifer Treiber (`postgres`), Drizzle-nativ.
-**Upgrade-Realität:** Patch-/Minor-Upgrades (16.3→16.4) = nur Image-Bump,
-datenkompatibel, trivial. **Major-Upgrades** (16→17) brauchen `pg_upgrade` bzw.
+**Upgrade-Realität:** Patch-Upgrades (18.3→18.4) = nur Image-Bump,
+datenkompatibel, trivial. **Major-Upgrades** (18→19) brauchen `pg_upgrade` bzw.
 Dump/Restore – das ist der „hakelige" Teil, aber **selten (jährlich) und
 planbar**. Lässt sich exakt wie Node behandeln (ADR 0005): **Major pinnen
-(`postgres:16`), bewusst als ADR-/PR-Schritt anheben**, nicht schleichend.
+(`postgres:18`), bewusst als ADR-/PR-Schritt anheben**, nicht schleichend.
 
 ### B) libSQL / `sqld` (self-hosted SQLite-Server)
 Open-Source-Server (MIT), Single-Binary über einer Datei → minimaler
@@ -65,7 +65,7 @@ und seit 18.11.2024 **nur Enterprise-Lizenz** (frei <$10 M Umsatz, aber
 |---|---|---|---|
 | **Tenant-Isolation / RLS** (hoch) | ✅ DB-erzwungen | ❌ nur Code-Scoping | ⚠️ RLS ab v25.2, jung |
 | **Ops laufend** (hoch) | ✅ Single-Container, Coolify-Backups | ✅✅ Single-Binary/Datei | ❌ Cluster-Betrieb |
-| **Upgrade-Schmerz** (hoch) | ⚠️ Minor trivial; Major selten+planbar (pin & deliberate) | ✅ minimal | ✅✅ rollend/online – aber Cluster |
+| **Upgrade-Schmerz** (hoch) | ⚠️ Patch trivial; Major selten+planbar (pin & deliberate) | ✅ minimal | ✅✅ rollend/online – aber Cluster |
 | **Atomare Trades / ACID** (hoch) | ✅ voll | ✅ (Single-Writer ⇒ Tx trivial atomar) | ✅ verteilt |
 | **Write-Concurrency** (mittel) | ✅ gut | ⚠️ SQLite-Single-Writer (Decke) | ✅✅ horizontal |
 | **CI / DX** (mittel) | ✅ Container im CI / Testcontainers | ✅✅ In-Memory-SQLite | ⚠️ Cluster im CI aufwendig |
@@ -102,9 +102,10 @@ Wechsel A↔B überschaubar, falls die Concurrency-Decke je relevant wird.
 
 ## Konsequenzen
 
-- `postgres:16` als Coolify-Resource (**Major gepinnt**), automatisierte Backups;
-  Patch/Minor = Image-Bump, **Major-Upgrade nur als bewusster ADR-/PR-Schritt**
-  (analog ADR 0005).
+- **`postgres:18`** (neueste stabile Major; PostgreSQL kennt kein „LTS", jede
+  Major = 5 Jahre Support) als Coolify-Resource (**Major gepinnt**),
+  automatisierte Backups; Patch = Image-Bump, **Major-Upgrade nur als bewusster
+  ADR-/PR-Schritt** (analog ADR 0005).
 - **RLS** auf allen fachlichen Tabellen; pro Request eine Transaktion mit
   `SET LOCAL app.current_tenant = <appId>`; `tenantQuery()`-Helper als zweite
   Schicht (defense-in-depth).

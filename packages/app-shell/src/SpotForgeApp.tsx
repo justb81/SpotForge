@@ -1,10 +1,14 @@
+import { useCallback, useState } from "react";
 import type { AppDefinition, LocaleCode, ThemeTokens } from "@spotforge/app-config";
 import { DEFAULT_LOCALE } from "@spotforge/app-config";
 import type { CascadeClassifier } from "@spotforge/ai-engine";
 import type { AttributeDefinition } from "@spotforge/game-core";
 import { ThemeProvider, type ResolvedCardFrames } from "@spotforge/ui";
 import { SafeAreaView, StyleSheet } from "react-native";
-import { SpotScreen } from "./screens/SpotScreen";
+import { useText } from "./content/text";
+import { AppNavigator } from "./navigation/AppNavigator";
+import { FtueFlow } from "./ftue/FtueFlow";
+import { NEW_PLAYER, type PlayerProgress } from "./progression/disclosure";
 
 /** Default-Entdecker-Tag, solange es keine Accounts gibt (Auth folgt in den MVP-Issues). */
 export const DEFAULT_SPOTTER = "local";
@@ -38,17 +42,28 @@ export interface SpotForgeAppProps {
    * einen Lade-/Bereitschaftshinweis statt eines Spot-Ergebnisses.
    */
   cascade?: CascadeClassifier;
+  /**
+   * Anfänglicher Spielfortschritt – steuert FTUE und Progressive Disclosure. Der
+   * Host kann hier einen persistierten Stand einreichen; Default ist ein neuer
+   * Spieler ({@link NEW_PLAYER}, FTUE offen).
+   */
+  initialProgress?: PlayerProgress;
+  /**
+   * Wird aufgerufen, wenn sich der Fortschritt ändert (z.B. FTUE abgeschlossen),
+   * damit der Host ihn persistieren kann. app-shell bleibt bewusst I/O-frei.
+   */
+  onProgressChange?: (progress: PlayerProgress) => void;
 }
 
 /**
- * Generischer App-Einstieg. Kategorie-agnostisch: alle sichtbaren Inhalte
- * stammen aus der übergebenen {@link AppDefinition} bzw. dem Theme; nichts ist
- * kategorie-spezifisch fest kodiert.
+ * Generischer App-Einstieg. Kategorie-agnostisch: alle sichtbaren Inhalte stammen
+ * aus der übergebenen {@link AppDefinition} bzw. dem Theme; nichts ist kategorie-
+ * spezifisch fest kodiert.
  *
- * Zeigt genau einen Screen – die Spot-Screen-Shell – und startet direkt dort,
- * ohne Login/Onboarding. Spotten erzeugt **offline** einen **Draft** (ADR 0010);
- * das Forgen ist der Online-Schritt und folgt separat. Navigation, FTUE und die
- * übrigen Flows kommen in den weiteren MVP-Issues.
+ * Steuert den obersten Ablauf: ein neuer Spieler durchläuft zunächst die
+ * **First-Time-User-Experience** (GDD §11.1); danach übernimmt der
+ * {@link AppNavigator} mit der Tab-Navigation (Spot, Sammlung, Duell, Tausch,
+ * Profil), deren Sichtbarkeit die Progressive Disclosure (GDD §11.2) regelt.
  */
 export function SpotForgeApp({
   definition,
@@ -58,18 +73,43 @@ export function SpotForgeApp({
   locale = DEFAULT_LOCALE,
   spottedBy = DEFAULT_SPOTTER,
   cascade,
+  initialProgress = NEW_PLAYER,
+  onProgressChange,
 }: SpotForgeAppProps) {
+  const [progress, setProgress] = useState<PlayerProgress>(initialProgress);
+  const t = useText(definition, locale);
+
+  const updateProgress = useCallback(
+    (next: PlayerProgress) => {
+      setProgress(next);
+      onProgressChange?.(next);
+    },
+    [onProgressChange],
+  );
+
+  // FTUE abschließen: als gespielt markieren und auf mindestens Level 1 heben,
+  // damit die Basis-Bereiche freigeschaltet werden (Progressive Disclosure).
+  const completeFtue = useCallback(() => {
+    updateProgress({ ftueCompleted: true, level: Math.max(progress.level, 1) });
+  }, [progress.level, updateProgress]);
+
   return (
     <ThemeProvider theme={theme}>
       <SafeAreaView style={[styles.root, { backgroundColor: theme.colors.background }]}>
-        <SpotScreen
-          definition={definition}
-          attributes={attributes}
-          frames={frames}
-          locale={locale}
-          spottedBy={spottedBy}
-          cascade={cascade}
-        />
+        {progress.ftueCompleted ? (
+          <AppNavigator
+            definition={definition}
+            attributes={attributes}
+            frames={frames}
+            locale={locale}
+            spottedBy={spottedBy}
+            cascade={cascade}
+            progress={progress}
+            t={t}
+          />
+        ) : (
+          <FtueFlow t={t} onComplete={completeFtue} />
+        )}
       </SafeAreaView>
     </ThemeProvider>
   );

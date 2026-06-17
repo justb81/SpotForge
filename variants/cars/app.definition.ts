@@ -102,6 +102,12 @@ export default defineApp({
     "forge.title": { de: "Karte schmieden", en: "Forge card" },
     "collection.title": { de: "Garage", en: "Garage" },
     "battle.title": { de: "Duell", en: "Duel" },
+    // Fahrzeug-spezifische Beschriftungen (die generische app-shell bleibt neutral):
+    "draft.nameLabel": { de: "Marke / Modell", en: "Make / Model" },
+    "spot.manualHint": {
+      de: "Benenne Marke und Modell selbst.",
+      en: "Name the make and model yourself.",
+    },
   },
 
   // Theme & Assets: siehe ./branding.config.ts (ADR 0011).

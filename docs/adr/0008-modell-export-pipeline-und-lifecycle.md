@@ -109,8 +109,10 @@ gesichert ins Bundle gezogen?
 - **Mensch-/Geräte-Aufgaben (nicht agent-automatisierbar, als Folge-Issues von
   #9):** VMMRdb-Provenienz rechtlich gegenchecken (#61), int8-Kalibrierung mit
   echten Bildern (#62), Verifikation von Erkennungsqualität, Inferenz-Latenz und
-  Bundle-Budget **auf echtem Gerät** (#63). Die konkrete Gate-Allowlist +
-  Verkettung der Kaskade gehört in `forgeCard` (#8).
+  Bundle-Budget **auf echtem Gerät** (#63 – Protokoll, Budgets und Messwert-Template
+  in [`docs/verification/ai-cascade-device-verification.md`](../verification/ai-cascade-device-verification.md);
+  die Kaskade misst die Stufen-Latenzen selbst und der PoC zeigt sie on-screen an).
+  Die konkrete Gate-Allowlist + Verkettung der Kaskade gehört in `forgeCard` (#8).
 - `classificationHint` (AppDefinition) wirkt auf ein Fix-Label-Modell nicht
   (keine Freitext-Steuerung möglich); seine Einbindung gehört in die
   `forgeCard`-Orchestrierung (#8) und ist dort zu lösen.

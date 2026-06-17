@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Classifier, ClassificationResult } from "./classifier";
-import { createCascadeClassifier, evaluateGate, type GateConfig } from "./cascade";
+import {
+  createCascadeClassifier,
+  evaluateGate,
+  formatCascadeTimings,
+  type GateConfig,
+} from "./cascade";
 
 const gateCfg: GateConfig = {
   allow: ["sports car", "convertible", "car wheel", "pickup"],
@@ -114,5 +119,74 @@ describe("createCascadeClassifier", () => {
     await cascade.classify({ imageUri: "a" });
     await cascade.classify({ imageUri: "b" });
     expect(initFine).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Injizierte, monoton steigende Uhr: liefert die Werte der Reihe nach (für die
+// letzte fällt sie auf den letzten Wert zurück) → deterministische Latenzen.
+function clock(values: number[]): () => number {
+  let i = 0;
+  return () => values[i++] ?? values[values.length - 1] ?? 0;
+}
+
+describe("Kaskaden-Latenzen (CascadeTimings, #63)", () => {
+  it("misst im Reject-Pfad nur das Gate (kein Fein-Anteil)", async () => {
+    // now() wird genau 2× gerufen: t0 (vor Gate), t1 (nach Gate).
+    const cascade = createCascadeClassifier({
+      gate: fixedClassifier(result([["tabby cat", 0.99]])),
+      gateConfig: gateCfg,
+      initFine: vi.fn(async () => fixedClassifier(result([["x", 1]]))),
+      now: clock([0, 7]),
+    });
+
+    const out = await cascade.classify({ imageUri: "img" });
+    expect(out.timings).toEqual({ gateMs: 7, totalMs: 7 });
+  });
+
+  it("weist beim ERSTEN Accept Gate-, Fein-Init- und Fein-Dauer getrennt aus", async () => {
+    // now()-Aufrufe: t0=0 (vor Gate), t1=10 (nach Gate), t2=25 (nach Fein-Init),
+    // t3=40 (nach Fein-Classify).
+    const cascade = createCascadeClassifier({
+      gate: fixedClassifier(result([["sports car", 0.8]])),
+      gateConfig: gateCfg,
+      initFine: vi.fn(async () => fixedClassifier(result([["VW Golf VII", 0.7]]))),
+      now: clock([0, 10, 25, 40]),
+    });
+
+    const out = await cascade.classify({ imageUri: "img" });
+    expect(out.timings).toEqual({ gateMs: 10, fineInitMs: 15, fineMs: 15, totalMs: 40 });
+  });
+
+  it("zählt den Fein-Init-Kaltstart nur einmal (warmer Accept hat kein fineInitMs)", async () => {
+    const cascade = createCascadeClassifier({
+      gate: fixedClassifier(result([["pickup", 0.9]])),
+      gateConfig: gateCfg,
+      initFine: vi.fn(async () => fixedClassifier(result([["x", 1]]))),
+      // 1. classify (kalt): 0,5,8,12 · 2. classify (warm): 100,105,108,112
+      now: clock([0, 5, 8, 12, 100, 105, 108, 112]),
+    });
+
+    await cascade.classify({ imageUri: "a" }); // kalt → initialisiert das Feinmodell
+    const warm = await cascade.classify({ imageUri: "b" }); // warm → gecached
+    expect(warm.timings.fineInitMs).toBeUndefined();
+    expect(warm.timings).toEqual({ gateMs: 5, fineMs: 4, totalMs: 12 });
+  });
+});
+
+describe("formatCascadeTimings", () => {
+  it("formatiert den Reject-Pfad ohne Fein-Anteil", () => {
+    expect(formatCascadeTimings({ gateMs: 142, totalMs: 142 })).toBe("Gate 142 ms · Σ 142 ms");
+  });
+
+  it("formatiert den warmen Accept-Pfad mit Fein-Anteil", () => {
+    expect(formatCascadeTimings({ gateMs: 142, fineMs: 88, totalMs: 230 })).toBe(
+      "Gate 142 ms · Fein 88 ms · Σ 230 ms",
+    );
+  });
+
+  it("rundet und hängt den Fein-Init-Kaltstart als Zusatz an", () => {
+    expect(
+      formatCascadeTimings({ gateMs: 142.4, fineMs: 88, fineInitMs: 410.6, totalMs: 230 }),
+    ).toBe("Gate 142 ms · Fein 88 ms · Σ 230 ms (+Init 411 ms)");
   });
 });

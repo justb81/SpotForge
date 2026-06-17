@@ -55,6 +55,13 @@ spot(photo, { gate, guardrails })
   False-Negative killt einen legitimen Spot).
 - Kategorie-neutral: die Allowlist kommt aus der `AppDefinition` (`category.gate.allow`,
   verdrahtet in `spot` #8) — hier steht keine fest kodierte Kategorie.
+- **Stufen-Latenzen (`CascadeTimings`, #63):** jedes `CascadeResult` (und damit
+  jedes `SpotResult`) trägt die gemessenen Laufzeiten — `gateMs`, optional
+  `fineMs`/`fineInitMs` (Accept-Pfad, Kaltstart separat), `totalMs`. Die Uhr ist
+  injizierbar (`now`, Default monoton). `formatCascadeTimings` rendert eine
+  kompakte On-Screen-Zeile für die Geräte-Verifikation (kein Profiler im
+  Standalone-Release). Protokoll + Budgets:
+  [`docs/verification/ai-cascade-device-verification.md`](../../docs/verification/ai-cascade-device-verification.md).
 - **Ein generisches Gate für ganz SpotForge (White-Label):** dasselbe breite
   fp32-Modell (EfficientNet-B0/ImageNet) ist das Gate für **alle** Apps; jede App
   liefert nur ihre Allowlist (Auto-App → Fahrzeug-Synsets, Tier-App → Tier-Synsets).

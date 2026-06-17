@@ -11,11 +11,12 @@ export type {
 export { selectTopK } from "./select-top-k";
 
 // Zwei-Stufen-Kaskade (Gate → Feinmodell, beide gebündelt).
-export { evaluateGate, createCascadeClassifier, GATE_TOP_K } from "./cascade";
+export { evaluateGate, createCascadeClassifier, GATE_TOP_K, formatCascadeTimings } from "./cascade";
 export type {
   GateConfig,
   GateDecision,
   CascadeResult,
+  CascadeTimings,
   CascadeClassifier,
   CascadeOptions,
 } from "./cascade";

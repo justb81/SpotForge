@@ -2,7 +2,11 @@ import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
-import type { CascadeClassifier, SpotResult } from "@spotforge/ai-engine";
+import {
+  formatCascadeTimings,
+  type CascadeClassifier,
+  type SpotResult,
+} from "@spotforge/ai-engine";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { useTheme, type ResolvedCardFrames } from "@spotforge/ui";
 import { SpotCamera } from "../camera/SpotCamera";
@@ -142,7 +146,10 @@ export function SpotScreen({
             <ActivityIndicator color={theme.colors.primary} />
           </View>
         ) : (
-          renderResult()
+          <>
+            {renderResult()}
+            {renderLatency()}
+          </>
         )}
       </View>
 
@@ -240,6 +247,20 @@ export function SpotScreen({
       </View>
     );
   }
+
+  // Dezente Latenz-Diagnosezeile (#63): zeigt die gemessenen Kaskaden-Laufzeiten
+  // (Gate-only-Reject vs. Gate→Fein-Accept) **auf dem Bildschirm** an, weil ein
+  // Standalone-Release kein Profiler-Overlay hat. Nur sichtbar, wenn ein
+  // Klassifikations-Lauf Timings lieferte (nicht bei manuell angelegten Drafts).
+  function renderLatency() {
+    const timings = result?.timings;
+    if (!timings) return null;
+    return (
+      <Text style={[styles.latency, { color: theme.colors.text }]} accessibilityRole="text">
+        {formatCascadeTimings(timings)}
+      </Text>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
@@ -279,6 +300,13 @@ const styles = StyleSheet.create({
   detected: {
     fontSize: 14,
     fontWeight: "600",
+  },
+  latency: {
+    fontSize: 11,
+    fontFamily: "monospace",
+    textAlign: "center",
+    opacity: 0.55,
+    paddingVertical: 6,
   },
   captureButton: {
     height: 64,

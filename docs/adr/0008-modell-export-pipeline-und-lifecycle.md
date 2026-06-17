@@ -62,6 +62,22 @@ gesichert ins Bundle gezogen?
    - Bewusst ein *breites* Modell statt eines schmalen Fahrzeugtyp-Modells: nur
      ein breites Modell kann Nicht-Fahrzeuge zuverlässig ablehnen (ein
      Typ-Modell ohne Negativ-Klasse würde z.B. eine Katze als „Auto" einstufen).
+   - **Gate-Identität & -Logik (#83): EfficientNet-B0, ImageNet-1k, fp32.** Weil
+     das Backbone klein ist, wird das Gate **unquantisiert (fp32)** exportiert –
+     null Quantisierungsverlust, XNNPACKs schneller nativer Pfad (~0,4 GFLOPs),
+     und mit ~19–21 MB **kleiner** als das frühere V2-S-int8-Gate (22,9 MB).
+     Primärziel ist ein **minimaler Gate-False-Negative-Anteil** (ein Auto darf
+     nicht als Nicht-Fahrzeug abgelehnt werden). Die Asymmetrie – ein
+     durchgerutschtes Nicht-Auto fängt das Feinmodell/der `unrecognized`-Pfad
+     billig ab, ein abgelehntes Auto killt einen legitimen Spot – trimmt die
+     Logik bewusst **recall-lastig**: `evaluateGate` schwellt die **summierte**
+     Masse über **alle** erlaubten Synsets (marginale `P(im Scope)`) bei
+     erhöhtem `topK` (`GATE_TOP_K`), nicht den besten Einzelkandidaten. Das Gate
+     ist ein **eigen-exportiertes `custom`-Modell** (`tools/export-model`,
+     `quantize: "none"`, kanonische ImageNet-1k-Labels) – das frühere eingebaute
+     V2-S-Modell (`fromModelName`) gibt es nicht mehr. Schwelle/Backbone werden
+     off-device kalibriert (`tools/export-model/prescreen.py`, Vehicle-Recall)
+     und auf dem Gerät verifiziert (#63).
    - Das Gate ist eine eigene, separat versionierbare Modell-Stufe (eigener
      Manifest-Eintrag); die Verkettung (Gate-Allowlist aus der `AppDefinition`)
      übernimmt `forgeCard` (#8).
@@ -81,10 +97,12 @@ gesichert ins Bundle gezogen?
 ## Konsequenzen
 
 - `tools/fetch-models` und sein Manifest sind auf Schema v3 (nur gebündelt)
-  umgestellt; der EfficientNet-Eintrag (generisches Gate) ist migriert.
-- `createClassifier` unterscheidet eingebautes ImageNet-Basismodell
-  (`fromModelName`) und eigene Modelle (`fromCustomModel` mit Label-Satz +
-  Normalisierung) und liefert Top-k-Kandidaten.
+  umgestellt; der generische Gate-Eintrag ist das fp32-EfficientNet-B0 (#83), das
+  den V2-S-int8-Eintrag **ersetzt** (kein Parallelbetrieb).
+- `createClassifier` lädt **ausschließlich** eigen-exportierte Modelle
+  (`fromCustomModel` mit mitgeliefertem Label-Satz + Normalisierung) und liefert
+  Top-k-Kandidaten – für Gate **und** Feinmodell. Das eingebaute V2-S-Modell
+  (`fromModelName`) ist entfernt.
 - **Feinmodell CarForge:** `Jordo23/vehicle-classifier` (EfficientNet-B4, 8.949
   Klassen „Make Model Year", VMMRdb, MIT) – fertig, kein Training. Export über
   das `timm`-Backend; **fest ins CarForge-APK gebündelt**.

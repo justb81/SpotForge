@@ -1,0 +1,26 @@
+{
+  "$comment": "Generisches breites GATE-Modell (#83, ADR 0008): EfficientNet-B0, ImageNet-1k, exportiert als fp32 (quantize:none → kein Quant-Verlust, XNNPACKs schneller nativer Pfad, ~0,4 GFLOPs). Ersetzt das alte EfficientNet-V2-S-int8-Gate und ist kleiner als dieses. Primärziel: minimale Gate-False-Negatives (ein Auto wird nicht fälschlich abgelehnt). Die Gewichte zieht timm reproduzierbar aus dem HF-Hub (arch-Tag); die Labels sind die kanonische ImageNet-1k-Liste (tools/export-model/imagenet-1k.labels.json), damit sie exakt der gate.allow-Allowlist der Varianten entsprechen. Export via .github/workflows/model-export.yml. Recall-/Schwellen-Kalibrierung: tools/export-model/prescreen.py + Geräte-Verifikation (#63).",
+  "id": "gate-imagenet-efficientnet-b0",
+  "name": "EfficientNet-B0 (ImageNet-1k, fp32/XNNPACK) – generisches Gate-Modell",
+  "version": "1.0.0",
+  "category": "imagenet",
+  "format": "timm",
+  "sourceModel": "timm/efficientnet_b0.ra_in1k",
+  "revision": "main",
+  "timm": {
+    "arch": "efficientnet_b0.ra_in1k",
+    "numClasses": 1000,
+    "pretrained": true,
+    "labelsJson": "tools/export-model/imagenet-1k.labels.json",
+    "inputSize": [224, 224]
+  },
+  "preprocessor": {
+    "normMean": [0.485, 0.456, 0.406],
+    "normStd": [0.229, 0.224, 0.225]
+  },
+  "quantize": "none",
+  "output": {
+    "model": "gate_imagenet_efficientnet_b0_fp32.pte",
+    "labels": "gate_imagenet_efficientnet_b0.labels.json"
+  }
+}

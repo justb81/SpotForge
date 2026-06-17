@@ -1,19 +1,28 @@
 {
-  "$comment": "Modell-Manifest (schemaVersion 3). Source of Truth für jedes ausgelieferte Modell-Artefakt: Bezugsquelle, SHA-256, Version, Kategorie. Alle Modelle werden je Variante FEST ins APK gebündelt – kein Nachladen/OTA. tools/fetch-models lädt die Artefakte vor dem Build hierher (data/models/* ist gitignored). Fahrzeug-spezifische Modelle erzeugt tools/export-model (#9) und hostet sie als GitHub-Release-Asset.",
+  "$comment": "Modell-Manifest (schemaVersion 3). Source of Truth für jedes ausgelieferte Modell-Artefakt: Bezugsquelle, SHA-256, Version, Kategorie. Alle Modelle werden je Variante FEST ins APK gebündelt – kein Nachladen/OTA. tools/fetch-models lädt die Artefakte vor dem Build hierher (data/models/* ist gitignored). Das breite Gate-Modell (EfficientNet-B0, fp32) und fahrzeug-spezifische Modelle erzeugt tools/export-model (#9, #83) und hostet sie als GitHub-Release-Asset.",
   "schemaVersion": 3,
   "models": [
     {
-      "id": "imagenet-efficientnet-v2-s",
-      "name": "EfficientNet-V2-S (ImageNet, int8/XNNPACK) – generisches Gate-Modell",
+      "id": "gate-imagenet-efficientnet-b0",
+      "name": "EfficientNet-B0 (ImageNet-1k, fp32/XNNPACK) – generisches Gate-Modell",
       "version": "1.0.0",
       "category": "imagenet",
-      "preprocessor": null,
+      "preprocessor": {
+        "normMean": [0.485, 0.456, 0.406],
+        "normStd": [0.229, 0.224, 0.225]
+      },
       "artifacts": {
         "model": {
-          "url": "https://huggingface.co/software-mansion/react-native-executorch-efficientnet-v2-s/resolve/v0.9.0/xnnpack/efficientnet_v2_s_xnnpack_int8.pte",
-          "dest": "data/models/efficientnet_v2_s_int8.pte",
-          "sha256": "30835124e9dd20b8350f93c6c687ad09d6a05a1646b7dabdec3259a3c9145266",
-          "bytes": 22943904
+          "url": "https://github.com/justb81/SpotForge/releases/download/model-gate-imagenet-efficientnet-b0-v1.0.0/gate_imagenet_efficientnet_b0_fp32.pte",
+          "dest": "data/models/gate_imagenet_efficientnet_b0_fp32.pte",
+          "sha256": "634e8188f7f85d931dba66a6edbd54583a81aa31af526316fa7e134e2e218e04",
+          "bytes": 21148320
+        },
+        "labels": {
+          "url": "https://github.com/justb81/SpotForge/releases/download/model-gate-imagenet-efficientnet-b0-v1.0.0/gate_imagenet_efficientnet_b0.labels.json",
+          "dest": "data/models/gate_imagenet_efficientnet_b0.labels.json",
+          "sha256": "5315b9a81e443e50d2a0318cf333d6eebc027ba1c0ecff1ad02c2642bbe08c64",
+          "bytes": 15475
         }
       }
     }

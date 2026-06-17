@@ -13,9 +13,13 @@ Zwei Export-Backends (Config-Feld ``format``):
 * ``optimum`` – HuggingFace-*transformers*-Modelle via ``optimum-executorch``
   (``optimum-cli export executorch``). Labels/Normalisierung aus ``config.json``
   bzw. ``preprocessor_config.json``.
-* ``timm``    – ein timm-Checkpoint (``.pth``) wird geladen und direkt über
-  ``torch.export → XNNPACK`` gelowert. Labels aus einer CSV, Normalisierung aus
-  der Config. (z.B. Jordo23/vehicle-classifier, EfficientNet-B4, 8.949 Klassen.)
+* ``timm``    – ein timm-Modell wird direkt über ``torch.export → XNNPACK``
+  gelowert; entweder **vortrainiert** (``timm.pretrained: true`` – Gewichte aus
+  dem HF-Hub via arch-Tag, z.B. das breite ImageNet-Gate EfficientNet-B0, #83)
+  oder aus einem **Checkpoint** (``.pth``, z.B. Jordo23/vehicle-classifier,
+  EfficientNet-B4, 8.949 Klassen). Labels aus einer committeten JSON-Liste
+  (``timm.labelsJson``, repo-relativ) oder einer CSV (``timm.labelsFile``),
+  Normalisierung aus der Config. ``quantize: "none"`` exportiert **fp32**.
 
 Modell-Kontrakt (von react-native-executorch gefordert): Input
 ``float32[1,3,H,W]`` (RGB, nach ``(pixel - mean) / std``), Output ``float32[1,C]``
@@ -46,6 +50,10 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Repo-Wurzel (tools/export-model/export.py → ../../). Für repo-relative Pfade
+# (z.B. timm.labelsJson), unabhängig vom aktuellen Arbeitsverzeichnis.
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def sha256_file(path: Path) -> str:
@@ -116,26 +124,50 @@ def labels_from_csv(path: str, index_col: str, label_col: str) -> list[str]:
     return [r[label_col] for r in rows]
 
 
+def load_timm_labels(cfg: dict, t: dict) -> list[str]:
+    """Geordnete Labels: entweder eine committete JSON-Liste (``labelsJson``,
+    repo-relativ – z.B. die kanonische ImageNet-1k-Liste fürs Gate, #83) oder
+    eine CSV aus dem Quell-Repo (``labelsFile``)."""
+    if t.get("labelsJson"):
+        path = Path(t["labelsJson"])
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        labels = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(labels, list) or not all(isinstance(x, str) for x in labels):
+            raise SystemExit(f"labelsJson {path} ist keine JSON-Liste von Strings.")
+        return labels
+
+    from huggingface_hub import hf_hub_download
+
+    labels_path = hf_hub_download(repo_id=cfg["sourceModel"], filename=t["labelsFile"], revision=cfg["revision"])
+    return labels_from_csv(labels_path, t["indexColumn"], t["labelColumn"])
+
+
 def export_timm(cfg: dict, model_out: Path) -> tuple[list[str], dict | None]:
-    """Lädt einen timm-Checkpoint und lowert ihn direkt nach ExecuTorch .pte."""
+    """Lädt ein timm-Modell (vortrainiert ODER aus Checkpoint) und lowert es
+    direkt nach ExecuTorch .pte."""
     import torch
     import timm
-    from huggingface_hub import hf_hub_download
     from torch.export import export
     from executorch.exir import to_edge_transform_and_lower
     from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
 
     t = cfg["timm"]
-    ckpt_path = hf_hub_download(repo_id=cfg["sourceModel"], filename=t["checkpointFile"], revision=cfg["revision"])
-    checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    state = checkpoint[t["stateDictKey"]] if t.get("stateDictKey") else checkpoint
+    if t.get("pretrained"):
+        # Vortrainiertes timm-Modell (z.B. das breite ImageNet-Gate, #83); die
+        # Gewichte zieht timm reproduzierbar aus dem HF-Hub anhand des arch-Tags.
+        model = timm.create_model(t["arch"], pretrained=True, num_classes=t["numClasses"])
+    else:
+        from huggingface_hub import hf_hub_download
 
-    model = timm.create_model(t["arch"], pretrained=False, num_classes=t["numClasses"])
-    model.load_state_dict(state)
+        ckpt_path = hf_hub_download(repo_id=cfg["sourceModel"], filename=t["checkpointFile"], revision=cfg["revision"])
+        checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+        state = checkpoint[t["stateDictKey"]] if t.get("stateDictKey") else checkpoint
+        model = timm.create_model(t["arch"], pretrained=False, num_classes=t["numClasses"])
+        model.load_state_dict(state)
     model.eval()
 
-    labels_path = hf_hub_download(repo_id=cfg["sourceModel"], filename=t["labelsFile"], revision=cfg["revision"])
-    labels = labels_from_csv(labels_path, t["indexColumn"], t["labelColumn"])
+    labels = load_timm_labels(cfg, t)
     if len(labels) != t["numClasses"]:
         raise SystemExit(f"Label-Anzahl {len(labels)} != numClasses {t['numClasses']}.")
 

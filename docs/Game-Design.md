@@ -117,8 +117,9 @@ vorerst speichert der Draft das aufgenommene Foto.
 
 ### 5.2 Technische Anforderungen
 
-- **Klassifikation:** Zwei-Stufen-Kaskade – ImageNet-Gate (EfficientNet-V2-S) +
-  Feinmodell Marke/Modell (EfficientNet-B4), fest gebündelt je Variante (ADR 0008)
+- **Klassifikation:** Zwei-Stufen-Kaskade – breites ImageNet-Gate (EfficientNet-B0,
+  fp32, recall-lastig) + Feinmodell Marke/Modell (EfficientNet-B4), fest gebündelt
+  je Variante (ADR 0008)
 - **Offline-Fakten-DB (SQLite + FTS5):** liefert nur **provisorische Vorschläge** für
   den Draft und die Offline-Anzeige – **nicht** die autoritativen Werte
 - **World Data (server-seitig):** autoritative Attribute beim Forgen (§5.4),
@@ -325,7 +326,7 @@ Suche:            MeiliSearch (Karten-Marktplatz-Suche)
 ```
 Framework:        ExecuTorch (react-native-executorch, .pte)  [ADR 0007]
 Klassifikation:   Zwei-Stufen-Kaskade – breites ImageNet-Gate
-                  (EfficientNet-V2-S) + Feinmodell Marke/Modell
+                  (EfficientNet-B0, fp32) + Feinmodell Marke/Modell
                   (Jordo23, EfficientNet-B4)                  [ADR 0008]
 Card-Art:         LCM (Latent Consistency Model) quantisiert
                   oder Stable Diffusion v2.1 (4-bit quantized)

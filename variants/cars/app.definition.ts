@@ -20,40 +20,70 @@ export default defineApp({
     primary: "vehicles",
     guardrails: {
       allowed: ["vehicles"],
-      minConfidence: 0.6,
+      // Gate-Annahme-Schwelle auf die SUMMIERTE Fahrzeug-Masse über alle
+      // `gate.allow`-Synsets (marginale P(Fahrzeug)), nicht auf einen einzelnen
+      // Kandidaten (#83, evaluateGate). Bewusst recall-lastig getrimmt – ein
+      // False-Negative killt einen legitimen Spot, ein False-Positive ist billig
+      // (Feinmodell + `unrecognized`-Pfad fangen ihn). Startwert; final kalibriert
+      // der Off-Device-Pre-Screen (tools/export-model/prescreen.py) und die
+      // Geräte-Verifikation (#63).
+      minConfidence: 0.35,
       rejectMessage: {
         de: "Das sieht nicht nach einem Fahrzeug aus. Richte die Kamera auf ein Auto, Motorrad, einen LKW oder Bus.",
         en: "That doesn't look like a vehicle. Point the camera at a car, motorcycle, truck or bus.",
       },
     },
-    // Rohe ImageNet-1k-Labels (EfficientNet-V2-S-Gate, ADR 0008) für Straßen-
-    // fahrzeuge: Autos, LKW, Busse, motorisierte Zweiräder. Müssen exakt dem
-    // Label-Vokabular des Gate-Modells entsprechen; Domänen-Mapping → #72.
+    // Rohe ImageNet-1k-Labels des breiten fp32-Gate-Modells (EfficientNet-B0,
+    // ADR 0008) für Straßenfahrzeuge. Müssen exakt dem Label-Vokabular des
+    // Gate-Modells entsprechen (tools/export-model/imagenet-1k.labels.json;
+    // Konvention: erstes Synonym, „_" → Leerzeichen). Domänen-Mapping → #72.
+    //
+    // Möglichst vollständig (#83): jedes fehlende Fahrzeug-Synset wäre ein
+    // garantierter False-Negative für diese Karosserie. Enthält daher auch
+    // motorisierte Sonder-/Geländefahrzeuge sowie – bewusst – einige stark
+    // fahrzeug-indikative TEIL-Synsets (`car wheel`, `grille`, `car mirror`):
+    // Sie tragen reale Fahrzeug-Masse bei Nah-/Teilaufnahmen bei (Asymmetrie:
+    // FP billig). Reine Zweiräder ohne Motor (Fahrrad) bleiben außerhalb.
     gate: {
       allow: [
-        "ambulance",
-        "beach wagon",
-        "cab",
+        // Pkw / Karosserieformen
+        "sports car",
         "convertible",
+        "cab",
         "jeep",
         "limousine",
         "minivan",
+        "beach wagon",
         "Model T",
         "racer",
-        "sports car",
-        "recreational vehicle",
         "pickup",
+        // Lkw / Nutzfahrzeuge
         "tow truck",
         "trailer truck",
         "garbage truck",
         "fire engine",
         "moving van",
         "police van",
+        "ambulance",
+        "snowplow",
+        // Busse
         "minibus",
         "school bus",
         "trolleybus",
+        // motorisierte Zweiräder
         "moped",
         "motor scooter",
+        // Sonder-/Geländefahrzeuge
+        "recreational vehicle",
+        "golfcart",
+        "go-kart",
+        "snowmobile",
+        "tractor",
+        "forklift",
+        // stark fahrzeug-indikative Teile (Recall bei Nah-/Teilaufnahmen)
+        "car wheel",
+        "grille",
+        "car mirror",
       ],
     },
   },

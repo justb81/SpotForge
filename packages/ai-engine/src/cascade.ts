@@ -23,6 +23,18 @@ import type {
   ClassificationCandidate,
 } from "./classifier";
 
+/**
+ * Empfohlenes `topK` der **Gate**-Stufe (#83). Bewusst hoch, weil ein Objekt im
+ * Scope seine Wahrscheinlichkeitsmasse oft über mehrere erlaubte Synsets
+ * verteilt (ein Auto: `sports car` 0,30 + `convertible` 0,22 + `car wheel` 0,18
+ * …) – jede Klasse für sich unter der Schwelle, summiert klar im Scope.
+ * {@link evaluateGate} schwellt diese **summierte** Masse; ein zu kleines `topK`
+ * würde verteilte Masse abschneiden und legitime Spots fälschlich ablehnen
+ * (False-Negative). Der App-Host baut die Gate-{@link Classifier}-Instanz mit
+ * diesem Wert; das Feinmodell bleibt bei kleinem `topK` (Top-k-UX).
+ */
+export const GATE_TOP_K = 20;
+
 /** Annahme-Kriterium der Gate-Stufe. */
 export interface GateConfig {
   /**
@@ -30,25 +42,50 @@ export interface GateConfig {
    * Stammt aus der `AppDefinition` – nicht aus dem gemeinsamen Code.
    */
   allow: string[];
-  /** Mindest-Konfidenz des besten erlaubten Kandidaten, sonst Reject. */
+  /**
+   * Mindest-**summierte** Wahrscheinlichkeitsmasse über alle erlaubten Synsets
+   * (marginale `P(im Scope)`), sonst Reject. **Nicht** die Schwelle eines
+   * einzelnen Kandidaten – die Semantik ist bewusst recall-lastig (#83): die
+   * Asymmetrie favorisiert sie, weil ein False-Negative einen legitimen Spot
+   * killt, ein False-Positive aber billig vom Feinmodell/`unrecognized`-Pfad
+   * abgefangen wird.
+   */
   minConfidence: number;
 }
 
 /** Ergebnis der Gate-Prüfung. */
 export interface GateDecision {
   accepted: boolean;
-  /** Bester erlaubter Kandidat (falls vorhanden), unabhängig von der Schwelle. */
+  /**
+   * Summierte Wahrscheinlichkeit über alle erlaubten Kandidaten (marginale
+   * `P(im Scope)`), gegen die {@link GateConfig.minConfidence} geprüft wird.
+   */
+  mass: number;
+  /**
+   * Bester erlaubter Kandidat (falls vorhanden), unabhängig von der Schwelle –
+   * dient der Reject-/UX-Meldung („erkannt: …"), nicht der Annahme-Entscheidung.
+   */
   matched?: ClassificationCandidate;
 }
 
 /**
- * Prüft das Gate-Ergebnis gegen die Allowlist: akzeptiert, wenn der beste
- * erlaubte Kandidat die Mindest-Konfidenz erreicht.
+ * Prüft das Gate-Ergebnis gegen die Allowlist über **summierte Klassen-Masse**
+ * (#83): akzeptiert, wenn die Summe der Konfidenzen aller erlaubten Kandidaten
+ * (marginale `P(im Scope)`) die Schwelle erreicht. Das fängt über mehrere
+ * Synsets verteilte Scope-Masse ein, die ein Einzelklassen-Schwellwert verlöre
+ * (häufigste Quelle von Gate-False-Negatives). `matched` (bester erlaubter
+ * Kandidat) bleibt für die Reject-Meldung erhalten.
  */
 export function evaluateGate(result: ClassificationResult, config: GateConfig): GateDecision {
   const allow = new Set(config.allow);
-  const matched = result.candidates.find((c) => allow.has(c.label));
-  return { accepted: matched !== undefined && matched.confidence >= config.minConfidence, matched };
+  let mass = 0;
+  let matched: ClassificationCandidate | undefined;
+  for (const c of result.candidates) {
+    if (!allow.has(c.label)) continue;
+    mass += c.confidence;
+    if (matched === undefined) matched = c; // Kandidaten sind absteigend sortiert.
+  }
+  return { accepted: mass >= config.minConfidence, mass, matched };
 }
 
 /** Ergebnis der Kaskade. `fine` ist nur gesetzt, wenn das Gate akzeptiert hat. */

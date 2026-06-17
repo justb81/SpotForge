@@ -11,7 +11,7 @@ export type {
 export { selectTopK } from "./select-top-k";
 
 // Zwei-Stufen-Kaskade (Gate → Feinmodell, beide gebündelt).
-export { evaluateGate, createCascadeClassifier } from "./cascade";
+export { evaluateGate, createCascadeClassifier, GATE_TOP_K } from "./cascade";
 export type {
   GateConfig,
   GateDecision,
@@ -25,8 +25,6 @@ export type {
   ModelSource,
   PreprocessorConfig,
   ClassifierModel,
-  BuiltinImageNetModel,
-  CustomClassifierModel,
   CreateClassifierOptions,
 } from "./executorch/createClassifier";
 

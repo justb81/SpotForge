@@ -24,13 +24,15 @@ gebündelte Modell reproduzierbar und in sich konsistent.
 
 ## Zwei Export-Backends (`format`)
 
-| `format`  | Quelle                              | Labels / Norm                          |
-|-----------|-------------------------------------|----------------------------------------|
-| `optimum` | HF-*transformers*-Modell            | `config.json` (`id2label`) / `preprocessor_config.json` |
-| `timm`    | timm-Checkpoint (`.pth`)            | CSV-Spalte / `preprocessor` aus Config |
+| `format`  | Quelle                                            | Labels / Norm                          |
+|-----------|---------------------------------------------------|----------------------------------------|
+| `optimum` | HF-*transformers*-Modell                          | `config.json` (`id2label`) / `preprocessor_config.json` |
+| `timm`    | timm-Modell: **vortrainiert** (HF-Hub) oder Checkpoint (`.pth`) | JSON-Liste (`labelsJson`) oder CSV (`labelsFile`) / `preprocessor` aus Config |
 
-`optimum` nutzt `optimum-cli export executorch`; `timm` lädt den Checkpoint und
-lowert ihn direkt über `torch.export → to_edge_transform_and_lower(XNNPACK)`.
+`optimum` nutzt `optimum-cli export executorch`; `timm` lädt das Modell (Gewichte
+vortrainiert aus dem HF-Hub via arch-Tag **oder** aus einem Checkpoint) und lowert
+es direkt über `torch.export → to_edge_transform_and_lower(XNNPACK)`. `quantize`
+ist `int8` **oder** `none` (fp32 – z.B. fürs Gate, #83).
 
 ## Export-Config
 
@@ -39,8 +41,14 @@ Pro Modell eine Datei unter `models/<id>.json`. Gemeinsame Felder: `id`
 `category` (`CategoryId`), `sourceModel` (HF-Repo), `revision`, `output`
 (Dateinamen), `preprocessor` (`normMean`/`normStd`), `quantize` (`int8`|`none`).
 
-`timm`-spezifisch unter `timm`: `arch`, `numClasses`, `checkpointFile`,
-`stateDictKey`, `labelsFile`, `indexColumn`, `labelColumn`, `inputSize`.
+`timm`-spezifisch unter `timm`: `arch`, `numClasses`, `inputSize` und je nach
+Quelle entweder
+- **vortrainiert:** `pretrained: true` (Gewichte aus dem HF-Hub via arch-Tag,
+  z.B. `efficientnet_b0.ra_in1k`), oder
+- **Checkpoint:** `checkpointFile`, `stateDictKey`;
+
+dazu die Labels entweder als committete JSON-Liste (`labelsJson`, repo-relativer
+Pfad – Index = Klasse) oder als CSV (`labelsFile`, `indexColumn`, `labelColumn`).
 
 > **Quantisierung (int8):** Die XNNPACK-PTQ kalibriert mangels Bilddatensatz mit
 > Platzhalter-Tensoren – funktional, aber echte Kalibrierbilder verbessern die
@@ -86,3 +94,36 @@ Feinmodell **bei Bedarf** in den Speicher initialisiert.
 **Offene Mensch-/Geräte-Aufgaben (#9):** VMMRdb-Provenienz rechtlich gegenchecken,
 int8-Kalibrierung mit echten Bildern, Verifikation von Erkennungsqualität/Latenz
 und Größen-/Performance-Budget **auf echtem Gerät**.
+
+## Beispiel: Gate (ImageNet, fp32)
+
+`models/gate-imagenet-efficientnet-b0.json` exportiert das breite **Gate** der
+Kaskade (#83): **EfficientNet-B0**, ImageNet-1k, **vortrainiert** aus dem HF-Hub,
+**fp32** (`quantize: "none"` → kein Quantisierungsverlust, kleiner als das frühere
+V2-S-int8-Gate). Die Labels sind die **kanonische ImageNet-1k-Liste**
+(`imagenet-1k.labels.json`, erstes Synonym, `_` → Leerzeichen) – committet, damit
+sie exakt der `gate.allow`-Allowlist der Varianten entsprechen.
+
+Das Gate klärt „gehört das überhaupt in den Scope?" und ist kategorie-neutral für
+**alle** Apps (jede App liefert nur ihre Allowlist). Seine Annahme-Logik schwellt
+die **summierte** Fahrzeug-Masse (`packages/ai-engine` `evaluateGate`), nicht den
+besten Einzelkandidaten.
+
+## Pre-Screen: Gate-Recall kalibrieren (`prescreen.py`)
+
+`prescreen.py` misst **off-device** den Vehicle-Recall / False-Negative-Anteil des
+Gates und kalibriert die Schwelle (`minConfidence` der Variante). Es bewertet die
+**gleiche** Regel wie `evaluateGate` (summierte erlaubte Masse über die Top-k) auf
+dem fp32-timm-Modell – kein `.pte`/ExecuTorch-Runtime nötig.
+
+```bash
+python tools/export-model/prescreen.py \
+  --config tools/export-model/models/gate-imagenet-efficientnet-b0.json \
+  --data path/to/eval-set \          # eval-set/vehicle/* und eval-set/nonvehicle/*
+  --allow path/to/cars-allow.json \  # JSON-Array = gate.allow der Variante (cars)
+  --topk 20 --target-recall 0.98
+```
+
+Ausgabe: Schwellen-Tabelle (Recall / FN-Rate / Precision / FP-Rate) und die
+**kleinste** Schwelle, die das Recall-Ziel hält. Entscheidet B0 vs. Lite0 und die
+`minConfidence`; die finale Geräte-Verifikation (Latenz/Größe/Qualität) ist #63.

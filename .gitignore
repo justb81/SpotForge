@@ -51,6 +51,7 @@ data/models/*.pte
 data/models/*.onnx
 data/models/*.ort
 data/models/*.bin
+data/models/*.labels.json
 
 # Generated SQLite databases
 data/facts/*.db

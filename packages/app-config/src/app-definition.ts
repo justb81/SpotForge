@@ -67,7 +67,12 @@ export function resolveText(text: LocalizedText, locale: LocaleCode = DEFAULT_LO
 export interface CategoryGuardrails {
   /** Erlaubte Kategorien (i.d.R. nur die primäre). */
   allowed: CategoryId[];
-  /** Mindest-Konfidenz 0..1, darunter wird abgelehnt. */
+  /**
+   * Gate-Annahme-Schwelle 0..1: Mindest-**summierte** Wahrscheinlichkeitsmasse
+   * über alle erlaubten Gate-Synsets ({@link CategoryGate.allow}, marginale
+   * `P(im Scope)`), darunter wird abgelehnt. Bewusst recall-lastig (#83); siehe
+   * `evaluateGate` in `@spotforge/ai-engine`.
+   */
   minConfidence: number;
   /** Mehrsprachige Meldung, wenn ein Objekt außerhalb des Scopes gespottet wird. */
   rejectMessage: LocalizedText;
@@ -78,8 +83,9 @@ export interface CategoryGuardrails {
  * Labels** des breiten Gate-Modells als „im Scope" gelten. Anders als
  * {@link CategoryGuardrails.allowed} (Domänen-Kategorien) sind das die konkreten
  * Label-Strings des Gate-Modells – für die Auto-App z.B. die ImageNet-Fahrzeug-
- * klassen. Die Annahme-Schwelle teilt sich das Gate mit
- * {@link CategoryGuardrails.minConfidence}.
+ * klassen. Die (summierte) Annahme-Schwelle teilt sich das Gate mit
+ * {@link CategoryGuardrails.minConfidence}; `evaluateGate` (#83) summiert die
+ * Masse über **alle** hier gelisteten Synsets.
  */
 export interface CategoryGate {
   /** Erlaubte rohe Gate-Labels (mind. eines), exakt im Vokabular des Gate-Modells. */

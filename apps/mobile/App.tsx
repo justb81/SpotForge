@@ -5,15 +5,24 @@ import { SpotForgeApp } from "@spotforge/app-shell";
 import {
   createCascadeClassifier,
   gateConfigFromAppDefinition,
+  GATE_TOP_K,
   type CascadeClassifier,
 } from "@spotforge/ai-engine";
 import { initExecutorch } from "react-native-executorch";
 import { ExpoResourceFetcher } from "react-native-executorch-expo-resource-fetcher";
 import Constants from "expo-constants";
-// Gebündeltes ExecuTorch-Modell (#50, EfficientNet-V2-S int8). data/models/*
-// liegt nicht im Git; `pnpm fetch-models` (CI vor dem Bundle, lokal vor `dev`)
-// legt die Datei ab. Metro bündelt sie als Asset (assetExts in metro.config.js).
-import modelAsset from "../../data/models/efficientnet_v2_s_int8.pte";
+// Gebündeltes breites Gate-Modell (#83): EfficientNet-B0, ImageNet-1k, **fp32**
+// (keine Quantisierung → kein Quant-Verlust, kleiner als das alte V2-S-int8-Gate).
+// data/models/* liegt nicht im Git; `pnpm fetch-models` (CI vor dem Bundle, lokal
+// vor `dev`) legt Modell + Labels ab. Metro bündelt sie als Assets (metro.config.js).
+import gateModelAsset from "../../data/models/gate_imagenet_efficientnet_b0_fp32.pte";
+import gateLabels from "../../data/models/gate_imagenet_efficientnet_b0.labels.json";
+
+// ImageNet-Normalisierung des Gate-Exports (muss zum Export passen, ADR 0008).
+const IMAGENET_PREPROCESSOR = {
+  normMean: [0.485, 0.456, 0.406] as [number, number, number],
+  normStd: [0.229, 0.224, 0.225] as [number, number, number],
+};
 // Generische Seltenheits-Kartenrahmen (variants/_default, ADR 0011) – statisch
 // gebündelt; Metro liefert je Import eine Asset-ID (ImageSourcePropType).
 import commonFrame from "../../variants/_default/assets/frames/common.png";
@@ -91,20 +100,25 @@ function Root() {
       try {
         initExecutorch({ resourceFetcher: ExpoResourceFetcher });
         const { createClassifier } = await import("@spotforge/ai-engine");
-        // PoC-Basismodell: eingebautes ImageNet-EfficientNet (grobe Klassen). Es
-        // dient zugleich als Gate und – mangels eigenem Feinmodell – als Feinmodell.
-        // Das fahrzeug-spezifische Modell (#9) löst Letzteres als `kind: "custom"`
-        // mit eigenem Label-Satz ab, sobald es exportiert/gebündelt ist.
-        const ready = await createClassifier({
-          kind: "imagenet-efficientnet-v2-s",
-          modelSource: modelAsset,
-        });
+        // Breites fp32-Gate (#83): EfficientNet-B0/ImageNet mit mitgeliefertem
+        // Label-Satz + Normalisierung. Erhöhtes topK ({@link GATE_TOP_K}), damit
+        // evaluateGate die über mehrere Synsets verteilte Fahrzeug-Masse erfasst.
+        const gate = await createClassifier(
+          {
+            modelSource: gateModelAsset,
+            labels: gateLabels,
+            preprocessor: IMAGENET_PREPROCESSOR,
+          },
+          { topK: GATE_TOP_K },
+        );
         if (active) {
           setCascade(
             createCascadeClassifier({
-              gate: ready,
+              gate,
               gateConfig: gateConfigFromAppDefinition(definition),
-              initFine: async () => ready,
+              // Platzhalter-Feinmodell bis zum gebündelten Fahrzeugmodell (#9):
+              // mangels eigenem Feinmodell wird das Gate-Modell wiederverwendet.
+              initFine: async () => gate,
             }),
           );
         }

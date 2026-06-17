@@ -14,29 +14,19 @@ export interface PreprocessorConfig {
 }
 
 /**
- * Das eingebaute ImageNet-Basismodell (EfficientNet-V2-S, int8) der PoC-Stufe
- * (#50). Liefert nur grobe 1000-Klassen-Labels; Labels und Normalisierung sind
- * in `react-native-executorch` hinterlegt. Bewusst nur ein Übergangsstand bis
- * zum fahrzeug-spezifischen Modell.
- */
-export interface BuiltinImageNetModel {
-  kind: "imagenet-efficientnet-v2-s";
-  modelSource: ModelSource;
-}
-
-/**
- * Ein eigen-exportiertes Modell (#9), z.B. fahrzeug-spezifisch
- * (`tools/export-model`). Labels reisen **mit dem Modell** (gleiche Version),
- * statt im App-Code zu stehen – so ist das gebündelte Modell reproduzierbar und
- * in sich konsistent.
+ * Modell-Deskriptor, den der App-Host an {@link createClassifier} reicht. **Jedes**
+ * On-Device-Modell ist ein eigen-exportiertes Artefakt (`tools/export-model`, #9)
+ * mit **mitgeliefertem Label-Satz** – sowohl das breite Gate (fp32-ImageNet, #83)
+ * als auch das fahrzeug-spezifische Feinmodell. Labels reisen **mit dem Modell**
+ * (gleiche Version), statt im App-Code zu stehen – so ist das gebündelte Modell
+ * reproduzierbar und in sich konsistent.
  *
  * Modell-Kontrakt (von `react-native-executorch` gefordert): Input
  * `float32[1,3,H,W]` (RGB, nach `(pixel − mean) / std`), Output `float32[1,C]`
  * mit rohen Logits in der Reihenfolge von {@link labels}; Softmax übernimmt das
  * native Runtime.
  */
-export interface CustomClassifierModel {
-  kind: "custom";
+export interface ClassifierModel {
   modelSource: ModelSource;
   /** Geordnete Labels; Index = Logit-Position. Aus dem Modell-Artefakt geladen. */
   labels: string[];
@@ -44,13 +34,10 @@ export interface CustomClassifierModel {
   preprocessor?: PreprocessorConfig;
 }
 
-/** Modell-Deskriptor, den der App-Host an {@link createClassifier} reicht. */
-export type ClassifierModel = BuiltinImageNetModel | CustomClassifierModel;
-
 export interface CreateClassifierOptions {
-  /** Anzahl zurückgegebener Top-k-Kandidaten (Default 5). */
+  /** Anzahl zurückgegebener Top-k-Kandidaten (Default 5; Gate: {@link GATE_TOP_K}). */
   topK?: number;
-  /** Fortschritt 0..1 beim (Erst-)Laden/Download des Modells. */
+  /** Fortschritt 0..1 beim (Erst-)Laden des Modells. */
   onDownloadProgress?: (progress: number) => void;
 }
 
@@ -58,12 +45,10 @@ export interface CreateClassifierOptions {
  * Baut einen On-Device-{@link Classifier} über **react-native-executorch**
  * (PyTorch ExecuTorch) – New-Architecture-/Expo-nativ ([ADR 0007]).
  *
- * Zwei Modellarten:
- * - `imagenet-efficientnet-v2-s`: eingebautes ImageNet-Basismodell (PoC #50).
- * - `custom`: eigen-exportiertes Modell mit mitgeliefertem Label-Satz (#9).
- *
- * ExecuTorch übernimmt Resize/Normalisierung und Softmax intern; `forward`
- * liefert eine Label→Wahrscheinlichkeits-Map, die wir zu Top-k aufbereiten.
+ * Lädt ein eigen-exportiertes Modell (`fromCustomModel`) mit mitgeliefertem
+ * Label-Satz + Normalisierung. ExecuTorch übernimmt Resize/Normalisierung und
+ * Softmax intern; `forward` liefert eine Label→Wahrscheinlichkeits-Map, die wir
+ * zu Top-k aufbereiten.
  */
 export async function createClassifier(
   model: ClassifierModel,
@@ -71,27 +56,21 @@ export async function createClassifier(
 ): Promise<Classifier> {
   const { topK = 5, onDownloadProgress } = options;
 
-  const module =
-    model.kind === "custom"
-      ? await ClassificationModule.fromCustomModel(
-          model.modelSource,
-          {
-            labelMap: toLabelMap(model.labels),
-            ...(model.preprocessor
-              ? {
-                  preprocessorConfig: {
-                    normMean: model.preprocessor.normMean,
-                    normStd: model.preprocessor.normStd,
-                  },
-                }
-              : {}),
-          },
-          onDownloadProgress,
-        )
-      : await ClassificationModule.fromModelName(
-          { modelName: "efficientnet-v2-s-quantized", modelSource: model.modelSource },
-          onDownloadProgress,
-        );
+  const module = await ClassificationModule.fromCustomModel(
+    model.modelSource,
+    {
+      labelMap: toLabelMap(model.labels),
+      ...(model.preprocessor
+        ? {
+            preprocessorConfig: {
+              normMean: model.preprocessor.normMean,
+              normStd: model.preprocessor.normStd,
+            },
+          }
+        : {}),
+    },
+    onDownloadProgress,
+  );
 
   return {
     async classify({ imageUri }: ClassifierInput): Promise<ClassificationResult> {

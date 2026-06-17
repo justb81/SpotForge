@@ -1,5 +1,5 @@
 {
-  "$comment": "CarForge-Feinmodell (#9): Marke+Modell+Jahr über das fertige EfficientNet-B4 von Jordo23/vehicle-classifier (VMMRdb, 8.949 Klassen, MIT-Lizenz – kein eigenes Training). timm-Checkpoint .pth → direkter torch.export→XNNPACK. Hinweis: VMMRdb-Datensatz-Provenienz vor Produktivnutzung kurz rechtlich gegenchecken. Export läuft im CI-Workflow .github/workflows/model-export.yml.",
+  "$comment": "CarForge-Feinmodell (#9): Marke+Modell+Jahr über das fertige EfficientNet-B4 von Jordo23/vehicle-classifier (VMMRdb, 8.949 Klassen, MIT-Lizenz – kein eigenes Training). timm-Checkpoint .pth → direkter torch.export→XNNPACK. Hinweis: VMMRdb-Datensatz-Provenienz vor Produktivnutzung kurz rechtlich gegenchecken. Export läuft im CI-Workflow .github/workflows/model-export.yml. PROVISORISCH fp32 (quantize: none) – gibt das volle Modell zum Testen der Kaskade (#63); int8-Quantisierung + echte Kalibrierung folgen in #62 (dort ist auch der PT2E-Export-Pfad auf die gepinnte torch-Version zu heben).",
   "id": "cars-jordo23-vmmr",
   "name": "VMMR EfficientNet-B4 (Marke+Modell+Jahr, 8.949 Klassen)",
   "version": "1.0.0",
@@ -21,9 +21,9 @@
     "normMean": [0.485, 0.456, 0.406],
     "normStd": [0.229, 0.224, 0.225]
   },
-  "quantize": "int8",
+  "quantize": "none",
   "output": {
-    "model": "cars_jordo23_vmmr_int8.pte",
+    "model": "cars_jordo23_vmmr_fp32.pte",
     "labels": "cars_jordo23_vmmr.labels.json"
   }
 }

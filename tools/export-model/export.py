@@ -204,7 +204,12 @@ def export_timm(cfg: dict, model_out: Path) -> tuple[list[str], dict | None]:
 def quantize_int8(model, sample):
     """Post-Training-Quantisierung (int8, XNNPACK). Kalibrierung mit Platzhalter-
     Tensoren – echte Kalibrierbilder verbessern die Genauigkeit (Geräte-Aufgabe).
-    Import-Pfade folgen der von optimum-executorch gezogenen executorch-Version."""
+
+    ACHTUNG (#62): Der PT2E-Pfad unten passt nicht zur gepinnten torch-Version
+    (2.12): `torch.export.export_for_training` und `torch.ao.quantization.
+    quantize_pt2e` sind dort entfernt/nach `torchao` gewandert. Vor dem int8-Export
+    in #62 zusammen mit der echten Kalibrierung auf die aktuelle API heben. Bis
+    dahin werden Feinmodelle provisorisch `quantize: "none"` (fp32) exportiert."""
     from torch.export import export, export_for_training
     from torch.ao.quantization.quantize_pt2e import prepare_pt2e, convert_pt2e
     from executorch.backends.xnnpack.quantizer.xnnpack_quantizer import (

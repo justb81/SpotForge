@@ -9,20 +9,23 @@ export interface StatRowProps {
   stat: StatDisplay;
   /** Hebt die Reihe hervor (z.B. gewähltes Trumpf-Attribut). */
   highlighted?: boolean;
+  /** Textfarbe (On-Card-Tinte); Default: UI-Textfarbe des Themes. */
+  color?: string;
 }
 
-export function StatRow({ stat, highlighted = false }: StatRowProps) {
+export function StatRow({ stat, highlighted = false, color }: StatRowProps) {
   const theme = useTheme();
+  const ink = color ?? theme.colors.text;
   return (
     <View style={styles.row}>
-      <Text style={[styles.label, { color: theme.colors.text }]} numberOfLines={1}>
+      <Text style={[styles.label, { color: ink }]} numberOfLines={1}>
         {stat.label}
       </Text>
       <Text
         style={[
           styles.value,
           {
-            color: highlighted ? theme.colors.accent : theme.colors.text,
+            color: highlighted ? theme.colors.accent : ink,
             fontWeight: highlighted ? "800" : "600",
           },
         ]}

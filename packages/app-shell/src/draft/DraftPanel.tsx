@@ -67,6 +67,7 @@ export function DraftPanel({ draft, attributes, frames, labels, onDraftChange }:
           card={draftPreviewCard(draft)}
           attributes={attributes}
           frames={frames}
+          artSource={draft.photoUri !== undefined ? { uri: draft.photoUri } : undefined}
           spottedByLabel={labels.spottedBy}
           rarityLabel={labels.draftRarity}
         />

@@ -49,14 +49,18 @@ export function CardView({
   const radius = theme.radius ?? DEFAULT_RADIUS;
   const stats = toStatDisplays(card.attributes, attributes);
   const art = artSource ?? (card.artUri !== undefined ? { uri: card.artUri } : undefined);
+  // Die Seltenheits-Frames haben einen hellen Karten-Body → On-Card-Text (Titel,
+  // Stats, Spotted-By) wird in der dunklen Theme-Tinte gesetzt, nicht in der
+  // UI-Textfarbe (die für den dunklen App-Hintergrund hell ist).
+  const ink = theme.colors.secondary;
 
   return (
     <View style={[styles.root, { borderRadius: radius }]}>
-      <Image
-        source={frames[card.rarity]}
-        resizeMode="stretch"
-        style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
-      />
+      {/* Rahmen als Karten-Hintergrund. cover statt stretch: der Frame ist
+          750×1050 = exakt 5:7 wie die Karte → randscharf ohne Verzerrung und ohne
+          den auf der New Architecture (Fabric) unzuverlässigen stretch-Pfad. Den
+          runden Eck-Clip übernimmt das root (overflow:hidden + borderRadius). */}
+      <Image source={frames[card.rarity]} resizeMode="cover" style={StyleSheet.absoluteFill} />
 
       <View style={styles.content}>
         <View style={styles.header}>
@@ -65,7 +69,7 @@ export function CardView({
             style={[
               styles.title,
               {
-                color: theme.colors.text,
+                color: ink,
                 fontFamily: theme.typography.headingFontFamily ?? theme.typography.fontFamily,
               },
             ]}
@@ -93,11 +97,16 @@ export function CardView({
 
         <View style={styles.stats}>
           {stats.map((stat) => (
-            <StatRow key={stat.key} stat={stat} highlighted={stat.key === highlightedAttribute} />
+            <StatRow
+              key={stat.key}
+              stat={stat}
+              color={ink}
+              highlighted={stat.key === highlightedAttribute}
+            />
           ))}
         </View>
 
-        <Text numberOfLines={1} style={[styles.spottedBy, { color: theme.colors.text }]}>
+        <Text numberOfLines={1} style={[styles.spottedBy, { color: ink }]}>
           {spottedByLabel} {card.spottedBy}
         </Text>
       </View>

@@ -2,7 +2,11 @@ import { Component, type ReactNode, useEffect, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
 import type { AppDefinition, Branding } from "@spotforge/app-config";
 import { SpotForgeApp } from "@spotforge/app-shell";
-import type { Classifier } from "@spotforge/ai-engine";
+import {
+  createCascadeClassifier,
+  gateConfigFromAppDefinition,
+  type CascadeClassifier,
+} from "@spotforge/ai-engine";
 import { initExecutorch } from "react-native-executorch";
 import { ExpoResourceFetcher } from "react-native-executorch-expo-resource-fetcher";
 import Constants from "expo-constants";
@@ -10,8 +14,33 @@ import Constants from "expo-constants";
 // liegt nicht im Git; `pnpm fetch-models` (CI vor dem Bundle, lokal vor `dev`)
 // legt die Datei ab. Metro bündelt sie als Asset (assetExts in metro.config.js).
 import modelAsset from "../../data/models/efficientnet_v2_s_int8.pte";
+// Generische Seltenheits-Kartenrahmen (variants/_default, ADR 0011) – statisch
+// gebündelt; Metro liefert je Import eine Asset-ID (ImageSourcePropType).
+import commonFrame from "../../variants/_default/assets/frames/common.png";
+import uncommonFrame from "../../variants/_default/assets/frames/uncommon.png";
+import rareFrame from "../../variants/_default/assets/frames/rare.png";
+import epicFrame from "../../variants/_default/assets/frames/epic.png";
+import legendaryFrame from "../../variants/_default/assets/frames/legendary.png";
+// Attribut-Schema je Kategorie (Source of Truth: data/categories/<id>.json). Statisch
+// gebündelt, da Metro keine dynamischen require-Pfade auflöst; die aktive Kategorie
+// wählt die App über definition.category.primary.
+import vehiclesCategory from "../../data/categories/vehicles.json";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "?";
+
+// Vollständige Frame-Map (alle Stufen gebunden), die CardView je Karte indexiert.
+const CARD_FRAMES = {
+  common: commonFrame,
+  uncommon: uncommonFrame,
+  rare: rareFrame,
+  epic: epicFrame,
+  legendary: legendaryFrame,
+};
+
+// Attribut-Schemata der bündelbaren Kategorien (aktuell nur die Auto-Kategorie).
+const CATEGORY_ATTRIBUTES: Record<string, (typeof vehiclesCategory)["attributes"]> = {
+  vehicles: vehiclesCategory.attributes,
+};
 
 /**
  * Fängt Render-/Startfehler ab und zeigt sie **auf dem Bildschirm** an, statt die
@@ -49,26 +78,35 @@ function Root() {
   const definition = Constants.expoConfig?.extra?.appDefinition as AppDefinition | undefined;
   const branding = Constants.expoConfig?.extra?.appBranding as Branding | undefined;
 
-  // ExecuTorch initialisieren und den On-Device-Klassifikator aus dem gebündelten
-  // Modell bereitstellen. Bis er bereit ist, zeigt der Spot-Screen einen
-  // Lade-Hinweis; Ladefehler werden sichtbar gemacht statt verschluckt.
-  const [classifier, setClassifier] = useState<Classifier>();
+  // ExecuTorch initialisieren und aus dem gebündelten Modell die Zwei-Stufen-
+  // Kaskade (Gate → Feinmodell) bauen, mit der die app-shell den Spot-Flow fährt.
+  // Bis sie bereit ist, zeigt der Spot-Screen einen Lade-Hinweis; Ladefehler werden
+  // sichtbar gemacht statt verschluckt.
+  const [cascade, setCascade] = useState<CascadeClassifier>();
   const [modelError, setModelError] = useState<string>();
   useEffect(() => {
+    if (!definition) return;
     let active = true;
     (async () => {
       try {
         initExecutorch({ resourceFetcher: ExpoResourceFetcher });
         const { createClassifier } = await import("@spotforge/ai-engine");
-        // PoC-Basismodell: eingebautes ImageNet-EfficientNet (grobe Klassen).
-        // Das fahrzeug-spezifische Modell (#9) löst dies als `kind: "custom"`
-        // mit eigenem Label-Satz ab, sobald es exportiert/gehostet ist.
+        // PoC-Basismodell: eingebautes ImageNet-EfficientNet (grobe Klassen). Es
+        // dient zugleich als Gate und – mangels eigenem Feinmodell – als Feinmodell.
+        // Das fahrzeug-spezifische Modell (#9) löst Letzteres als `kind: "custom"`
+        // mit eigenem Label-Satz ab, sobald es exportiert/gebündelt ist.
         const ready = await createClassifier({
           kind: "imagenet-efficientnet-v2-s",
           modelSource: modelAsset,
         });
         if (active) {
-          setClassifier(ready);
+          setCascade(
+            createCascadeClassifier({
+              gate: ready,
+              gateConfig: gateConfigFromAppDefinition(definition),
+              initFine: async () => ready,
+            }),
+          );
         }
       } catch (e) {
         if (active) {
@@ -79,7 +117,7 @@ function Root() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [definition]);
 
   if (!definition || !branding) {
     return (
@@ -107,7 +145,15 @@ function Root() {
     );
   }
 
-  return <SpotForgeApp definition={definition} theme={branding.theme} classifier={classifier} />;
+  return (
+    <SpotForgeApp
+      definition={definition}
+      theme={branding.theme}
+      frames={CARD_FRAMES}
+      attributes={CATEGORY_ATTRIBUTES[definition.category.primary] ?? []}
+      cascade={cascade}
+    />
+  );
 }
 
 export default function App() {

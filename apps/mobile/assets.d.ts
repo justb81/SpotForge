@@ -6,3 +6,10 @@ declare module "*.pte" {
   const asset: number;
   export default asset;
 }
+
+// Bild-Assets (z.B. die Seltenheits-Kartenrahmen) liefern beim Import eine
+// Metro-Asset-Registry-ID (number), die als React-Native-`ImageSourcePropType` taugt.
+declare module "*.png" {
+  const asset: number;
+  export default asset;
+}

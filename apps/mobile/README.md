@@ -18,7 +18,7 @@ App-Code liegt in `@spotforge/app-shell`; hier wird er nur mit der aktiven
   und reicht sie an `<SpotForgeApp/>`.
 
 ```bash
-# Einmalig: gebündeltes ONNX-Modell beziehen (liegt nicht im Git, #50)
+# Einmalig: gebündeltes ExecuTorch-Modell beziehen (liegt nicht im Git, #50)
 pnpm fetch-models
 
 # Auto-App lokal starten (Default-Variante)
@@ -55,18 +55,21 @@ JS-Iteration weiterhin via `pnpm dev`/Metro gegen den Dev-Build.
 Zum schnellen Testen auf einem echten Gerät baut der Workflow
 [`poc-android-apk.yml`](../../.github/workflows/poc-android-apk.yml) ohne
 Expo-Cloud ein eigenständiges, **offline lauffähiges** APK (`expo prebuild` +
-`gradlew assembleRelease`, Profil `cars-preview`) und legt es als
-herunterladbares Workflow-Artefakt ab. Manuell auslösbar oder bei jedem Push auf
-einen `claude/poc-**`-Branch.
+`gradlew assembleRelease`, Variante über den `variant`-Input, Default `cars`) und
+legt es als herunterladbares Workflow-Artefakt ab. **Manueller Workflow
+(`workflow_dispatch`): auf jedem Branch auslösbar** – in der Actions-UI den Branch
+wählen oder per API mit beliebigem `ref` starten.
 
 ## Status
 
 Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`
-mit der aktiven `AppDefinition`, initialisiert ExecuTorch und reicht den aus dem
-gebündelten `.pte` erzeugten On-Device-Klassifikator durch. **PoC-Loop (#48–#51):**
-Dev-Build + Test-APK-Pipeline, Kamera-Capture und EfficientNet-Klassifikation
-(react-native-executorch). Echte Icon-/Splash-Assets der Variante sind noch
-Platzhalter (`variants/cars/assets/`).
+mit der aktiven `AppDefinition` und reicht die zur Laufzeit/Build-Zeit aufgelösten
+Bausteine herein: die aus dem gebündelten `.pte` gebaute **Kaskade** (Gate →
+Feinmodell, EfficientNet via react-native-executorch), die statisch gebündelten
+**Seltenheits-Frames** (`variants/_default/assets/frames/`) und das **Attribut-
+Schema** der Kategorie (`data/categories/<id>.json`). Damit fährt die Shell den
+Offline-Loop Spot → Draft → Bearbeiten. Echte Icon-/Splash-Assets der Variante
+sind noch Platzhalter (`variants/cars/assets/`).
 
 ## Abhängigkeiten
 

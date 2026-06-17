@@ -1,64 +1,116 @@
-import { useCallback, useState } from "react";
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
-import type { Classifier, ClassificationResult } from "@spotforge/ai-engine";
-import { useTheme } from "@spotforge/ui";
+import type { CascadeClassifier, SpotResult } from "@spotforge/ai-engine";
+import type { AttributeDefinition, Card } from "@spotforge/game-core";
+import { useTheme, type ResolvedCardFrames } from "@spotforge/ui";
 import { SpotCamera } from "../camera/SpotCamera";
+import { DraftPanel } from "../draft/DraftPanel";
+import { UnrecognizedPanel } from "./UnrecognizedPanel";
+import { createSpotter } from "../spotting/createSpotter";
+import { buildManualDraft } from "../draft/manual-draft";
 
 export interface SpotScreenProps {
   /** Aktive Variante – liefert Texte und Guardrails (das Theme kommt aus dem ThemeProvider). */
   definition: AppDefinition;
+  /** Attribut-Schema der App-Kategorie (Draft-Bearbeitung & Karten-Stats). */
+  attributes: AttributeDefinition[];
+  /** Aufgelöste Seltenheits-Frames für das Kartenrendering. */
+  frames: ResolvedCardFrames;
   /** Bevorzugte Anzeige-Sprache; Default: {@link DEFAULT_LOCALE}. */
   locale?: LocaleCode;
-  /** On-Device-Klassifikator (#50); erst gesetzt, wenn das Modell geladen ist. */
-  classifier?: Classifier;
+  /** Entdecker-Tag der erzeugten Drafts (Creator-Ownership, GDD §15). */
+  spottedBy: string;
+  /** Zwei-Stufen-Kaskade (Gate → Feinmodell, #8/#50); erst gesetzt, wenn die Modelle geladen sind. */
+  cascade?: CascadeClassifier;
 }
 
-type Mode = "idle" | "capturing" | "processing" | "preview";
+type Mode = "idle" | "capturing" | "processing";
 
 /**
- * Die Spot-Screen-Shell des PoC und zugleich die Integrationsklammer (#51):
- * **idle** (CTA) → **capturing** (Live-Kamera, #49) → **processing**
- * (Aufbereitung + On-Device-Inferenz, #50) → **preview** (Foto + erkanntes
- * Label & Konfidenz). Vollständig offline, kein Login/Onboarding.
+ * Der Kern-Loop in der UI (ADR 0010, GDD §5.1): **Spotten** erzeugt offline einen
+ * **Draft**. idle (CTA) → capturing (Live-Kamera) → processing (Kaskade + Draft) →
+ * Ergebnis (`draft` | `rejected` | `unrecognized`). Ein Draft lässt sich bestätigen/
+ * korrigieren und mit Attribut-Vorschlägen versehen. Das **Forgen** ist der
+ * Online-Schritt und liegt außerhalb dieses Screens.
  */
-export function SpotScreen({ definition, locale = DEFAULT_LOCALE, classifier }: SpotScreenProps) {
+export function SpotScreen({
+  definition,
+  attributes,
+  frames,
+  locale = DEFAULT_LOCALE,
+  spottedBy,
+  cascade,
+}: SpotScreenProps) {
   const { identity, content } = definition;
   const theme = useTheme();
-  const { minConfidence, rejectMessage } = definition.category.guardrails;
+
   // Mehrsprachige Overrides in die aktive Sprache auflösen; fehlende Schlüssel
   // fallen auf den mitgegebenen Default zurück.
-  const text = (key: string, fallback: string) => {
-    const override = content[key];
-    return override ? resolveText(override, locale) : fallback;
-  };
+  const text = useCallback(
+    (key: string, fallback: string) => {
+      const override = content[key];
+      return override ? resolveText(override, locale) : fallback;
+    },
+    [content, locale],
+  );
+
+  const spotter = useMemo(
+    () => (cascade ? createSpotter(definition, cascade, { locale }) : undefined),
+    [definition, cascade, locale],
+  );
 
   const [mode, setMode] = useState<Mode>("idle");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [result, setResult] = useState<ClassificationResult | null>(null);
+  const [result, setResult] = useState<SpotResult | null>(null);
+  const [draft, setDraft] = useState<Card | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const reset = useCallback(() => {
+    setResult(null);
+    setDraft(null);
+    setError(null);
+  }, []);
 
   const handleCapture = useCallback(
     async (uri: string) => {
       setMode("processing");
-      setResult(null);
-      setError(null);
+      reset();
       setPhotoUri(uri);
 
-      // Die Engine (ExecuTorch) übernimmt Resize/Normalisierung intern – wir
-      // reichen die Foto-URI direkt durch.
-      if (classifier) {
-        try {
-          setResult(await classifier.classify({ imageUri: uri }));
-        } catch {
-          setError(text("spot.error", "Erkennung fehlgeschlagen. Bitte erneut versuchen."));
-        }
+      if (!spotter) {
+        setError(text("spot.modelLoading", "Modell wird geladen …"));
+        setMode("idle");
+        return;
       }
-      setMode("preview");
+
+      try {
+        const spotResult = await spotter({ imageUri: uri, spottedBy });
+        setResult(spotResult);
+        if (spotResult.kind === "draft") {
+          setDraft(spotResult.card);
+        }
+      } catch {
+        setError(text("spot.error", "Erkennung fehlgeschlagen. Bitte erneut versuchen."));
+      }
+      setMode("idle");
     },
-    [classifier],
+    [spotter, spottedBy, reset, text],
   );
+
+  const handleManualCreate = useCallback(
+    (objectName: string) => {
+      if (!photoUri) return;
+      const card = buildManualDraft(definition, { objectName, photoUri, spottedBy });
+      setDraft(card);
+      setResult({ kind: "draft", card });
+    },
+    [definition, photoUri, spottedBy],
+  );
+
+  const showFooter = mode === "idle";
+  const hasResult = result !== null || error !== null;
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
@@ -89,69 +141,102 @@ export function SpotScreen({ definition, locale = DEFAULT_LOCALE, classifier }: 
           <View style={styles.center}>
             <ActivityIndicator color={theme.colors.primary} />
           </View>
-        ) : mode === "preview" && photoUri ? (
-          <View style={styles.fill}>
-            <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
-            <View style={[styles.resultOverlay, { backgroundColor: theme.colors.secondary }]}>
-              {renderResult()}
-            </View>
-          </View>
         ) : (
-          <View style={styles.center}>
-            <Text style={[styles.placeholder, { color: theme.colors.text }]}>
-              {text("spot.resultPlaceholder", "Noch kein Spot. Nimm ein Foto auf.")}
-            </Text>
-          </View>
+          renderResult()
         )}
       </View>
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => setMode("capturing")}
-        style={[styles.captureButton, { backgroundColor: theme.colors.primary }]}
-      >
-        <Text style={[styles.captureLabel, { color: theme.colors.text }]}>
-          {mode === "preview" ? text("spot.retake", "Neues Foto") : text("spot.cta", "Spotten")}
-        </Text>
-      </Pressable>
+      {showFooter ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            reset();
+            setMode("capturing");
+          }}
+          style={[styles.captureButton, { backgroundColor: theme.colors.primary }]}
+        >
+          <Text style={[styles.captureLabel, { color: theme.colors.text }]}>
+            {hasResult ? text("spot.retake", "Neues Foto") : text("spot.cta", "Spotten")}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 
   function renderResult() {
     if (error) {
-      return <Text style={[styles.resultHint, { color: theme.colors.text }]}>{error}</Text>;
-    }
-    if (!classifier) {
       return (
-        <Text style={[styles.resultHint, { color: theme.colors.text }]}>
-          {text("spot.modelLoading", "Modell wird geladen …")}
-        </Text>
+        <View style={styles.center}>
+          <Text style={[styles.message, { color: theme.colors.text }]}>{error}</Text>
+        </View>
       );
     }
-    if (!result) {
-      return null;
+
+    // Ein bearbeiteter Draft ist die Quelle der Wahrheit (überlebt Editor-Speichern).
+    if (draft && result?.kind === "draft") {
+      return (
+        <DraftPanel
+          draft={draft}
+          attributes={attributes}
+          frames={frames}
+          onDraftChange={setDraft}
+          labels={{
+            hit: text("spot.hit", "Treffer! Draft angelegt."),
+            forgePending: text(
+              "forge.pending",
+              "Geschmiedet wird online – Verbindung erforderlich.",
+            ),
+            edit: text("draft.edit", "Bestätigen / korrigieren"),
+            spottedBy: text("card.spottedBy", "Gespottet von"),
+            draftRarity: text("draft.rarity", "Entwurf"),
+            editor: {
+              title: text("draft.editTitle", "Draft bearbeiten"),
+              nameLabel: text("draft.nameLabel", "Marke / Modell"),
+              attributesLabel: text("draft.attributesLabel", "Werte vorschlagen"),
+              save: text("draft.save", "Übernehmen"),
+              cancel: text("draft.cancel", "Abbrechen"),
+            },
+          }}
+        />
+      );
     }
 
-    const percent = Math.round(result.confidence * 100);
-    const lowConfidence = result.confidence < minConfidence;
-    // Weitere Kandidaten (Top-k ohne die Top-1) zur Disambiguierung.
-    const alternatives = result.candidates.slice(1);
+    if (result?.kind === "rejected") {
+      return (
+        <View style={styles.center}>
+          <Text style={[styles.message, { color: theme.colors.text }]}>{result.message}</Text>
+          {result.detectedLabel ? (
+            <Text style={[styles.detected, { color: theme.colors.accent }]}>
+              {text("spot.detected", "Erkannt")}: {result.detectedLabel}
+            </Text>
+          ) : null}
+        </View>
+      );
+    }
+
+    if (result?.kind === "unrecognized") {
+      return (
+        <UnrecognizedPanel
+          rawLabel={result.label}
+          onCreate={handleManualCreate}
+          labels={{
+            title: text("spot.unrecognizedTitle", "Nicht erkannt"),
+            hint: text(
+              "spot.unrecognizedHint",
+              "Das ließ sich keinem Objekt zuordnen. Du kannst es selbst benennen.",
+            ),
+            nameLabel: text("draft.nameLabel", "Marke / Modell"),
+            create: text("spot.manualCreate", "Als Draft anlegen"),
+          }}
+        />
+      );
+    }
 
     return (
-      <View style={styles.resultBody}>
-        <Text style={[styles.resultLabel, { color: theme.colors.text }]}>{result.label}</Text>
-        <Text style={[styles.resultConfidence, { color: theme.colors.accent }]}>{percent} %</Text>
-        {alternatives.length > 0 ? (
-          <Text style={[styles.resultHint, { color: theme.colors.text }]}>
-            {text("spot.alternatives", "Auch möglich")}:{" "}
-            {alternatives.map((c) => `${c.label} (${Math.round(c.confidence * 100)} %)`).join(", ")}
-          </Text>
-        ) : null}
-        {lowConfidence ? (
-          <Text style={[styles.resultHint, { color: theme.colors.text }]}>
-            {resolveText(rejectMessage, locale)}
-          </Text>
-        ) : null}
+      <View style={styles.center}>
+        <Text style={[styles.placeholder, { color: theme.colors.text }]}>
+          {text("spot.resultPlaceholder", "Noch kein Spot. Nimm ein Foto auf.")}
+        </Text>
       </View>
     );
   }
@@ -175,46 +260,25 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden",
   },
-  fill: {
-    flex: 1,
-  },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
+    gap: 8,
   },
   placeholder: {
     fontSize: 16,
     opacity: 0.8,
     textAlign: "center",
   },
-  preview: {
-    flex: 1,
-    width: "100%",
-  },
-  resultOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 16,
-    opacity: 0.92,
-  },
-  resultBody: {
-    gap: 4,
-  },
-  resultLabel: {
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  resultConfidence: {
+  message: {
     fontSize: 16,
-    fontWeight: "600",
+    textAlign: "center",
   },
-  resultHint: {
+  detected: {
     fontSize: 14,
-    opacity: 0.85,
+    fontWeight: "600",
   },
   captureButton: {
     height: 64,

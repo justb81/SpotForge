@@ -1,7 +1,8 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "resolveJsonModule": true
   },
   "include": ["App.tsx", "index.ts", "assets.d.ts"]
 }

@@ -112,6 +112,9 @@ describe("createSpot", () => {
       expect(out.card.photoUri).toBe("file:///golf.jpg");
       expect(out.card.proposedAttributes).toEqual({ power: 110 });
       expect(out.card.id).toBe("draft-1");
+      // Feinmodell-Ergebnis für die Konfidenz-Anzeige durchgereicht.
+      expect(out.recognition?.label).toBe("VW Golf VII");
+      expect(out.recognition?.confidence).toBeCloseTo(0.8);
     }
   });
 

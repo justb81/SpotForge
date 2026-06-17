@@ -181,30 +181,42 @@ export function SpotScreen({
 
     // Ein bearbeiteter Draft ist die Quelle der Wahrheit (überlebt Editor-Speichern).
     if (draft && result?.kind === "draft") {
+      // Feinmodell-Konfidenz einblenden (nicht bei manuell angelegten Drafts).
+      // Achtung: Klassifikatoren sind oft auch bei Fehlklassifikation
+      // überzuversichtlich – der Wert ist ein Hinweis, der Draft bleibt editierbar.
+      const recognition = result.recognition;
       return (
-        <DraftPanel
-          draft={draft}
-          attributes={attributes}
-          frames={frames}
-          onDraftChange={setDraft}
-          labels={{
-            hit: text("spot.hit", "Treffer! Draft angelegt."),
-            forgePending: text(
-              "forge.pending",
-              "Geschmiedet wird online – Verbindung erforderlich.",
-            ),
-            edit: text("draft.edit", "Bestätigen / korrigieren"),
-            spottedBy: text("card.spottedBy", "Gespottet von"),
-            draftRarity: text("draft.rarity", "Entwurf"),
-            editor: {
-              title: text("draft.editTitle", "Draft bearbeiten"),
-              nameLabel: text("draft.nameLabel", "Marke / Modell"),
-              attributesLabel: text("draft.attributesLabel", "Werte vorschlagen"),
-              save: text("draft.save", "Übernehmen"),
-              cancel: text("draft.cancel", "Abbrechen"),
-            },
-          }}
-        />
+        <>
+          {recognition ? (
+            <Text style={[styles.confidence, { color: theme.colors.accent }]}>
+              {text("spot.recognizedAs", "Erkannt")}: {recognition.label} ·{" "}
+              {Math.round(recognition.confidence * 100)} %
+            </Text>
+          ) : null}
+          <DraftPanel
+            draft={draft}
+            attributes={attributes}
+            frames={frames}
+            onDraftChange={setDraft}
+            labels={{
+              hit: text("spot.hit", "Treffer! Draft angelegt."),
+              forgePending: text(
+                "forge.pending",
+                "Geschmiedet wird online – Verbindung erforderlich.",
+              ),
+              edit: text("draft.edit", "Bestätigen / korrigieren"),
+              spottedBy: text("card.spottedBy", "Gespottet von"),
+              draftRarity: text("draft.rarity", "Entwurf"),
+              editor: {
+                title: text("draft.editTitle", "Draft bearbeiten"),
+                nameLabel: text("draft.nameLabel", "Marke / Modell"),
+                attributesLabel: text("draft.attributesLabel", "Werte vorschlagen"),
+                save: text("draft.save", "Übernehmen"),
+                cancel: text("draft.cancel", "Abbrechen"),
+              },
+            }}
+          />
+        </>
       );
     }
 
@@ -307,6 +319,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     opacity: 0.55,
     paddingVertical: 6,
+  },
+  confidence: {
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   captureButton: {
     height: 64,

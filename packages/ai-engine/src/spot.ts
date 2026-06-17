@@ -11,6 +11,7 @@
 import { buildDraft, type AttributeValues, type Card } from "@spotforge/game-core";
 import { resolveText, type AppDefinition, type LocaleCode } from "@spotforge/app-config";
 import type { CascadeClassifier, CascadeTimings, GateConfig } from "./cascade";
+import type { ClassificationResult } from "./classifier";
 
 /** Eingabe eines Spot-Vorgangs. */
 export interface SpotInput {
@@ -31,7 +32,17 @@ export type SpotResult = {
    */
   timings?: CascadeTimings;
 } & (
-  | { kind: "draft"; card: Card }
+  | {
+      kind: "draft";
+      card: Card;
+      /**
+       * Feinmodell-Ergebnis (Top-1 + Kandidaten) hinter dem Draft – für die
+       * **Konfidenz-Anzeige** in der UI. `undefined` bei manuell angelegten Drafts.
+       * Hinweis: Klassifikatoren sind oft auch bei Fehlklassifikation
+       * überzuversichtlich – die Konfidenz ist ein Hinweis, keine Garantie.
+       */
+      recognition?: ClassificationResult;
+    }
   | { kind: "rejected"; message: string; detectedLabel?: string }
   | { kind: "unrecognized"; label: string }
 );
@@ -165,6 +176,6 @@ export function createSpot(
       ...(input.geoRegion !== undefined ? { geoRegion: input.geoRegion } : {}),
     });
 
-    return { kind: "draft", card, timings };
+    return { kind: "draft", card, timings, ...(fine !== undefined ? { recognition: fine } : {}) };
   };
 }

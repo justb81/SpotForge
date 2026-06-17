@@ -253,7 +253,9 @@ Aus dem Car-Spotting-PoC (#48–#51) hart erkauft:
   direkt ausführen. Das APK anschließend per `adb install` oder Artefakt-Download
   sideloaden. Kein Emulator verfügbar – Akzeptanzkriterien auf echtem Gerät
   verifiziert der **Mensch**. `.github/workflows/poc-android-apk.yml` baut dasselbe
-  APK in CI – **manuell (`workflow_dispatch`), auf jedem Branch auslösbar**.
+  APK in CI – **manuell (`workflow_dispatch`, auf jedem Branch) und automatisch per
+  `pull_request`** für jeden PR, der einen den Build betreffenden Pfad ändert
+  (`paths`-Filter: Mobile-Host, gebündelte Pakete, `variants/`, Modell-Beschaffung).
 - **Standalone-Release crasht still?** Kein Metro-Overlay vorhanden → eine
   Error-Boundary, die Fehler **auf den Bildschirm** schreibt, ist Gold wert.
   Crasht es nativ **vor** dem Rendern (Splash → zu), hilft nur `adb logcat`.

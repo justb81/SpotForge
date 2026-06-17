@@ -106,7 +106,9 @@ absolute APK-Größe gegen einen dokumentierten Baseline-Build).
 
 1. **Test-APK bauen** über den Workflow `.github/workflows/poc-android-apk.yml`
    (`PoC Android APK`): in der Actions-UI manuell starten (Branch wählen) **oder**
-   per API mit beliebigem `ref`. Eingabe `variant` = `cars` (Default). Der Workflow
+   per API mit beliebigem `ref`. Für PRs, die einen den Build betreffenden Pfad
+   ändern, läuft er ohnehin automatisch – dann genügt der Artefakt-Download aus dem
+   PR-Lauf. Eingabe `variant` = `cars` (Default). Der Workflow
    zieht via `pnpm fetch-models` **beide** im Manifest gelisteten Modelle, bündelt
    sie als Metro-Assets und baut ein signiertes Release-APK (Debug-Keystore, zum
    Sideloaden).

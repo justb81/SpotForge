@@ -1,6 +1,6 @@
 # Geräte-Verifikation der KI-Kaskade (#63)
 
-**Bezug:** [#63] · #9 · #62 (echtes Feinmodell) · #83 (fp32-B0-Gate) ·
+**Bezug:** [#63] · #9 · #62 (int8 als optionale spätere Optimierung) · #83 (fp32-B0-Gate) ·
 [ADR 0008](../adr/0008-modell-export-pipeline-und-lifecycle.md) ·
 [ADR 0007](../adr/0007-on-device-inference-executorch.md)
 **Module:** `apps/mobile`, `packages/ai-engine`
@@ -18,29 +18,32 @@ Akzeptanzkriterien) und ein **Messwert-Template** zum Ausfüllen.
 
 ---
 
-## Was jetzt schon messbar ist — und was auf #62 wartet
+## Die Kaskade (beide Modelle fp32, gebündelt)
 
-Die Kaskade läuft als zwei Stufen (`packages/ai-engine/src/cascade.ts`):
+Die Kaskade läuft als zwei Stufen (`packages/ai-engine/src/cascade.ts`); **beide
+Modelle sind fp32** (gewählter Baseline-Ansatz — kein Quantisierungsverlust, für
+ein Mobile-Game vertretbare Größe):
 
 - **Gate** (läuft bei **jedem** Spot): EfficientNet-**B0**, ImageNet-1k, **fp32**
   (#83) — ~21,1 MB, ~0,4 GFLOPs. Klärt grob „ist das ein Fahrzeug?" über die
   **summierte** Klassen-Masse (`evaluateGate`).
 - **Feinmodell** (nur im **Accept**-Pfad, lazy in den Speicher initialisiert):
-  EfficientNet-**B4** / Jordo23 (VMMRdb, 8.949 Klassen), **int8** — geschätzt
-  ~33–35 MB, ~4,2 GFLOPs.
+  EfficientNet-**B4** / Jordo23 (VMMRdb, 8.949 Klassen), **fp32** — ~128 MiB
+  (134.278.356 Bytes), ~4,2 GFLOPs.
+
+Damit ist **die volle Kaskade messbar** — kein Teil wartet mehr auf #62 (int8 ist
+eine optionale spätere Optimierung, kein Blocker):
 
 | Messung | Jetzt aussagekräftig? | Hinweis |
 |---|---|---|
-| **Reject-Pfad-Latenz** (Gate-only) | **Ja** | Gate ist das echte, auszuliefernde B0-fp32-Modell (#83). |
-| **Bundle-Größe Gate** | **Ja** | 21,1 MB `.pte` im Manifest verankert. |
-| **Accept-Pfad-Latenz** (Gate→Fein) | **Nein, erst nach #62** | Der PoC nutzt aktuell **das Gate als Platzhalter-Feinmodell** (`apps/mobile/App.tsx`, `initFine: async () => gate`). Die gemessene „Fein"-Zeit ist damit B0, **nicht** B4 — nicht repräsentativ. |
-| **Bundle-Größe Feinmodell** | **Nein, erst nach #62** | Echtes int8-`.pte` existiert noch nicht; Größe ist eine Schätzung. |
-| **Erkennungsqualität** | **Nein, erst nach #62** | Mit Platzhalter-Feinmodell sinnlos. Qualität ist make-or-break → **zuerst** prüfen, sobald #62 das kalibrierte Modell liefert. |
+| **Reject-Pfad-Latenz** (Gate-only) | **Ja** | Gate = auszulieferndes B0-fp32-Modell (#83). |
+| **Accept-Pfad-Latenz** (Gate→Fein) | **Ja** | Feinmodell = echtes B4-fp32 (`cars_jordo23_vmmr_fp32.pte`), gebündelt. |
+| **Bundle-Größe** (beide `.pte`) | **Ja** | Im Manifest verankert: Gate 21,1 MB + Fein 134,3 MB. |
+| **Erkennungsqualität** | **Ja** | Echtes B4-fp32; make-or-break → **zuerst** prüfen. fp32 hat keinen Quant-Verlust ggü. dem Quellmodell. |
 
 > **Reihenfolge (aus der #9-Re-Examination):** **Erkennungsqualität zuerst**, dann
 > Latenz/Größe. Qualität ist make-or-break und billig zu prüfen; das Tunen von
-> Latenz/Größe lohnt erst, wenn die Qualität trägt. Diese Reihenfolge greift,
-> sobald **#62** das echte Feinmodell bereitstellt.
+> Latenz/Größe lohnt erst, wenn die Qualität trägt.
 
 ---
 
@@ -70,18 +73,21 @@ Akzeptanz zählt auf diesem Profil, nicht auf einem High-End-Flaggschiff.
 
 ### Bundle-Größe (APK-Zuwachs durch die gebündelten `.pte`)
 
-| Artefakt | Rolle | Größe (int8/fp32) | Quelle |
+| Artefakt | Rolle | Größe (fp32) | Quelle |
 |---|---|---|---|
 | `gate_imagenet_efficientnet_b0_fp32.pte` | Gate (immer) | **21,1 MB** | Manifest (`bytes: 21148320`) |
-| Feinmodell B4/Jordo23 (int8) | Fein (Accept) | **~33–35 MB** (Schätzung) | #62-Diskussion |
-| **Summe Modelle** | | **≈ 54–56 MB** | |
+| `cars_jordo23_vmmr_fp32.pte` | Fein (Accept) | **134,3 MB** | Manifest (`bytes: 134278356`) |
+| **Summe Modelle** | | **≈ 155 MB** | |
 
-**Budget: APK-Größenzuwachs durch beide `.pte` ≤ 65 MB.** (`.pte`-Assets liegen im
-APK weitgehend unkomprimiert; Puffer für Label-Sätze + Alignment.) Gemessen als
-Differenz `APK mit Modellen` − `APK ohne Modelle` (oder absolute APK-Größe gegen
-einen dokumentierten Baseline-Build).
+**Budget: APK-Größenzuwachs durch beide `.pte` ≤ 170 MB.** Bewusste Entscheidung:
+**fp32 für beide Modelle** — ~155 MB sind für ein Mobile-Game vertretbar (gängige
+Apps/Games liegen bei hunderten MB bis GB), und fp32 hat **keinen
+Quantisierungsverlust**. int8 bleibt eine **optionale** spätere Optimierung (#62),
+falls die Größe doch gedrückt werden soll; erst der Genauigkeitsverlust ist zu
+evaluieren. Gemessen als Differenz `APK mit Modellen` − `APK ohne Modelle` (oder
+absolute APK-Größe gegen einen dokumentierten Baseline-Build).
 
-### Erkennungsqualität (reale Spots, **nach #62**)
+### Erkennungsqualität (reale Spots)
 
 | Metrik | Budget (Vorschlag) | Erhebung |
 |---|---|---|
@@ -108,9 +114,8 @@ einen dokumentierten Baseline-Build).
    das Zielgerät sideloaden (`adb install -r <apk>` oder Datei-Transfer).
 3. **Gerät dokumentieren:** Modell, SoC, RAM, Android-Version (siehe Template).
 
-> Solange #62 offen ist, enthält das Manifest nur das Gate-`.pte`; der PoC nutzt
-> das Gate als Platzhalter-Feinmodell. Reject-Pfad-Latenz und Gate-Bundle-Größe
-> sind damit schon belastbar messbar.
+> Das Manifest enthält **beide** Modelle (Gate B0-fp32 + Feinmodell B4-fp32);
+> `fetch-models` zieht beide vor dem Build. Damit ist die **volle Kaskade** im APK.
 
 ## Prozedur
 
@@ -128,12 +133,11 @@ Standalone-Release-Blindflug).
 1. **Reject-Pfad messen:** mehrere **Nicht-Fahrzeuge** spotten (Tier, Pflanze,
    Gebäude, Person). Erwartung: Reject-Meldung; `Gate …·Σ …` ablesen. Pro Gerät
    ≥ 5 Läufe; **Median** notieren (erster Lauf separat = warm/kalt-Effekt).
-2. **Accept-Pfad messen** *(belastbar erst nach #62)*: mehrere **Fahrzeuge**
-   spotten. Den **ersten** Accept separat notieren (enthält `+Init …` = Fein-
-   Kaltstart), danach den **warmen** Steady-State (`Σ` ohne Init). ≥ 5 warme Läufe;
-   Median.
-3. **Erkennungsqualität** *(nach #62)*: ≥ 50 reale Spots gemäß
-   [Stichproben-Methodik](#erkennungsqualität-reale-spots-nach-62). Für jeden Spot
+2. **Accept-Pfad messen:** mehrere **Fahrzeuge** spotten. Den **ersten** Accept
+   separat notieren (enthält `+Init …` = Fein-Kaltstart), danach den **warmen**
+   Steady-State (`Σ` ohne Init). ≥ 5 warme Läufe; Median.
+3. **Erkennungsqualität:** ≥ 50 reale Spots gemäß
+   [Stichproben-Methodik](#erkennungsqualität-reale-spots). Für jeden Spot
    Top-1 + ob das korrekte Modell in den Top-5 ist; getrennt Alt-/Neu-Fahrzeuge.
 4. **Bundle-Größe** erfassen: APK-Größe gegen den dokumentierten Baseline-Build.
 
@@ -152,7 +156,7 @@ Pro Gerät/Build eine Tabelle ausfüllen (Datum, App-Version, Commit/Run-ID ange
 | Android-Version | _…_ |
 | App-Version (`v…` aus Error-/Latenz-Anzeige) | _…_ |
 | APK-Quelle (Workflow-Run-ID / Branch / Commit) | _…_ |
-| Manifest enthält Feinmodell? (#62 erledigt?) | _ja/nein_ |
+| Modelle (Gate-Version / Fein-Version) | _… / …_ |
 
 ### Latenz (Median über N Läufe)
 
@@ -167,10 +171,10 @@ Pro Gerät/Build eine Tabelle ausfüllen (Datum, App-Version, Commit/Run-ID ange
 | Größe | Wert | Budget | Soll/Ist |
 |---|---|---|---|
 | Gate `.pte` | 21,1 MB | – | – |
-| Feinmodell `.pte` | _… (nach #62)_ | – | – |
-| APK-Zuwachs durch beide `.pte` | _…_ | ≤ 65 MB | _…_ |
+| Feinmodell `.pte` | 134,3 MB | – | – |
+| APK-Zuwachs durch beide `.pte` | _…_ | ≤ 170 MB | _…_ |
 
-### Erkennungsqualität (nach #62)
+### Erkennungsqualität (reale Spots)
 
 | Stichprobe | n | Top-1 | Top-5 | Budget Top-5 | Soll/Ist |
 |---|---|---|---|---|---|
@@ -185,13 +189,13 @@ Pro Gerät/Build eine Tabelle ausfüllen (Datum, App-Version, Commit/Run-ID ange
 Konkrete Folgeentscheidung dokumentieren (Akzeptanzkriterium #63). Mögliche Hebel:
 
 - **Latenz Accept-Pfad zu hoch:** kleineres Backbone (B4 → B3/B2), geringere
-  Eingangsauflösung (380 → 300/260), stärkere/selektivere Quantisierung des
-  Feinmodells.
-- **Bundle zu groß:** stärkere Quantisierung (int8 schon gesetzt; Klassen-Kopf des
-  8.949-Klassen-B4 ist der Treiber), kleineres Backbone, Klassen-Pruning.
-- **Erkennungsqualität zu niedrig:** echte int8-Kalibrierung (#62) verbessern,
-  fp16/teilweise Quantisierung, repräsentativeren Kalibrier-/Trainings-Datensatz,
-  ggf. anderes Feinmodell. Blindfleck MJ ≥ 2017 explizit adressieren.
+  Eingangsauflösung (380 → 300/260), int8-Quantisierung des Feinmodells (#62).
+- **Bundle zu groß:** int8-Quantisierung als optionale Optimierung evaluieren (#62
+  — Genauigkeitsverlust ggü. fp32 prüfen; der 8.949-Klassen-B4-Kopf ist der
+  Größentreiber), kleineres Backbone, Klassen-Pruning.
+- **Erkennungsqualität zu niedrig:** repräsentativeren/anderes Feinmodell, Blindfleck
+  MJ ≥ 2017 explizit adressieren. (fp32 hat keinen Quant-Verlust — Quantisierung ist
+  hier **nicht** der Hebel.)
 
 Quellen: [Jordo23/vehicle-classifier](https://huggingface.co/Jordo23/vehicle-classifier) ·
 [Qualcomm AI Hub – EfficientNet-B4](https://aihub.qualcomm.com/compute/models/efficientnet_b4)

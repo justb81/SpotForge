@@ -207,9 +207,10 @@ def quantize_int8(model, sample):
 
     ACHTUNG (#62): Der PT2E-Pfad unten passt nicht zur gepinnten torch-Version
     (2.12): `torch.export.export_for_training` und `torch.ao.quantization.
-    quantize_pt2e` sind dort entfernt/nach `torchao` gewandert. Vor dem int8-Export
-    in #62 zusammen mit der echten Kalibrierung auf die aktuelle API heben. Bis
-    dahin werden Feinmodelle provisorisch `quantize: "none"` (fp32) exportiert."""
+    quantize_pt2e` sind dort entfernt/nach `torchao` gewandert. fp32
+    (`quantize: "none"`) ist der gewählte Baseline-Ansatz für beide Modelle; int8
+    ist eine OPTIONALE spätere Optimierung (#62) – beim Einführen den Pfad auf die
+    aktuelle API heben und den Genauigkeitsverlust gegen fp32 evaluieren."""
     from torch.export import export, export_for_training
     from torch.ao.quantization.quantize_pt2e import prepare_pt2e, convert_pt2e
     from executorch.backends.xnnpack.quantizer.xnnpack_quantizer import (

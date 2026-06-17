@@ -20,8 +20,8 @@ import gateLabels from "../../data/models/gate_imagenet_efficientnet_b0.labels.j
 // Gebündeltes Feinmodell (#9): Jordo23/vehicle-classifier (EfficientNet-B4, VMMRdb,
 // 8.949 Klassen „Make Model Year", int8). Wird nur bei akzeptiertem Gate in den
 // Speicher initialisiert (Kaskade). data/models/* liegt nicht im Git; `pnpm
-// fetch-models` zieht es vor dem Build. Hinweis: PROVISORISCH fp32 (volles Modell)
-// zum Testen der Kaskade; int8 + echte Kalibrierung folgen in #62.
+// fetch-models` zieht es vor dem Build. fp32 ist der gewählte Baseline-Ansatz
+// (volles Modell, kein Quant-Verlust); int8 ist eine optionale spätere Optimierung (#62).
 import fineModelAsset from "../../data/models/cars_jordo23_vmmr_fp32.pte";
 import fineLabels from "../../data/models/cars_jordo23_vmmr.labels.json";
 

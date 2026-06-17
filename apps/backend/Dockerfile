@@ -16,6 +16,7 @@ COPY packages/config/package.json ./packages/config/
 COPY packages/game-core/package.json ./packages/game-core/
 COPY packages/ai-engine/package.json ./packages/ai-engine/
 COPY packages/api-client/package.json ./packages/api-client/
+COPY packages/api-contract/package.json ./packages/api-contract/
 COPY packages/app-config/package.json ./packages/app-config/
 COPY packages/app-shell/package.json ./packages/app-shell/
 COPY packages/ui/package.json ./packages/ui/
@@ -38,6 +39,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 WORKDIR /app
 COPY --from=build /prod/backend ./
+# Generierte SQL-Migrationen ins Image (Migrate-on-boot liest <cwd>/migrations).
+COPY --from=build /repo/apps/backend/migrations ./migrations
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

@@ -1,21 +1,55 @@
-# Lokale Entwicklungs-Infrastruktur für das SpotForge-Backend.
+# Produktions-Stack für **Coolify** (Build/Run direkt aus dem Repo).
 #
-#   docker compose up -d        # Postgres, Redis, MeiliSearch, MinIO starten
-#   docker compose --profile backend up --build   # zusätzlich das Backend-Image
+# Ingress läuft ausschließlich über Coolifys Traefik-Proxy – daher **keine**
+# Host-Port-Mappings (`ports:`). Die Dienste erreichen sich intern über ihren
+# Service-Namen (`postgres`, `redis`, `garage`, `meilisearch`). Nach außen wird
+# nur der **App-Container** über eine Domain exponiert (Coolify generiert die
+# Traefik-Labels aus `SERVICE_FQDN_BACKEND_3000`). Postgres, Redis, MeiliSearch
+# und Garage bleiben intern.
 #
-# In Produktion werden diese Dienste NICHT hierüber betrieben, sondern als
-# eigene Ressourcen in Coolify (siehe docs/deployment.md). Werte stammen aus
-# .env (Vorlage: .env.example).
+# Lokale Entwicklung nutzt NICHT diese Datei, sondern `docker-compose.dev.yml`
+# (Infra mit Host-Ports; Backend läuft via `pnpm dev` auf dem Host).
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      # Coolify füllt diese Variable mit der zugewiesenen Domain und erzeugt
+      # daraus automatisch die Traefik-Router-/Service-Labels (Port 3000).
+      - SERVICE_FQDN_BACKEND_3000
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+      # Interne Service-Hostnamen (kein Host-Port nötig). Zwei DB-Rollen:
+      # App = Nicht-Superuser (RLS!), Migration = Admin (siehe ADR 0012).
+      - DATABASE_URL=postgres://${APP_DB_USER:-spotforge_app}:${APP_DB_PASSWORD:?set APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-spotforge}
+      - MIGRATION_DATABASE_URL=postgres://${POSTGRES_USER:-spotforge}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-spotforge}
+      - REDIS_URL=redis://redis:6379
+      - MEILI_HOST=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}
+      - S3_ENDPOINT=http://garage:3900
+      - S3_REGION=${S3_REGION:-garage}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY}
+      - S3_BUCKET=${S3_BUCKET:-spotforge-media}
+      - JWT_SECRET=${JWT_SECRET:?set JWT_SECRET}
+      - GOOGLE_CLIENT_IDS=${GOOGLE_CLIENT_IDS:-}
+      - APPLE_CLIENT_IDS=${APPLE_CLIENT_IDS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-spotforge}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spotforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-spotforge}
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -27,8 +61,6 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     volumes:
       - redisdata:/data
     healthcheck:
@@ -41,10 +73,8 @@ services:
     image: getmeili/meilisearch:v1.10
     restart: unless-stopped
     environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe}
-      MEILI_ENV: development
-    ports:
-      - "7700:7700"
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY}
+      MEILI_ENV: production
     volumes:
       - meilidata:/meili_data
     healthcheck:
@@ -53,46 +83,24 @@ services:
       timeout: 5s
       retries: 5
 
-  minio:
-    image: minio/minio:latest
+  # S3-kompatibler Objektspeicher (ADR 0013). Bleibt vorerst intern; Bild-Upload
+  # (Presigned URLs) exponiert Garage später über eine eigene Subdomain.
+  garage:
+    image: dxflrs/garage:v1.0.1
     restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-spotforge}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-spotforge-secret}
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     volumes:
-      - miniodata:/data
+      - garagemeta:/var/lib/garage/meta
+      - garagedata:/var/lib/garage/data
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
+      test: ["CMD", "/garage", "status"]
+      interval: 30s
       timeout: 5s
       retries: 5
-
-  # Optionales Backend-Image (nur mit `--profile backend`). Baut dasselbe
-  # Dockerfile, das auch Coolify nutzt.
-  backend:
-    profiles: ["backend"]
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "${PORT:-3000}:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      meilisearch:
-        condition: service_healthy
 
 volumes:
   pgdata:
   redisdata:
   meilidata:
-  miniodata:
+  garagemeta:
+  garagedata:

@@ -42,26 +42,38 @@ URLs usw.) liegt als Environment-Variablen in Coolify (Vorlage: [`.env.example`]
 
 ## Backend auf Coolify
 
-Coolify baut das Backend **direkt aus dem Git-Repo** (kein externer Registry-Schritt).
+Coolify baut den gesamten Backend-Stack **direkt aus dem Git-Repo** über die
+[`docker-compose.yml`](../docker-compose.yml) (App + Postgres + Redis + MeiliSearch +
+Garage). Der **Ingress läuft ausschließlich über Coolifys Traefik-Proxy** – die
+Compose-Datei hat daher **keine Host-Port-Mappings**. Nach außen wird nur der
+**App-Container** über eine Domain exponiert; Postgres, Redis, MeiliSearch und
+Garage bleiben intern und sind nur über das Compose-Netz (per Service-Name)
+erreichbar.
 
 ### Einmalige Einrichtung
 
-1. **Resource → Application** anlegen und das Repo `justb81/spotforge` per **GitHub-App**
-   verbinden (Branch `main`).
-2. **Build-Einstellungen** (Monorepo!):
-   - **Base Directory:** `/` (Repo-Wurzel ist der Docker-Build-Context)
-   - **Dockerfile Location:** `apps/backend/Dockerfile`
-   - Build Pack: **Dockerfile**
-3. **Port:** `3000`. **Health-Check-Pfad:** `/health`.
-4. **Environment-Variablen** der App setzen – Schlüssel siehe [`.env.example`](../.env.example).
-   Die Verbindungs-URLs zeigen auf die folgenden Coolify-Ressourcen.
-5. **Daten-Ressourcen** in Coolify anlegen und mit der App verbinden:
-   - **PostgreSQL** → `DATABASE_URL`
-   - **Redis** → `REDIS_URL`
-   - **MeiliSearch** → `MEILI_HOST` / `MEILI_MASTER_KEY`
-   - **S3/MinIO** → `S3_*`
-6. **Auto-Deploy** aktivieren (Deploy bei Push auf `main`). Optional: „nur nach grünem
-   CI" – dazu in Coolify das Warten auf den GitHub-Check aktivieren.
+1. **Resource → Docker Compose** anlegen, das Repo `justb81/spotforge` per
+   **GitHub-App** verbinden (Branch `main`), **Compose-Pfad** `docker-compose.yml`.
+2. **Domain** dem `backend`-Service zuweisen. Coolify füllt `SERVICE_FQDN_BACKEND_3000`
+   und generiert daraus automatisch die Traefik-Labels (interner Port `3000`).
+   **Health-Check-Pfad:** `/health`.
+3. **Environment-Variablen** des Stacks setzen – Schlüssel siehe
+   [`.env.example`](../.env.example). Insbesondere die Secrets ohne Default
+   (`POSTGRES_PASSWORD`, `APP_DB_PASSWORD`, `JWT_SECRET`, `MEILI_MASTER_KEY`,
+   `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`) sowie `GOOGLE_CLIENT_IDS` /
+   `APPLE_CLIENT_IDS`. Die Verbindungs-URLs zeigen intern auf `postgres` / `redis` /
+   `garage` (in der Compose-Datei vorgegeben).
+4. **Zwei Postgres-Rollen (ADR 0012):** Die App verbindet als **Nicht-Superuser**
+   (`DATABASE_URL`, Rolle `spotforge_app`) – nur so erzwingt RLS die Mandantentrennung.
+   **Migrate-on-boot** nutzt die Admin-Rolle (`MIGRATION_DATABASE_URL`) und legt die
+   App-Rolle beim Start idempotent an. Migrationen laufen automatisch beim Boot
+   (Advisory-Lock); kein separater Migrations-Schritt nötig.
+5. **Garage-Bootstrap** (einmalig, sobald der S3-Speicher genutzt wird): Layout/Key/
+   Bucket via `tools/garage/bootstrap.sh` anlegen; den erzeugten Key als
+   `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` setzen. Garage bleibt intern, bis das
+   Bild-Upload-Feature es über eine eigene Subdomain exponiert (ADR 0013).
+6. **Auto-Deploy** aktivieren (Deploy bei Push auf `main`). Optional „nur nach grünem
+   CI": in Coolify das Warten auf den GitHub-Check aktivieren.
 
 ### Deploy & Rollback
 
@@ -70,16 +82,21 @@ Coolify baut das Backend **direkt aus dem Git-Repo** (kein externer Registry-Sch
 
 ### Lokal entwickeln
 
+Lokal läuft das Backend **nativ auf dem Host** (Hot-Reload); nur die Infra kommt aus
+Docker – über die separate [`docker-compose.dev.yml`](../docker-compose.dev.yml), die
+**mit** Host-Ports exponiert (anders als der Coolify-Stack):
+
 ```bash
 cp .env.example .env
-docker compose up -d                  # Postgres, Redis, MeiliSearch, MinIO
-pnpm --filter @spotforge/backend dev  # Fastify mit Hot-Reload (tsx watch)
-# Image wie Coolify bauen/prüfen:
-docker compose --profile backend up --build
+docker compose -f docker-compose.dev.yml up -d   # Postgres, Redis, MeiliSearch, Garage
+tools/garage/bootstrap.sh                         # einmalig: Garage-Key/Bucket
+pnpm --filter @spotforge/backend dev              # Fastify mit Hot-Reload (tsx watch)
+# Produktions-Image wie Coolify bauen/prüfen:
+docker compose up --build
 ```
 
-Health-Checks: `GET /health` (Liveness), `GET /ready` (Readiness). Fachliche Routen
-erwarten den Mandanten-Header `x-app-id` (= `AppDefinition.id`).
+Health-Checks: `GET /health` (Liveness), `GET /ready` (Readiness – pingt DB + Redis).
+Fachliche Routen erwarten den Mandanten-Header `x-app-id` (= `AppDefinition.id`).
 
 ---
 

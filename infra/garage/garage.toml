@@ -1,0 +1,34 @@
+# Garage-Konfiguration (Single-Node), gemountet nach /etc/garage.toml.
+# S3-kompatibler Objektspeicher für (opt-in) geteilte Kartenbilder – ADR 0013.
+#
+# Single-Node-Setup: replication_factor = 1 (keine Redundanz; Coolify sichert
+# die Volumes). Mehr-Node-Replikation ist bewusst nicht Teil des MVP.
+#
+# WICHTIG: `rpc_secret` und `admin_token` sind **Dev-Defaults**. Für Produktion
+# auf Coolify durch eigene Werte ersetzen (`openssl rand -hex 32` bzw.
+# `openssl rand -base64 32`) – z.B. über eine eigene, nicht eingecheckte
+# garage.toml im Coolify-Storage.
+
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+
+replication_factor = 1
+
+rpc_bind_addr = "[::]:3901"
+rpc_public_addr = "127.0.0.1:3901"
+rpc_secret = "29249d50c02ad14ace3e4010adf386c5b5ed7ca7b8653780c1cb30a16a59e0f8"
+
+[s3_api]
+s3_region = "garage"
+api_bind_addr = "[::]:3900"
+root_domain = ".s3.garage.localhost"
+
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage.localhost"
+index = "index.html"
+
+[admin]
+api_bind_addr = "[::]:3903"
+admin_token = "E6lM5sfrwH16B4YUyyt62wbeoonkAZW6lXT9S9B5Lhw="

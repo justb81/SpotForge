@@ -66,6 +66,39 @@ tragfähig bestätigt.
    **`backbone_version`-Sprung** zu behandeln (paralleler Korpus, eigenes
    Eval-Gate) — **nie stillschweigend in denselben Topf**.
 
+## Embedding-Berechnung: Spot-UX vs. Forge-Pass
+
+Aus Punkt 2/3 folgt, **wann** und **auf welchem Pfad** der Embedding-Tap rechnet.
+Spotting und Embedding werden entkoppelt:
+
+- **Spotting** ist hochfrequent + latenzkritisch (Kamera → sofortige Rückmeldung).
+  Es **darf GPU/NPU nutzen** — der Latenz-Hebel liegt am compute-gebundenen
+  **Feinmodell** (B4 ~4,2 GFLOPs); das **Gate** (B0 ~0,4 GFLOPs) ist
+  preprocessing-gebunden (#63: ~200–400 ms Bilddekodierung/Resize) und profitiert
+  nicht.
+- **Das Embedding** wird **nur für geforgte + (Training-)opt-in Karten** benötigt
+  (#88). Es wird **lazy beim Forgen, kurz vor dem Upload**, aus dem am Draft
+  gespeicherten Foto (ADR 0010) berechnet. Vorteile: verworfene Drafts kosten
+  keinen Embedding-Pass; ohne Opt-in entfällt er ganz (DSGVO-Zweckbindung, #26).
+
+**Kanonische Regel (degradiert sauber):** Das Embedding stammt **immer** aus einem
+fp32/CPU-Pass.
+
+- Lief der Spot-Pass bereits fp32/CPU (CPU-only-Gerät), wird sein Tap
+  **wiederverwendet** → **ein** Backbone-Pass.
+- Lief der Spot-Pass auf GPU, wird beim Forgen ein fp32/CPU-Pass **nachgezogen** →
+  **zwei** Pässe (der bewusste Trade: schnellere Spots gegen etwas mehr Arbeit beim
+  selteneren, ohnehin online + latenztoleranten Forgen).
+
+Eine numerische GPU-/CPU-Drift im **Spot-Argmax** ist unkritisch: das Korpus-Label
+ist das vom User im Draft-Editor **bestätigte** (#88), nicht das rohe Spot-Ergebnis.
+
+**Der GPU-Spot-Pfad selbst ist eine gemessene Optimierung, kein Tagesgeschäft:**
+erst bauen, wenn die fp32/CPU-Baseline auf dem Referenz-Mid-Range-Android (#63) als
+zu langsam **gemessen** ist — die Delegate-Reife (Vulkan/QNN für B4/ViT) ist das
+offene Risiko (ADR 0007). Die obige Regel verankert die Architektur unabhängig
+davon, ob/wann der GPU-Pfad kommt.
+
 ## Begründung
 
 - **fp32 eliminiert den größten Divergenz-Treiber** (Quantisierungs-Verschiebung)

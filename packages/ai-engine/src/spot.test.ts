@@ -23,7 +23,7 @@ function fixedCascade(out: CascadeResult): CascadeClassifier {
 }
 
 function rejected(gate: ClassificationResult): CascadeResult {
-  return { gate, decision: { accepted: false, mass: 0 } };
+  return { gate, decision: { accepted: false, mass: 0 }, timings: { gateMs: 12, totalMs: 12 } };
 }
 
 function accepted(gate: ClassificationResult, fine: ClassificationResult): CascadeResult {
@@ -32,6 +32,7 @@ function accepted(gate: ClassificationResult, fine: ClassificationResult): Casca
     gate,
     decision: { accepted: true, mass: matched?.confidence ?? 0, matched },
     fine,
+    timings: { gateMs: 12, fineMs: 30, totalMs: 42 },
   };
 }
 
@@ -103,12 +104,17 @@ describe("createSpot", () => {
 
     const out = await spot({ imageUri: "file:///golf.jpg", spottedBy: "user-42" });
     expect(out.kind).toBe("draft");
+    // Kaskaden-Latenzen werden für die On-Screen-Geräte-Verifikation (#63) durchgereicht.
+    expect(out.timings).toEqual({ gateMs: 12, fineMs: 30, totalMs: 42 });
     if (out.kind === "draft") {
       expect(out.card.status).toBe("draft");
       expect(out.card.objectName).toBe("VW Golf VII");
       expect(out.card.photoUri).toBe("file:///golf.jpg");
       expect(out.card.proposedAttributes).toEqual({ power: 110 });
       expect(out.card.id).toBe("draft-1");
+      // Feinmodell-Ergebnis für die Konfidenz-Anzeige durchgereicht.
+      expect(out.recognition?.label).toBe("VW Golf VII");
+      expect(out.recognition?.confidence).toBeCloseTo(0.8);
     }
   });
 

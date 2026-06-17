@@ -10,7 +10,8 @@
 
 import { buildDraft, type AttributeValues, type Card } from "@spotforge/game-core";
 import { resolveText, type AppDefinition, type LocaleCode } from "@spotforge/app-config";
-import type { CascadeClassifier, GateConfig } from "./cascade";
+import type { CascadeClassifier, CascadeTimings, GateConfig } from "./cascade";
+import type { ClassificationResult } from "./classifier";
 
 /** Eingabe eines Spot-Vorgangs. */
 export interface SpotInput {
@@ -23,10 +24,28 @@ export interface SpotInput {
 }
 
 /** Ergebnis eines Spot-Vorgangs. */
-export type SpotResult =
-  | { kind: "draft"; card: Card }
+export type SpotResult = {
+  /**
+   * Gemessene Kaskaden-Latenzen (#63) für die On-Screen-Geräte-Verifikation.
+   * Aus dem Klassifikations-Lauf befüllt; bei manuell angelegten Drafts (ohne
+   * Kaskade) `undefined`.
+   */
+  timings?: CascadeTimings;
+} & (
+  | {
+      kind: "draft";
+      card: Card;
+      /**
+       * Feinmodell-Ergebnis (Top-1 + Kandidaten) hinter dem Draft – für die
+       * **Konfidenz-Anzeige** in der UI. `undefined` bei manuell angelegten Drafts.
+       * Hinweis: Klassifikatoren sind oft auch bei Fehlklassifikation
+       * überzuversichtlich – die Konfidenz ist ein Hinweis, keine Garantie.
+       */
+      recognition?: ClassificationResult;
+    }
   | { kind: "rejected"; message: string; detectedLabel?: string }
-  | { kind: "unrecognized"; label: string };
+  | { kind: "unrecognized"; label: string }
+);
 
 /**
  * Auflösung eines rohen Feinmodell-Labels auf das Domänenmodell. **Seam für #72**;
@@ -117,7 +136,7 @@ export function createSpot(
   const { cascade, resolver, factLookup, newId, now, locale } = deps;
 
   return async function spot(input: SpotInput): Promise<SpotResult> {
-    const { decision, gate, fine } = await cascade.classify({ imageUri: input.imageUri });
+    const { decision, gate, fine, timings } = await cascade.classify({ imageUri: input.imageUri });
 
     // 1) Gate-Guardrail: nicht im Scope → Reject (mit erkanntem Top-Label für die UX).
     if (!decision.accepted) {
@@ -126,19 +145,20 @@ export function createSpot(
         kind: "rejected",
         message: resolveText(appDef.category.guardrails.rejectMessage, locale),
         ...(detectedLabel !== undefined ? { detectedLabel } : {}),
+        timings,
       };
     }
 
     // 2) Feinmodell ohne verwertbares Ergebnis → unrecognized.
     const topFine = fine?.candidates[0];
     if (topFine === undefined || topFine.label.trim() === "") {
-      return { kind: "unrecognized", label: gate.candidates[0]?.label ?? "" };
+      return { kind: "unrecognized", label: gate.candidates[0]?.label ?? "", timings };
     }
 
     // 3) Label → Domänen-Objekt (Default-Resolver; #72 produktiv).
     const resolution = resolver.resolve(topFine.label);
     if (resolution === undefined) {
-      return { kind: "unrecognized", label: topFine.label };
+      return { kind: "unrecognized", label: topFine.label, timings };
     }
 
     // 4) Optionale provisorische Offline-Vorschläge (#10) – nicht autoritativ.
@@ -156,6 +176,6 @@ export function createSpot(
       ...(input.geoRegion !== undefined ? { geoRegion: input.geoRegion } : {}),
     });
 
-    return { kind: "draft", card };
+    return { kind: "draft", card, timings, ...(fine !== undefined ? { recognition: fine } : {}) };
   };
 }

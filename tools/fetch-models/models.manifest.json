@@ -25,6 +25,30 @@
           "bytes": 15475
         }
       }
+    },
+    {
+      "id": "cars-jordo23-vmmr",
+      "name": "VMMR EfficientNet-B4 (Marke+Modell+Jahr, 8.949 Klassen)",
+      "version": "1.0.0",
+      "category": "vehicles",
+      "preprocessor": {
+        "normMean": [0.485, 0.456, 0.406],
+        "normStd": [0.229, 0.224, 0.225]
+      },
+      "artifacts": {
+        "model": {
+          "url": "https://github.com/justb81/SpotForge/releases/download/model-cars-jordo23-vmmr-v1.0.0/cars_jordo23_vmmr_fp32.pte",
+          "dest": "data/models/cars_jordo23_vmmr_fp32.pte",
+          "sha256": "5796c1034ea4860667f065adbed3b82d2e145b35db9d0d5a4c04bd69c4745b5b",
+          "bytes": 134278356
+        },
+        "labels": {
+          "url": "https://github.com/justb81/SpotForge/releases/download/model-cars-jordo23-vmmr-v1.0.0/cars_jordo23_vmmr.labels.json",
+          "dest": "data/models/cars_jordo23_vmmr.labels.json",
+          "sha256": "a3eb10df3c71f63c8effd33d6b1b5c66efaa6f3520b5faba027e603c0d7db7d2",
+          "bytes": 222293
+        }
+      }
     }
   ]
 }

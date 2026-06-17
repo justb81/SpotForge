@@ -1,13 +1,18 @@
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
-import type { CascadeClassifier, SpotResult } from "@spotforge/ai-engine";
+import {
+  formatCascadeTimings,
+  type CascadeClassifier,
+  type SpotResult,
+} from "@spotforge/ai-engine";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { useTheme, type ResolvedCardFrames } from "@spotforge/ui";
 import { SpotCamera } from "../camera/SpotCamera";
 import { DraftPanel } from "../draft/DraftPanel";
 import { UnrecognizedPanel } from "./UnrecognizedPanel";
+import { RecognitionPicker } from "./RecognitionPicker";
 import { createSpotter } from "../spotting/createSpotter";
 import { buildManualDraft } from "../draft/manual-draft";
 
@@ -65,11 +70,13 @@ export function SpotScreen({
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [result, setResult] = useState<SpotResult | null>(null);
   const [draft, setDraft] = useState<Card | null>(null);
+  const [manualMode, setManualMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setResult(null);
     setDraft(null);
+    setManualMode(false);
     setError(null);
   }, []);
 
@@ -86,11 +93,9 @@ export function SpotScreen({
       }
 
       try {
-        const spotResult = await spotter({ imageUri: uri, spottedBy });
-        setResult(spotResult);
-        if (spotResult.kind === "draft") {
-          setDraft(spotResult.card);
-        }
+        // Kein Auto-Draft mehr: bei akzeptiertem Gate zeigt der RecognitionPicker
+        // erst die Top-k-Kandidaten zur Auswahl (Draft entsteht bei der Auswahl).
+        setResult(await spotter({ imageUri: uri, spottedBy }));
       } catch {
         setError(text("spot.error", "Erkennung fehlgeschlagen. Bitte erneut versuchen."));
       }
@@ -99,10 +104,25 @@ export function SpotScreen({
     [spotter, spottedBy, reset, text],
   );
 
+  // Auswahl eines Kandidaten → Draft. Für den Top-1 wird der bereits in der
+  // Pipeline gebaute Draft (inkl. evtl. Vorschläge) genutzt, sonst aus dem Label.
+  const handleSelectCandidate = useCallback(
+    (index: number, label: string) => {
+      if (index === 0 && result?.kind === "draft") {
+        setDraft(result.card);
+        return;
+      }
+      if (!photoUri) return;
+      setDraft(buildManualDraft(definition, { objectName: label, photoUri, spottedBy }));
+    },
+    [definition, photoUri, spottedBy, result],
+  );
+
   const handleManualCreate = useCallback(
     (objectName: string) => {
       if (!photoUri) return;
       const card = buildManualDraft(definition, { objectName, photoUri, spottedBy });
+      setManualMode(false);
       setDraft(card);
       setResult({ kind: "draft", card });
     },
@@ -137,12 +157,29 @@ export function SpotScreen({
               permissionCta: text("spot.permissionCta", "Kamera erlauben"),
             }}
           />
-        ) : mode === "processing" ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={theme.colors.primary} />
-          </View>
         ) : (
-          renderResult()
+          <>
+            {/* Aufgenommenes Foto bleibt als Hintergrund sichtbar (Verarbeitung +
+                Ergebnis/Picker); ein dezenter Scrim hält Texte lesbar. */}
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+              />
+            ) : null}
+            {photoUri ? <View style={[StyleSheet.absoluteFill, styles.scrim]} /> : null}
+            {mode === "processing" ? (
+              <View style={styles.center}>
+                <ActivityIndicator color={theme.colors.primary} />
+              </View>
+            ) : (
+              <>
+                {renderResult()}
+                {renderLatency()}
+              </>
+            )}
+          </>
         )}
       </View>
 
@@ -172,7 +209,7 @@ export function SpotScreen({
       );
     }
 
-    // Ein bearbeiteter Draft ist die Quelle der Wahrheit (überlebt Editor-Speichern).
+    // Bestätigter/ausgewählter Draft (überlebt Editor-Speichern).
     if (draft && result?.kind === "draft") {
       return (
         <DraftPanel
@@ -196,6 +233,41 @@ export function SpotScreen({
               save: text("draft.save", "Übernehmen"),
               cancel: text("draft.cancel", "Abbrechen"),
             },
+          }}
+        />
+      );
+    }
+
+    // „Manuell eingeben" aus dem Picker: leeres Namensfeld.
+    if (manualMode) {
+      return (
+        <UnrecognizedPanel
+          rawLabel=""
+          onCreate={handleManualCreate}
+          labels={{
+            title: text("spot.manualTitle", "Manuell eingeben"),
+            hint: text("spot.manualHint", "Benenne Marke und Modell selbst."),
+            nameLabel: text("draft.nameLabel", "Marke / Modell"),
+            create: text("spot.manualCreate", "Als Draft anlegen"),
+          }}
+        />
+      );
+    }
+
+    // Gate akzeptiert → Top-k-Kandidaten (mit Konfidenz) zur Auswahl + „Manuell".
+    if (
+      result?.kind === "draft" &&
+      result.recognition &&
+      result.recognition.candidates.length > 0
+    ) {
+      return (
+        <RecognitionPicker
+          candidates={result.recognition.candidates}
+          onSelect={handleSelectCandidate}
+          onManual={() => setManualMode(true)}
+          labels={{
+            title: text("spot.pickTitle", "Erkannt – bitte auswählen:"),
+            manual: text("spot.manualEntry", "Manuell eingeben"),
           }}
         />
       );
@@ -240,6 +312,20 @@ export function SpotScreen({
       </View>
     );
   }
+
+  // Dezente Latenz-Diagnosezeile (#63): zeigt die gemessenen Kaskaden-Laufzeiten
+  // (Gate-only-Reject vs. Gate→Fein-Accept) **auf dem Bildschirm** an, weil ein
+  // Standalone-Release kein Profiler-Overlay hat. Nur sichtbar, wenn ein
+  // Klassifikations-Lauf Timings lieferte (nicht bei manuell angelegten Drafts).
+  function renderLatency() {
+    const timings = result?.timings;
+    if (!timings) return null;
+    return (
+      <Text style={[styles.latency, { color: theme.colors.text }]} accessibilityRole="text">
+        {formatCascadeTimings(timings)}
+      </Text>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
@@ -260,6 +346,10 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden",
   },
+  scrim: {
+    // Neutraler Lesbarkeits-Schleier über dem Hintergrundfoto.
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+  },
   center: {
     flex: 1,
     alignItems: "center",
@@ -279,6 +369,13 @@ const styles = StyleSheet.create({
   detected: {
     fontSize: 14,
     fontWeight: "600",
+  },
+  latency: {
+    fontSize: 11,
+    fontFamily: "monospace",
+    textAlign: "center",
+    opacity: 0.55,
+    paddingVertical: 6,
   },
   captureButton: {
     height: 64,

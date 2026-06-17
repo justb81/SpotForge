@@ -56,9 +56,11 @@ Zum schnellen Testen auf einem echten Gerät baut der Workflow
 [`poc-android-apk.yml`](../../.github/workflows/poc-android-apk.yml) ohne
 Expo-Cloud ein eigenständiges, **offline lauffähiges** APK (`expo prebuild` +
 `gradlew assembleRelease`, Variante über den `variant`-Input, Default `cars`) und
-legt es als herunterladbares Workflow-Artefakt ab. **Manueller Workflow
-(`workflow_dispatch`): auf jedem Branch auslösbar** – in der Actions-UI den Branch
-wählen oder per API mit beliebigem `ref` starten.
+legt es als herunterladbares Workflow-Artefakt ab. Trigger: **`workflow_dispatch`**
+(auf jedem Branch auslösbar – Branch in der Actions-UI wählen oder per API mit
+beliebigem `ref` starten) **und automatisch per `pull_request`** für jeden PR, der
+einen den Build betreffenden Pfad ändert (Mobile-Host, gebündelte Pakete,
+`variants/`, Modell-Beschaffung); `concurrency` bricht überholte Läufe je PR ab.
 
 ## Status
 

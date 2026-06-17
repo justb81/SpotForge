@@ -17,8 +17,16 @@ import Constants from "expo-constants";
 // vor `dev`) legt Modell + Labels ab. Metro bündelt sie als Assets (metro.config.js).
 import gateModelAsset from "../../data/models/gate_imagenet_efficientnet_b0_fp32.pte";
 import gateLabels from "../../data/models/gate_imagenet_efficientnet_b0.labels.json";
+// Gebündeltes Feinmodell (#9): Jordo23/vehicle-classifier (EfficientNet-B4, VMMRdb,
+// 8.949 Klassen „Make Model Year", int8). Wird nur bei akzeptiertem Gate in den
+// Speicher initialisiert (Kaskade). data/models/* liegt nicht im Git; `pnpm
+// fetch-models` zieht es vor dem Build. fp32 ist der gewählte Baseline-Ansatz
+// (volles Modell, kein Quant-Verlust); int8 ist eine optionale spätere Optimierung (#62).
+import fineModelAsset from "../../data/models/cars_jordo23_vmmr_fp32.pte";
+import fineLabels from "../../data/models/cars_jordo23_vmmr.labels.json";
 
-// ImageNet-Normalisierung des Gate-Exports (muss zum Export passen, ADR 0008).
+// ImageNet-Normalisierung – gilt für Gate (B0) UND Feinmodell (B4); beide Exporte
+// nutzen denselben normMean/normStd (muss zum Export passen, ADR 0008).
 const IMAGENET_PREPROCESSOR = {
   normMean: [0.485, 0.456, 0.406] as [number, number, number],
   normStd: [0.229, 0.224, 0.225] as [number, number, number],
@@ -116,9 +124,18 @@ function Root() {
             createCascadeClassifier({
               gate,
               gateConfig: gateConfigFromAppDefinition(definition),
-              // Platzhalter-Feinmodell bis zum gebündelten Fahrzeugmodell (#9):
-              // mangels eigenem Feinmodell wird das Gate-Modell wiederverwendet.
-              initFine: async () => gate,
+              // Feinmodell (Marke+Modell, #9) erst beim ersten akzeptierten Gate in
+              // den Speicher initialisieren – das große B4 belegt Speicher/Akku nur,
+              // wenn das Gate ein Fahrzeug durchlässt (kleines topK = Top-k-UX).
+              initFine: () =>
+                createClassifier(
+                  {
+                    modelSource: fineModelAsset,
+                    labels: fineLabels,
+                    preprocessor: IMAGENET_PREPROCESSOR,
+                  },
+                  { topK: 5 },
+                ),
             }),
           );
         }

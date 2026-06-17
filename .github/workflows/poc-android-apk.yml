@@ -5,9 +5,13 @@ name: PoC Android APK
 # Gedacht zum schnellen Testen auf einem echten Gerät: APK aus dem Run laden,
 # sideloaden, offline starten.
 #
-# **Manueller Workflow (workflow_dispatch): auf JEDEM Branch auslösbar** – in der
-# Actions-UI den Branch wählen oder per API mit beliebigem `ref` starten. Kein
-# automatischer Trigger; der Build läuft nur auf Anforderung.
+# Trigger:
+#  - **workflow_dispatch:** auf JEDEM Branch manuell auslösbar – in der Actions-UI
+#    den Branch wählen oder per API mit beliebigem `ref` starten; `variant` wählbar.
+#  - **pull_request:** automatisch für JEDEN PR, der einen den mobilen Build
+#    betreffenden Pfad ändert (siehe `paths`) – baut die Variante `cars`. Der Build
+#    ist schwer (Modelle + Gradle), daher bricht `concurrency` überholte Läufe je
+#    PR ab; Änderungen ohne Mobile-Bezug lösen ihn nicht aus.
 #
 # JS-Bundle ist eingebettet (kein Metro-Dev-Server nötig), alle nativen Module
 # (ExecuTorch, Kamera) sind enthalten. Release wird mit dem Debug-Keystore
@@ -19,6 +23,27 @@ on:
         description: "App-Variante (Ordner unter variants/)"
         type: string
         default: cars
+  pull_request:
+    # Nur Pfade, die ins APK einfließen: der Mobile-Host, alle gebündelten Pakete,
+    # die Varianten-/Branding-Bündel, die Modell-Beschaffung und dieser Workflow.
+    paths:
+      - "apps/mobile/**"
+      - "packages/app-shell/**"
+      - "packages/ui/**"
+      - "packages/ai-engine/**"
+      - "packages/app-config/**"
+      - "packages/game-core/**"
+      - "packages/api-client/**"
+      - "variants/**"
+      - "tools/fetch-models/**"
+      - "data/models/**"
+      - ".github/workflows/poc-android-apk.yml"
+
+# Je PR (bzw. Branch beim manuellen Lauf) immer nur ein Build; ein neuer Push
+# bricht den vorherigen ab – spart Runner-Zeit beim teuren APK-Build.
+concurrency:
+  group: poc-apk-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   VARIANT: ${{ github.event.inputs.variant || 'cars' }}

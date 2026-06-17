@@ -2,7 +2,8 @@
 
 - **Status:** Akzeptiert
 - **Datum:** 2026-06-14
-- **Bezug:** ADR 0007 (On-Device-Inferenz/ExecuTorch), GDD §5.2/§10.3; Issue #9
+- **Bezug:** ADR 0007 (On-Device-Inferenz/ExecuTorch), ADR 0014 (Inferenz-Präzision
+  fp32), GDD §5.2/§10.3; Issue #9
 
 ## Kontext
 
@@ -106,14 +107,13 @@ gesichert ins Bundle gezogen?
 - **Feinmodell CarForge:** `Jordo23/vehicle-classifier` (EfficientNet-B4, 8.949
   Klassen „Make Model Year", VMMRdb, MIT) – fertig, kein Training. Export über
   das `timm`-Backend; **fest ins CarForge-APK gebündelt**. **Präzision: fp32**
-  (`quantize: "none"`) – wie das Gate der gewählte Baseline-Ansatz; ~134 MB,
-  zusammen mit dem Gate ~155 MB (für ein Mobile-Game vertretbar, kein
-  Quantisierungsverlust). **int8 ist eine optionale spätere Optimierung (#62)**,
-  falls die Größe gedrückt werden soll – erst der Genauigkeitsverlust ggü. fp32 ist
-  zu evaluieren (und der PT2E-Export-Pfad auf die gepinnte torch-Version zu heben).
+  – einheitlich, kein int8 ([ADR 0014](./0014-on-device-inferenz-praezision-fp32.md));
+  ~134 MB, zusammen mit dem Gate ~155 MB (für ein Mobile-Game vertretbar, kein
+  Quantisierungsverlust). Falls die Größe je gedrückt werden muss, sind die Hebel
+  ein kleineres Backbone, geringere Eingangsauflösung oder Klassen-Pruning –
+  **nicht** Quantisierung.
 - **Mensch-/Geräte-Aufgaben (nicht agent-automatisierbar, als Folge-Issues von
-  #9):** VMMRdb-Provenienz rechtlich gegenchecken (#61), **optional** int8 als
-  Größen-Optimierung evaluieren (#62), Verifikation von Erkennungsqualität, Inferenz-Latenz und
+  #9):** VMMRdb-Provenienz rechtlich gegenchecken (#61), Verifikation von Erkennungsqualität, Inferenz-Latenz und
   Bundle-Budget **auf echtem Gerät** (#63 – Protokoll, Budgets und Messwert-Template
   in [`docs/verification/ai-cascade-device-verification.md`](../verification/ai-cascade-device-verification.md);
   die Kaskade misst die Stufen-Latenzen selbst und der PoC zeigt sie on-screen an).

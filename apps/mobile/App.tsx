@@ -12,16 +12,17 @@ import { initExecutorch } from "react-native-executorch";
 import { ExpoResourceFetcher } from "react-native-executorch-expo-resource-fetcher";
 import Constants from "expo-constants";
 // Gebündeltes breites Gate-Modell (#83): EfficientNet-B0, ImageNet-1k, **fp32**
-// (keine Quantisierung → kein Quant-Verlust, kleiner als das alte V2-S-int8-Gate).
-// data/models/* liegt nicht im Git; `pnpm fetch-models` (CI vor dem Bundle, lokal
-// vor `dev`) legt Modell + Labels ab. Metro bündelt sie als Assets (metro.config.js).
+// (keine Quantisierung → kein Quant-Verlust; fp32 ist die einheitliche Präzision,
+// ADR 0014). data/models/* liegt nicht im Git; `pnpm fetch-models` (CI vor dem
+// Bundle, lokal vor `dev`) legt Modell + Labels ab. Metro bündelt sie als Assets
+// (metro.config.js).
 import gateModelAsset from "../../data/models/gate_imagenet_efficientnet_b0_fp32.pte";
 import gateLabels from "../../data/models/gate_imagenet_efficientnet_b0.labels.json";
 // Gebündeltes Feinmodell (#9): Jordo23/vehicle-classifier (EfficientNet-B4, VMMRdb,
-// 8.949 Klassen „Make Model Year", int8). Wird nur bei akzeptiertem Gate in den
+// 8.949 Klassen „Make Model Year", fp32). Wird nur bei akzeptiertem Gate in den
 // Speicher initialisiert (Kaskade). data/models/* liegt nicht im Git; `pnpm
-// fetch-models` zieht es vor dem Build. fp32 ist der gewählte Baseline-Ansatz
-// (volles Modell, kein Quant-Verlust); int8 ist eine optionale spätere Optimierung (#62).
+// fetch-models` zieht es vor dem Build. fp32 ist die einheitliche Präzision
+// (volles Modell, kein Quant-Verlust; int8 verworfen, ADR 0014).
 import fineModelAsset from "../../data/models/cars_jordo23_vmmr_fp32.pte";
 import fineLabels from "../../data/models/cars_jordo23_vmmr.labels.json";
 

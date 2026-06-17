@@ -1,8 +1,9 @@
 # Geräte-Verifikation der KI-Kaskade (#63)
 
-**Bezug:** [#63] · #9 · #62 (int8 als optionale spätere Optimierung) · #83 (fp32-B0-Gate) ·
+**Bezug:** [#63] · #9 · #83 (fp32-B0-Gate) ·
 [ADR 0008](../adr/0008-modell-export-pipeline-und-lifecycle.md) ·
-[ADR 0007](../adr/0007-on-device-inference-executorch.md)
+[ADR 0007](../adr/0007-on-device-inference-executorch.md) ·
+[ADR 0014](../adr/0014-on-device-inferenz-praezision-fp32.md) (fp32 einheitlich, kein int8)
 **Module:** `apps/mobile`, `packages/ai-engine`
 
 Gate **und** Feinmodell sind **fest ins CarForge-APK gebündelt** (kein Nachladen/
@@ -31,8 +32,8 @@ ein Mobile-Game vertretbare Größe):
   EfficientNet-**B4** / Jordo23 (VMMRdb, 8.949 Klassen), **fp32** — ~128 MiB
   (134.278.356 Bytes), ~4,2 GFLOPs.
 
-Damit ist **die volle Kaskade messbar** — kein Teil wartet mehr auf #62 (int8 ist
-eine optionale spätere Optimierung, kein Blocker):
+Damit ist **die volle Kaskade messbar** — beide Modelle sind fp32, das
+auszuliefernde Format (ADR 0014):
 
 | Messung | Jetzt aussagekräftig? | Hinweis |
 |---|---|---|
@@ -82,10 +83,11 @@ Akzeptanz zählt auf diesem Profil, nicht auf einem High-End-Flaggschiff.
 **Budget: APK-Größenzuwachs durch beide `.pte` ≤ 170 MB.** Bewusste Entscheidung:
 **fp32 für beide Modelle** — ~155 MB sind für ein Mobile-Game vertretbar (gängige
 Apps/Games liegen bei hunderten MB bis GB), und fp32 hat **keinen
-Quantisierungsverlust**. int8 bleibt eine **optionale** spätere Optimierung (#62),
-falls die Größe doch gedrückt werden soll; erst der Genauigkeitsverlust ist zu
-evaluieren. Gemessen als Differenz `APK mit Modellen` − `APK ohne Modelle` (oder
-absolute APK-Größe gegen einen dokumentierten Baseline-Build).
+Quantisierungsverlust**. fp32 ist die **einheitliche, festgesetzte** Präzision
+(ADR 0014); int8 ist verworfen. Sollte die Größe je gedrückt werden müssen, sind
+die Hebel ein kleineres Backbone, geringere Eingangsauflösung oder Klassen-Pruning
+— **nicht** Quantisierung. Gemessen als Differenz `APK mit Modellen` − `APK ohne
+Modelle` (oder absolute APK-Größe gegen einen dokumentierten Baseline-Build).
 
 ### Erkennungsqualität (reale Spots)
 
@@ -231,10 +233,11 @@ Erste Verifikation auf echtem Gerät (Mensch) + Off-Device-Gegenprobe.
 Konkrete Folgeentscheidung dokumentieren (Akzeptanzkriterium #63). Mögliche Hebel:
 
 - **Latenz Accept-Pfad zu hoch:** kleineres Backbone (B4 → B3/B2), geringere
-  Eingangsauflösung (380 → 300/260), int8-Quantisierung des Feinmodells (#62).
-- **Bundle zu groß:** int8-Quantisierung als optionale Optimierung evaluieren (#62
-  — Genauigkeitsverlust ggü. fp32 prüfen; der 8.949-Klassen-B4-Kopf ist der
-  Größentreiber), kleineres Backbone, Klassen-Pruning.
+  Eingangsauflösung (380 → 300/260). (Quantisierung ist **kein** Hebel — fp32 ist
+  festgesetzt, ADR 0014.)
+- **Bundle zu groß:** kleineres Backbone, geringere Eingangsauflösung,
+  Klassen-Pruning (der 8.949-Klassen-B4-Kopf ist der Größentreiber). **Nicht**
+  Quantisierung (ADR 0014).
 - **Erkennungsqualität zu niedrig:** repräsentativeren/anderes Feinmodell, Blindfleck
   MJ ≥ 2017 explizit adressieren. (fp32 hat keinen Quant-Verlust — Quantisierung ist
   hier **nicht** der Hebel.)

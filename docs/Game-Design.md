@@ -327,7 +327,8 @@ Suche:            MeiliSearch (Karten-Marktplatz-Suche)
 Framework:        ExecuTorch (react-native-executorch, .pte)  [ADR 0007]
 Klassifikation:   Zwei-Stufen-Kaskade – breites ImageNet-Gate
                   (EfficientNet-B0, fp32) + Feinmodell Marke/Modell
-                  (Jordo23, EfficientNet-B4)                  [ADR 0008]
+                  (Jordo23, EfficientNet-B4); fp32 einheitlich,
+                  kein int8                            [ADR 0008/0014]
 Card-Art:         LCM (Latent Consistency Model) quantisiert
                   oder Stable Diffusion v2.1 (4-bit quantized)
 Offline-DB:       SQLite + FTS5 (Full-Text-Search für Fakten)

@@ -109,6 +109,26 @@ Das Gate klärt „gehört das überhaupt in den Scope?" und ist kategorie-neutr
 die **summierte** Fahrzeug-Masse (`packages/ai-engine` `evaluateGate`), nicht den
 besten Einzelkandidaten.
 
+## Smoke-Test: Backbone-Lowering prüfen (`smoke-export.py`)
+
+`smoke-export.py` klärt für den Embedding-Korpus-Plan (#88) **eine** Frage: lowert
+ein timm-Backbone als reiner **Feature-Extraktor** (`num_classes=0` → gepoolter
+Embedding-Vektor) überhaupt durch `torch.export → XNNPACK → .pte`? Bei
+ViT-Architekturen (DINOv2 etc.) ist das die eigentliche Unbekannte vor einem
+Bake-off. Ausgegeben werden Embedding-Dim, Input-Size, Params und `.pte`-Größe.
+
+```bash
+pip install executorch timm
+python tools/export-model/smoke-export.py --arch vit_small_patch14_dinov2.lvd142m
+# optional: --quantize int8   --keep   --out dist/smoke
+```
+
+> **Verifiziert (#88):** DINOv2 ViT-S/14 lowert sauber (384-d Embedding, Input
+> 518×518, 22,1 M Params, `.pte` fp32 ≈ 84 MB). **Nicht** abgedeckt: On-Device-
+> Latenz/RAM (@518² + Attention) und Erkennungsqualität → Geräte-Verifikation
+> (#63) bzw. Linear-Probe-Bake-off (#88, Stufe 0). `flatc` muss auf `$PATH` sein
+> (executorch bringt eins unter `executorch/data/bin/` mit).
+
 ## Pre-Screen: Gate-Recall kalibrieren (`prescreen.py`)
 
 `prescreen.py` misst **off-device** den Vehicle-Recall / False-Negative-Anteil des

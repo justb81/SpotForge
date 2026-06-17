@@ -12,6 +12,7 @@ import { useTheme, type ResolvedCardFrames } from "@spotforge/ui";
 import { SpotCamera } from "../camera/SpotCamera";
 import { DraftPanel } from "../draft/DraftPanel";
 import { UnrecognizedPanel } from "./UnrecognizedPanel";
+import { RecognitionPicker } from "./RecognitionPicker";
 import { createSpotter } from "../spotting/createSpotter";
 import { buildManualDraft } from "../draft/manual-draft";
 
@@ -69,11 +70,13 @@ export function SpotScreen({
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [result, setResult] = useState<SpotResult | null>(null);
   const [draft, setDraft] = useState<Card | null>(null);
+  const [manualMode, setManualMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const reset = useCallback(() => {
     setResult(null);
     setDraft(null);
+    setManualMode(false);
     setError(null);
   }, []);
 
@@ -90,11 +93,9 @@ export function SpotScreen({
       }
 
       try {
-        const spotResult = await spotter({ imageUri: uri, spottedBy });
-        setResult(spotResult);
-        if (spotResult.kind === "draft") {
-          setDraft(spotResult.card);
-        }
+        // Kein Auto-Draft mehr: bei akzeptiertem Gate zeigt der RecognitionPicker
+        // erst die Top-k-Kandidaten zur Auswahl (Draft entsteht bei der Auswahl).
+        setResult(await spotter({ imageUri: uri, spottedBy }));
       } catch {
         setError(text("spot.error", "Erkennung fehlgeschlagen. Bitte erneut versuchen."));
       }
@@ -103,10 +104,25 @@ export function SpotScreen({
     [spotter, spottedBy, reset, text],
   );
 
+  // Auswahl eines Kandidaten → Draft. Für den Top-1 wird der bereits in der
+  // Pipeline gebaute Draft (inkl. evtl. Vorschläge) genutzt, sonst aus dem Label.
+  const handleSelectCandidate = useCallback(
+    (index: number, label: string) => {
+      if (index === 0 && result?.kind === "draft") {
+        setDraft(result.card);
+        return;
+      }
+      if (!photoUri) return;
+      setDraft(buildManualDraft(definition, { objectName: label, photoUri, spottedBy }));
+    },
+    [definition, photoUri, spottedBy, result],
+  );
+
   const handleManualCreate = useCallback(
     (objectName: string) => {
       if (!photoUri) return;
       const card = buildManualDraft(definition, { objectName, photoUri, spottedBy });
+      setManualMode(false);
       setDraft(card);
       setResult({ kind: "draft", card });
     },
@@ -179,44 +195,67 @@ export function SpotScreen({
       );
     }
 
-    // Ein bearbeiteter Draft ist die Quelle der Wahrheit (überlebt Editor-Speichern).
+    // Bestätigter/ausgewählter Draft (überlebt Editor-Speichern).
     if (draft && result?.kind === "draft") {
-      // Feinmodell-Konfidenz einblenden (nicht bei manuell angelegten Drafts).
-      // Achtung: Klassifikatoren sind oft auch bei Fehlklassifikation
-      // überzuversichtlich – der Wert ist ein Hinweis, der Draft bleibt editierbar.
-      const recognition = result.recognition;
       return (
-        <>
-          {recognition ? (
-            <Text style={[styles.confidence, { color: theme.colors.accent }]}>
-              {text("spot.recognizedAs", "Erkannt")}: {recognition.label} ·{" "}
-              {Math.round(recognition.confidence * 100)} %
-            </Text>
-          ) : null}
-          <DraftPanel
-            draft={draft}
-            attributes={attributes}
-            frames={frames}
-            onDraftChange={setDraft}
-            labels={{
-              hit: text("spot.hit", "Treffer! Draft angelegt."),
-              forgePending: text(
-                "forge.pending",
-                "Geschmiedet wird online – Verbindung erforderlich.",
-              ),
-              edit: text("draft.edit", "Bestätigen / korrigieren"),
-              spottedBy: text("card.spottedBy", "Gespottet von"),
-              draftRarity: text("draft.rarity", "Entwurf"),
-              editor: {
-                title: text("draft.editTitle", "Draft bearbeiten"),
-                nameLabel: text("draft.nameLabel", "Marke / Modell"),
-                attributesLabel: text("draft.attributesLabel", "Werte vorschlagen"),
-                save: text("draft.save", "Übernehmen"),
-                cancel: text("draft.cancel", "Abbrechen"),
-              },
-            }}
-          />
-        </>
+        <DraftPanel
+          draft={draft}
+          attributes={attributes}
+          frames={frames}
+          onDraftChange={setDraft}
+          labels={{
+            hit: text("spot.hit", "Treffer! Draft angelegt."),
+            forgePending: text(
+              "forge.pending",
+              "Geschmiedet wird online – Verbindung erforderlich.",
+            ),
+            edit: text("draft.edit", "Bestätigen / korrigieren"),
+            spottedBy: text("card.spottedBy", "Gespottet von"),
+            draftRarity: text("draft.rarity", "Entwurf"),
+            editor: {
+              title: text("draft.editTitle", "Draft bearbeiten"),
+              nameLabel: text("draft.nameLabel", "Marke / Modell"),
+              attributesLabel: text("draft.attributesLabel", "Werte vorschlagen"),
+              save: text("draft.save", "Übernehmen"),
+              cancel: text("draft.cancel", "Abbrechen"),
+            },
+          }}
+        />
+      );
+    }
+
+    // „Manuell eingeben" aus dem Picker: leeres Namensfeld.
+    if (manualMode) {
+      return (
+        <UnrecognizedPanel
+          rawLabel=""
+          onCreate={handleManualCreate}
+          labels={{
+            title: text("spot.manualTitle", "Manuell eingeben"),
+            hint: text("spot.manualHint", "Benenne Marke und Modell selbst."),
+            nameLabel: text("draft.nameLabel", "Marke / Modell"),
+            create: text("spot.manualCreate", "Als Draft anlegen"),
+          }}
+        />
+      );
+    }
+
+    // Gate akzeptiert → Top-k-Kandidaten (mit Konfidenz) zur Auswahl + „Manuell".
+    if (
+      result?.kind === "draft" &&
+      result.recognition &&
+      result.recognition.candidates.length > 0
+    ) {
+      return (
+        <RecognitionPicker
+          candidates={result.recognition.candidates}
+          onSelect={handleSelectCandidate}
+          onManual={() => setManualMode(true)}
+          labels={{
+            title: text("spot.pickTitle", "Erkannt – bitte auswählen:"),
+            manual: text("spot.manualEntry", "Manuell eingeben"),
+          }}
+        />
       );
     }
 
@@ -319,13 +358,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     opacity: 0.55,
     paddingVertical: 6,
-  },
-  confidence: {
-    fontSize: 13,
-    fontWeight: "600",
-    textAlign: "center",
-    paddingTop: 8,
-    paddingBottom: 4,
   },
   captureButton: {
     height: 64,

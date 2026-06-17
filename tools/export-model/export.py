@@ -120,8 +120,27 @@ def export_optimum(cfg: dict, model_out: Path) -> tuple[list[str], dict | None]:
 def labels_from_csv(path: str, index_col: str, label_col: str) -> list[str]:
     with open(path, newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
-    rows.sort(key=lambda r: int(r[index_col]))
-    return [r[label_col] for r in rows]
+    # Index → Label. Die Quell-CSV kann mehrere Zeilen pro Klassen-ID enthalten
+    # (Datenfehler, z.B. Jordo23 global_class_id 106 doppelt) – nach Index
+    # zusammenführen, sonst überstiege die Label-Anzahl die Klassen des Modell-Kopfs.
+    # Bei WIDERSPRÜCHLICHEM Label hart abbrechen (dann ist die am Modell-Output
+    # ausgerichtete Reihenfolge nicht mehr eindeutig).
+    by_index: dict[int, str] = {}
+    for r in rows:
+        idx = int(r[index_col])
+        label = r[label_col]
+        if idx in by_index and by_index[idx] != label:
+            raise SystemExit(
+                f"Widersprüchliche Labels für {index_col}={idx}: {by_index[idx]!r} != {label!r}."
+            )
+        by_index[idx] = label
+    # Lückenlos 0..N-1 erwartet (Index = Modell-Output-Position).
+    if sorted(by_index) != list(range(len(by_index))):
+        raise SystemExit(
+            f"{index_col} ist nicht lückenlos 0..{len(by_index) - 1} "
+            f"(min={min(by_index)}, max={max(by_index)})."
+        )
+    return [by_index[i] for i in range(len(by_index))]
 
 
 def load_timm_labels(cfg: dict, t: dict) -> list[str]:

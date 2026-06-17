@@ -34,7 +34,7 @@ die **Mobile-Apps** (Expo White-Label) zu bauen und zu aktualisieren. Vorgabe:
 - Coolify nutzt vorhandene Infrastruktur, hält Daten in eigener Hand (Privacy-first, GDD
   §10.4) und vermeidet Vendor-Lock-in eines externen PaaS.
 - Build aus dem Repo spart den Registry-Umweg; das Dockerfile bleibt portabel und lokal
-  identisch baubar (`docker compose --profile backend`).
+  identisch baubar (`docker compose up --build` über die Coolify-`docker-compose.yml`).
 - EAS ist das etablierte Expo-Muster; iOS-Builds erfordern ohnehin Apple-Toolchain, die
   EAS in der Cloud bereitstellt.
 - tsc bleibt reines Typecheck-Werkzeug; das Bündeln übernimmt tsup – das löst das

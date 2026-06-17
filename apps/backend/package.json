@@ -8,16 +8,26 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsup",
     "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@fastify/jwt": "10.1.0",
+    "@spotforge/api-contract": "workspace:*",
     "@spotforge/game-core": "workspace:*",
-    "fastify": "^5.1.0"
+    "drizzle-orm": "0.45.2",
+    "fastify": "^5.1.0",
+    "fastify-plugin": "6.0.0",
+    "ioredis": "5.11.1",
+    "jose": "6.2.3",
+    "postgres": "3.4.9",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "drizzle-kit": "0.31.10",
     "tsup": "^8.3.0",
     "tsx": "^4.19.0"
   }

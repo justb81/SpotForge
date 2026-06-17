@@ -55,8 +55,13 @@ Klassifikation (Zwei-Stufen-Kaskade) → Guardrail-Prüfung → **Draft-Karte**.
 Stats und Seltenheit kommen beim **Forgen** vom Server (Online-Schmiede, ADR 0010).
 Guardrails und Prompts kommen aus der `AppDefinition`.
 
+### `packages/api-contract` — geteilter API-Vertrag
+Request-/Response-Schemata (zod) als **einzige Quelle** der Wire-Formate; Backend
+validiert damit, der Client leitet seine Typen ab. Reines Paket (nur `zod`).
+
 ### `packages/api-client` — typisierter Backend-Client
-REST + WebSocket, teilt DTO-Typen mit dem Backend (inkl. `appId`-Kontext).
+REST + WebSocket, teilt DTO-Typen mit dem Backend (über `api-contract`, inkl.
+`appId`-Kontext).
 
 ### `packages/ui` — themebares Design-System & Kartenrendering
 Komponenten konsumieren Theme-Tokens und Asset-Pfade aus der `AppDefinition`.
@@ -81,11 +86,12 @@ Build-, Codegen- und Seed-Skripte.
 ```
 variants/<name> ──▶ app-config (AppDefinition-Typen)
 apps/mobile ──────▶ app-shell, app-config  +  variants/<APP_VARIANT> (zur Build-Zeit)
-apps/backend ─────▶ game-core
+apps/backend ─────▶ game-core, api-contract
 app-shell ────────▶ ui, api-client, ai-engine, game-core, app-config
 ai-engine ────────▶ game-core, app-config, data/categories
 ui ───────────────▶ game-core, app-config
-api-client ───────▶ game-core
+api-client ───────▶ game-core, api-contract
+api-contract ─────▶ (keine internen Abhängigkeiten – nur zod)
 app-config ───────▶ game-core
 game-core ────────▶ (keine internen Abhängigkeiten)
 ```

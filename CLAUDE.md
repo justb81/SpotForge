@@ -67,6 +67,7 @@ packages/
   app-shell/   die komplette generische App (Screens/Flows), kategorie-neutral
   game-core/   reine Spiel- & Kartendomäne (Card, Rarity, Trumpf-Engine)
   ai-engine/   On-Device-Pipeline (generisch; nimmt Guardrails/Prompts)
+  api-contract/ geteilte Request-/Response-Schemata (zod) – Backend ↔ Client
   api-client/  typisierter Backend-Client
   ui/          themebares Design-System & Kartenrendering
   config/      geteilte tsconfig / eslint / prettier
@@ -88,11 +89,12 @@ Vertiefung: [`docs/repo-structure.md`](./docs/repo-structure.md) ·
 ```
 variants/<name> ─▶ app-config
 apps/mobile ─────▶ app-shell, app-config  + variants/<APP_VARIANT> (Build-Zeit)
-apps/backend ────▶ game-core
+apps/backend ────▶ game-core, api-contract
 app-shell ───────▶ ui, api-client, ai-engine, game-core, app-config
 ai-engine ───────▶ game-core, app-config, data/categories
 ui ──────────────▶ game-core, app-config
-api-client ──────▶ game-core
+api-client ──────▶ game-core, api-contract
+api-contract ────▶ (nichts – nur zod)
 app-config ──────▶ game-core
 game-core ───────▶ (nichts – Wurzel)
 ```
@@ -165,6 +167,17 @@ ergänzen.
   Assets als **Branding-Config** aus der `AppDefinition` herausgelöst;
   `variants/_default` als generische Basis, per Deep-Merge von Varianten
   überschrieben (`resolveBranding`).
+- **[ADR 0012](./docs/adr/0012-backend-datenbank-wahl.md):** Backend-DB =
+  **PostgreSQL (self-hosted) + Drizzle + RLS**. Mandantentrennung DB-erzwungen
+  über Row-Level-Security; pro Request eine Transaktion mit
+  `app.current_tenant` (`withTenant`). Major gepinnt (`postgres:18`). **Wichtig:**
+  RLS gilt nur für Nicht-Superuser → der Request-Pfad verbindet mit einer eigenen
+  App-Rolle (`DATABASE_URL`), Migrate-on-boot nutzt die Admin-Rolle
+  (`MIGRATION_DATABASE_URL`).
+- **[ADR 0013](./docs/adr/0013-objektspeicher-garage.md):** Objektspeicher =
+  **Garage** (S3-kompatibel, self-hosted) statt MinIO; Single-Node, Image
+  gepinnt, Bootstrap via `tools/garage/bootstrap.sh`. Bleibt intern bis das
+  Bild-Upload-Feature es exponiert.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

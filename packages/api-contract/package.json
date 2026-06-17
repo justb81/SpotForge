@@ -1,5 +1,5 @@
 {
-  "name": "@spotforge/api-client",
+  "name": "@spotforge/api-contract",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@spotforge/api-contract": "workspace:*",
-    "@spotforge/game-core": "workspace:*"
+    "zod": "4.4.3"
   }
 }

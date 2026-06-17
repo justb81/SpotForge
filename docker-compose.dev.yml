@@ -1,0 +1,82 @@
+# Lokale Entwicklungs-Infrastruktur (NUR Backing-Services, mit Host-Ports).
+#
+#   cp .env.example .env
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# Das Backend selbst läuft im Dev nativ auf dem Host (Hot Reload):
+#   pnpm --filter @spotforge/backend dev
+#
+# Daher werden die Dienste hier über localhost-Ports erreichbar gemacht – anders
+# als im Coolify-Produktions-Stack (docker-compose.yml), der ohne Host-Ports
+# rein über Traefik exponiert.
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-spotforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spotforge}
+      POSTGRES_DB: ${POSTGRES_DB:-spotforge}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spotforge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe}
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - meilidata:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # S3-kompatibel (ADR 0013). RPC/Admin-Ports lokal exponiert; Bootstrap (Layout,
+  # Key, Bucket) einmalig via tools/garage/bootstrap.sh.
+  garage:
+    image: dxflrs/garage:v1.0.1
+    restart: unless-stopped
+    ports:
+      - "3900:3900" # S3 API
+      - "3903:3903" # Admin API
+    volumes:
+      - garagemeta:/var/lib/garage/meta
+      - garagedata:/var/lib/garage/data
+      - ./infra/garage/garage.toml:/etc/garage.toml:ro
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
+  meilidata:
+  garagemeta:
+  garagedata:

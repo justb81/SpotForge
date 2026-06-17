@@ -13,3 +13,11 @@ declare module "*.png" {
   const asset: number;
   export default asset;
 }
+
+// Mitgelieferte Modell-Labels (`<id>.labels.json`, bezogen via tools/fetch-models,
+// nicht im Git). Geordnete Klassen-Labels (Index = Logit-Position). Eigene Endung,
+// damit echte, im Repo liegende JSONs (z.B. data/categories/*.json) typisiert bleiben.
+declare module "*.labels.json" {
+  const labels: string[];
+  export default labels;
+}

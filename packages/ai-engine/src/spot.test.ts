@@ -23,11 +23,16 @@ function fixedCascade(out: CascadeResult): CascadeClassifier {
 }
 
 function rejected(gate: ClassificationResult): CascadeResult {
-  return { gate, decision: { accepted: false } };
+  return { gate, decision: { accepted: false, mass: 0 } };
 }
 
 function accepted(gate: ClassificationResult, fine: ClassificationResult): CascadeResult {
-  return { gate, decision: { accepted: true, matched: gate.candidates[0] }, fine };
+  const matched = gate.candidates[0];
+  return {
+    gate,
+    decision: { accepted: true, mass: matched?.confidence ?? 0, matched },
+    fine,
+  };
 }
 
 /** Minimale, schema-gültige AppDefinition der Auto-App. */

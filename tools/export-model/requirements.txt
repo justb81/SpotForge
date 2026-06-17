@@ -3,6 +3,8 @@
 # selbst nach – daher hier bewusst nur die direkten Tools gepinnt.
 optimum-executorch==1.1.0
 huggingface_hub>=0.27,<1.0
-# timm-Backend (z.B. Jordo23/vehicle-classifier, EfficientNet-B4). Nutzt das von
-# optimum-executorch gezogene torch.
+# timm-Backend (z.B. das ImageNet-Gate EfficientNet-B0 #83 oder Jordo23/vehicle-
+# classifier, EfficientNet-B4). Nutzt das von optimum-executorch gezogene torch.
 timm>=1.0,<2.0
+# Pillow: nur für den Off-Device-Pre-Screen (prescreen.py) zum Laden der Eval-Bilder.
+Pillow>=10.0,<12.0

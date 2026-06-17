@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { Classifier, ClassificationResult } from "./classifier";
 import { createCascadeClassifier, evaluateGate, type GateConfig } from "./cascade";
 
-const gateCfg: GateConfig = { allow: ["sports car", "pickup"], minConfidence: 0.5 };
+const gateCfg: GateConfig = {
+  allow: ["sports car", "convertible", "car wheel", "pickup"],
+  minConfidence: 0.5,
+};
 
 function result(candidates: [string, number][]): ClassificationResult {
   const cs = candidates.map(([label, confidence]) => ({ label, confidence }));
@@ -13,34 +16,61 @@ function fixedClassifier(r: ClassificationResult): Classifier {
   return { classify: vi.fn(async () => r) };
 }
 
-describe("evaluateGate", () => {
-  it("akzeptiert erlaubtes Label über der Schwelle", () => {
+describe("evaluateGate (summierte Klassen-Masse, #83)", () => {
+  it("akzeptiert, wenn ein einzelnes erlaubtes Label die Schwelle erreicht", () => {
     const d = evaluateGate(result([["sports car", 0.8]]), gateCfg);
     expect(d.accepted).toBe(true);
+    expect(d.mass).toBeCloseTo(0.8);
     expect(d.matched?.label).toBe("sports car");
   });
 
-  it("lehnt erlaubtes Label unter der Schwelle ab", () => {
-    const d = evaluateGate(result([["pickup", 0.3]]), gateCfg);
-    expect(d.accepted).toBe(false);
-    expect(d.matched?.label).toBe("pickup");
-  });
-
-  it("lehnt nicht-erlaubtes Top-Label ab, nutzt aber erlaubten Folgekandidaten", () => {
+  it("akzeptiert über die SUMME verteilter Masse, die einzeln unter der Schwelle läge", () => {
+    // Kern von #83: ein Auto verteilt seine Masse über mehrere Synsets – jedes
+    // für sich (0,30 / 0,22 / 0,18) unter 0,5, summiert (0,70) klar im Scope.
     const d = evaluateGate(
       result([
-        ["tabby cat", 0.9],
-        ["sports car", 0.6],
+        ["sports car", 0.3],
+        ["convertible", 0.22],
+        ["car wheel", 0.18],
       ]),
       gateCfg,
     );
     expect(d.accepted).toBe(true);
+    expect(d.mass).toBeCloseTo(0.7);
+    expect(d.matched?.label).toBe("sports car"); // bester erlaubter Kandidat
+  });
+
+  it("ignoriert nicht-erlaubte Masse und summiert nur erlaubte Kandidaten", () => {
+    const d = evaluateGate(
+      result([
+        ["tabby cat", 0.9],
+        ["sports car", 0.3],
+        ["convertible", 0.25],
+      ]),
+      gateCfg,
+    );
+    expect(d.accepted).toBe(true);
+    expect(d.mass).toBeCloseTo(0.55);
     expect(d.matched?.label).toBe("sports car");
   });
 
-  it("lehnt ab, wenn kein Label erlaubt ist", () => {
+  it("lehnt ab, wenn die summierte erlaubte Masse unter der Schwelle bleibt", () => {
+    const d = evaluateGate(
+      result([
+        ["pickup", 0.2],
+        ["car wheel", 0.15],
+      ]),
+      gateCfg,
+    );
+    expect(d.accepted).toBe(false);
+    expect(d.mass).toBeCloseTo(0.35);
+    expect(d.matched?.label).toBe("pickup");
+  });
+
+  it("lehnt ab und liefert Masse 0, wenn kein Label erlaubt ist", () => {
     const d = evaluateGate(result([["tabby cat", 0.99]]), gateCfg);
     expect(d.accepted).toBe(false);
+    expect(d.mass).toBe(0);
     expect(d.matched).toBeUndefined();
   });
 });

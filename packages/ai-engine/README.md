@@ -26,10 +26,10 @@ spot(photo, { gate, guardrails })
 ## Verträge (austauschbare Implementierungen)
 
 - `Classifier` — über **react-native-executorch** (PyTorch ExecuTorch).
-  `createClassifier` lädt entweder das eingebaute ImageNet-Basismodell
-  (`kind: "imagenet-efficientnet-v2-s"`, PoC #50) **oder** ein eigen-exportiertes
-  Modell mit mitgeliefertem Label-Satz (`kind: "custom"`, #9). Liefert Top-k-
-  Kandidaten (`ClassificationResult.candidates`).
+  `createClassifier` lädt ein **eigen-exportiertes** Modell (`fromCustomModel`)
+  mit mitgeliefertem Label-Satz + Normalisierung – sowohl das breite fp32-Gate
+  (EfficientNet-B0/ImageNet, #83) als auch das fahrzeug-spezifische Feinmodell
+  (#9). Liefert Top-k-Kandidaten (`ClassificationResult.candidates`).
 - `FactLookup` — SQLite + FTS5 (Seeds aus `data/facts`); liefert nur
   **provisorische** Offline-Vorschläge für den Draft, **nicht** die autoritativen
   Werte (die kommen beim Forgen vom Server, #10 / [ADR 0010]).
@@ -45,13 +45,19 @@ spot(photo, { gate, guardrails })
   bei Annahme wird das schwere **Feinmodell** (Marke+Modell) ausgeführt. Beide
   Modelle sind **fest gebündelt**; `initFine` initialisiert das Feinmodell nur
   **bei Bedarf** in den Speicher (aus dem Bundle, kein Netz).
-- `evaluateGate(result, { allow, minConfidence })` — Allowlist + Schwelle;
-  lehnt Nicht-Scope-Objekte ab (Guardrail vor dem teuren Schritt).
+- `evaluateGate(result, { allow, minConfidence })` — schwellt die **summierte**
+  Wahrscheinlichkeitsmasse über **alle** erlaubten Synsets (marginale
+  `P(im Scope)`, #83), nicht den besten Einzelkandidaten: ein Objekt verteilt
+  seine Masse oft über mehrere Synsets, die einzeln unter der Schwelle lägen.
+  `matched` (bester erlaubter Kandidat) bleibt für die Reject-Meldung erhalten.
+  Das Gate wird mit erhöhtem `topK` (`GATE_TOP_K`) gebaut, damit verteilte Masse
+  überhaupt erfasst wird; die Schwelle ist bewusst **recall-lastig** (ein
+  False-Negative killt einen legitimen Spot).
 - Kategorie-neutral: die Allowlist kommt aus der `AppDefinition` (`category.gate.allow`,
   verdrahtet in `spot` #8) — hier steht keine fest kodierte Kategorie.
 - **Ein generisches Gate für ganz SpotForge (White-Label):** dasselbe breite
-  Modell (ImageNet) ist das Gate für **alle** Apps; jede App liefert nur ihre
-  Allowlist (Auto-App → Fahrzeug-Synsets, Tier-App → Tier-Synsets).
+  fp32-Modell (EfficientNet-B0/ImageNet) ist das Gate für **alle** Apps; jede App
+  liefert nur ihre Allowlist (Auto-App → Fahrzeug-Synsets, Tier-App → Tier-Synsets).
 
 ## Modell-Manifest (`models/`)
 
@@ -77,10 +83,10 @@ kein Foto-Upload (on-device).
 
 **Klassifikation + Modell-Bündelung (#9):** `Classifier`-Vertrag
 (`classify({ imageUri }) → { label, confidence, candidates }`, Top-k, entkoppelt
-von den Domänentypen) plus `createClassifier(model, options?)` für eingebautes
-ImageNet-Basismodell **und** eigene Modelle (`fromCustomModel` mit Label-Satz +
-Normalisierung). Dazu die Zwei-Stufen-Kaskade und der Manifest-Parser (`models/`);
-Modelle werden fest gebündelt (kein OTA).
+von den Domänentypen) plus `createClassifier(model, options?)` für eigen-exportierte
+Modelle (`fromCustomModel` mit Label-Satz + Normalisierung). Dazu die
+Zwei-Stufen-Kaskade mit summierter-Masse-Gate-Logik (#83) und der Manifest-Parser
+(`models/`); Modelle werden fest gebündelt (kein OTA).
 
 Implementiert: die `spot`-Orchestrierung (#8) – Gate-Guardrail aus der
 `AppDefinition` (`category.gate.allow` + `minConfidence`), trivialer

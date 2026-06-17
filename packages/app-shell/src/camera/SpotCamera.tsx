@@ -53,7 +53,9 @@ export function SpotCamera({ theme, labels, onCapture }: SpotCameraProps) {
   }
 
   const handleShutter = async () => {
-    const photo = await cameraRef.current?.takePictureAsync();
+    // Kein Auslöse-Ton (shutterSound default true) – aktuell soll die App
+    // komplett geräuschlos sein.
+    const photo = await cameraRef.current?.takePictureAsync({ shutterSound: false });
     if (photo?.uri) {
       onCapture(photo.uri);
     }

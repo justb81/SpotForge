@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
 import {
@@ -157,14 +157,28 @@ export function SpotScreen({
               permissionCta: text("spot.permissionCta", "Kamera erlauben"),
             }}
           />
-        ) : mode === "processing" ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={theme.colors.primary} />
-          </View>
         ) : (
           <>
-            {renderResult()}
-            {renderLatency()}
+            {/* Aufgenommenes Foto bleibt als Hintergrund sichtbar (Verarbeitung +
+                Ergebnis/Picker); ein dezenter Scrim hält Texte lesbar. */}
+            {photoUri ? (
+              <Image
+                source={{ uri: photoUri }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+              />
+            ) : null}
+            {photoUri ? <View style={[StyleSheet.absoluteFill, styles.scrim]} /> : null}
+            {mode === "processing" ? (
+              <View style={styles.center}>
+                <ActivityIndicator color={theme.colors.primary} />
+              </View>
+            ) : (
+              <>
+                {renderResult()}
+                {renderLatency()}
+              </>
+            )}
           </>
         )}
       </View>
@@ -331,6 +345,10 @@ const styles = StyleSheet.create({
   stage: {
     flex: 1,
     overflow: "hidden",
+  },
+  scrim: {
+    // Neutraler Lesbarkeits-Schleier über dem Hintergrundfoto.
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
   },
   center: {
     flex: 1,

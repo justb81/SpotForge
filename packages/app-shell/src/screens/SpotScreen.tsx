@@ -8,7 +8,7 @@ import {
   type SpotResult,
 } from "@spotforge/ai-engine";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
-import { useTheme, type ResolvedCardFrames } from "@spotforge/ui";
+import { useTheme } from "@spotforge/ui";
 import { useText } from "../content/text";
 import { SpotCamera } from "../camera/SpotCamera";
 import { DraftPanel } from "../draft/DraftPanel";
@@ -22,8 +22,6 @@ export interface SpotScreenProps {
   definition: AppDefinition;
   /** Attribut-Schema der App-Kategorie (Draft-Bearbeitung & Karten-Stats). */
   attributes: AttributeDefinition[];
-  /** Aufgelöste Seltenheits-Frames für das Kartenrendering. */
-  frames: ResolvedCardFrames;
   /** Bevorzugte Anzeige-Sprache; Default: {@link DEFAULT_LOCALE}. */
   locale?: LocaleCode;
   /** Entdecker-Tag der erzeugten Drafts (Creator-Ownership, GDD §15). */
@@ -44,7 +42,6 @@ type Mode = "idle" | "capturing" | "processing";
 export function SpotScreen({
   definition,
   attributes,
-  frames,
   locale = DEFAULT_LOCALE,
   spottedBy,
   cascade,
@@ -206,7 +203,6 @@ export function SpotScreen({
         <DraftPanel
           draft={draft}
           attributes={attributes}
-          frames={frames}
           onDraftChange={setDraft}
           labels={{
             hit: text("spot.hit"),

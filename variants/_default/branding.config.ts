@@ -1,14 +1,16 @@
 import { defineBranding } from "@spotforge/app-config";
 
 /**
- * Generische Branding-Basis für **alle** Apps (ADR 0011): neutrales Theme +
- * kategorie-neutrale Seltenheits-Kartenrahmen. Jede Variante (z.B. `cars`)
- * liefert in ihrer eigenen `branding.config.ts` nur Abweichungen; `resolveBranding`
- * legt sie über diese Defaults (Theme tief, Assets pro Feld).
+ * Generische Branding-Basis für **alle** Apps (ADR 0011): neutrales Theme. Jede
+ * Variante (z.B. `cars`) liefert in ihrer eigenen `branding.config.ts` nur
+ * Abweichungen; `resolveBranding` legt sie über diese Defaults (Theme tief,
+ * Assets pro Feld).
  *
  * Bewusst **ohne** `icon`/`splash`/`logo`: das sind marken-spezifische Assets,
  * die jede Variante selbst beisteuert. `_default` hat daher kein `app.definition.ts`
- * und ist keine eigenständige, baubare App.
+ * und ist keine eigenständige, baubare App. Die Seltenheits-Kartenrahmen sind
+ * **keine** Assets mehr, sondern werden prozedural gerendert (#96, ADR 0015) – ihre
+ * Farbe leitet sich app-übergreifend aus `RARITY_STYLES` (@spotforge/ui) ab.
  */
 export default defineBranding({
   theme: {
@@ -24,14 +26,5 @@ export default defineBranding({
       fontFamily: "System",
     },
     radius: 12,
-  },
-  assets: {
-    cardFrames: {
-      common: "./assets/frames/common.png",
-      uncommon: "./assets/frames/uncommon.png",
-      rare: "./assets/frames/rare.png",
-      epic: "./assets/frames/epic.png",
-      legendary: "./assets/frames/legendary.png",
-    },
   },
 });

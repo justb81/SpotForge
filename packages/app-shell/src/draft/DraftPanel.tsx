@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
-import { Button, CardView, useTheme, type ResolvedCardFrames } from "@spotforge/ui";
+import { Button, CardView, useTheme } from "@spotforge/ui";
 import { draftPreviewCard } from "./draft-edit";
 import { DraftEditor, type DraftEditorLabels } from "./DraftEditor";
 
@@ -30,15 +30,13 @@ export interface DraftPanelProps {
   draft: Card;
   /** Attribut-Schema der Kategorie. */
   attributes: AttributeDefinition[];
-  /** Aufgelöste Seltenheits-Frames für das Kartenrendering. */
-  frames: ResolvedCardFrames;
   /** Lokalisierte Beschriftungen. */
   labels: DraftPanelLabels;
   /** Hebt einen korrigierten Draft nach oben (Quelle der Wahrheit bleibt der Parent). */
   onDraftChange: (draft: Card) => void;
 }
 
-export function DraftPanel({ draft, attributes, frames, labels, onDraftChange }: DraftPanelProps) {
+export function DraftPanel({ draft, attributes, labels, onDraftChange }: DraftPanelProps) {
   const theme = useTheme();
   const [editing, setEditing] = useState(false);
 
@@ -66,7 +64,6 @@ export function DraftPanel({ draft, attributes, frames, labels, onDraftChange }:
         <CardView
           card={draftPreviewCard(draft)}
           attributes={attributes}
-          frames={frames}
           artSource={draft.photoUri !== undefined ? { uri: draft.photoUri } : undefined}
           spottedByLabel={labels.spottedBy}
           rarityLabel={labels.draftRarity}

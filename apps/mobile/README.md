@@ -67,10 +67,10 @@ einen den Build betreffenden Pfad ändert (Mobile-Host, gebündelte Pakete,
 Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`
 mit der aktiven `AppDefinition` und reicht die zur Laufzeit/Build-Zeit aufgelösten
 Bausteine herein: die aus dem gebündelten `.pte` gebaute **Kaskade** (Gate →
-Feinmodell, EfficientNet via react-native-executorch), die statisch gebündelten
-**Seltenheits-Frames** (`variants/_default/assets/frames/`) und das **Attribut-
-Schema** der Kategorie (`data/categories/<id>.json`). Damit fährt die Shell den
-Offline-Loop Spot → Draft → Bearbeiten. Echte Icon-/Splash-Assets der Variante
+Feinmodell, EfficientNet via react-native-executorch) und das **Attribut-Schema**
+der Kategorie (`data/categories/<id>.json`). Die Seltenheits-Rahmen werden in
+`@spotforge/ui` prozedural gerendert (ADR 0015, kein Asset). Damit fährt die Shell
+den Offline-Loop Spot → Draft → Bearbeiten. Echte Icon-/Splash-Assets der Variante
 sind noch Platzhalter (`variants/cars/assets/`).
 
 ## Abhängigkeiten

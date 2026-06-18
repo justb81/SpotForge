@@ -15,12 +15,6 @@ const base: BrandingInput = defineBranding({
     typography: { fontFamily: "System" },
     radius: 12,
   },
-  assets: {
-    cardFrames: {
-      common: "./assets/frames/common.png",
-      legendary: "./assets/frames/legendary.png",
-    },
-  },
 });
 
 const variant: BrandingInput = defineBranding({
@@ -57,23 +51,13 @@ describe("resolveBranding", () => {
     expect(assets.logo).toBe("variants/cars/assets/logo.png");
   });
 
-  it("erbt nicht überschriebene Frames aus der Basis (mit Basis-Verzeichnis)", () => {
-    const { assets } = resolve();
-    expect(assets.cardFrames?.common).toBe("variants/_default/assets/frames/common.png");
-    expect(assets.cardFrames?.legendary).toBe("variants/_default/assets/frames/legendary.png");
-  });
-
-  it("lässt eine Variante einzelne Frame-Stufen überschreiben", () => {
+  it("erbt einen Hintergrund aus der Basis, wenn die Variante keinen liefert", () => {
     const resolved = resolveBranding({
-      base,
+      base: { ...base, assets: { background: "./assets/bg.png" } },
       baseDir: "variants/_default",
-      variant: {
-        ...variant,
-        assets: { ...variant.assets, cardFrames: { legendary: "./assets/frames/legendary.png" } },
-      },
+      variant,
       variantDir: "variants/cars",
     });
-    expect(resolved.assets.cardFrames?.legendary).toBe("variants/cars/assets/frames/legendary.png");
-    expect(resolved.assets.cardFrames?.common).toBe("variants/_default/assets/frames/common.png");
+    expect(resolved.assets.background).toBe("variants/_default/assets/bg.png");
   });
 });

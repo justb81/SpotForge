@@ -3,9 +3,8 @@
 
 Einzige Quelle ist `variants/cars/assets/carforge.png` (weißes Logo auf
 Schwarz). Daraus werden Icon, Splash, In-App-Logo und Hintergrund erzeugt. Die
-kategorie-neutralen Seltenheits-Kartenrahmen liegen NICHT hier, sondern als
-generische Baseline in `packages/ui/assets/frames/` (siehe
-`tools/gen-ui-frames.py`).
+Seltenheits-Kartenrahmen sind KEINE Assets, sondern werden prozedural gerendert
+(ADR 0015, #96 – `CardFrame` in `@spotforge/ui`).
 
 Aufruf:  python3 tools/gen-cars-assets.py
 """

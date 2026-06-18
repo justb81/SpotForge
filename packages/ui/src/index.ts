@@ -19,13 +19,12 @@ export type { StatRowProps } from "./components/StatRow";
 // Kartenrendering
 export { CardView } from "./card/CardView";
 export type { CardViewProps } from "./card/CardView";
+export { CardFrame } from "./card/CardFrame";
+export type { CardFrameProps } from "./card/CardFrame";
 export { FoilOverlay } from "./card/FoilOverlay";
 export { rarityStyle, RARITY_STYLES } from "./card/rarity-style";
 export type { RarityStyle } from "./card/rarity-style";
+export { cardFrameSpec, CARD_FRAME_VIEWBOX } from "./card/card-frame-style";
+export type { CardFrameSpec } from "./card/card-frame-style";
 export { toStatDisplays, formatStatValue } from "./card/stat";
 export type { StatDisplay } from "./card/stat";
-
-// Frame-Auflösung (reine Merge-Logik; die generischen Default-Frame-Assets liegen
-// in der Basis-Variante variants/_default, der Build-Host reicht die fertige Map).
-export { mergeCardFrames } from "./card/frames";
-export type { CardFrameSources, ResolvedCardFrames } from "./card/frames";

@@ -11,7 +11,7 @@ import { StyleSheet, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import type { CascadeClassifier } from "@spotforge/ai-engine";
 import type { AttributeDefinition } from "@spotforge/game-core";
-import { useTheme, type ResolvedCardFrames } from "@spotforge/ui";
+import { useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
 import type { PlayerProgress } from "../progression/disclosure";
 import { SpotScreen } from "../screens/SpotScreen";
@@ -22,7 +22,6 @@ import { resolveActiveTab, visibleTabs, type TabKey } from "./tabs";
 export interface AppNavigatorProps {
   definition: AppDefinition;
   attributes: AttributeDefinition[];
-  frames: ResolvedCardFrames;
   locale: LocaleCode;
   spottedBy: string;
   cascade?: CascadeClassifier;
@@ -35,7 +34,6 @@ export interface AppNavigatorProps {
 export function AppNavigator({
   definition,
   attributes,
-  frames,
   locale,
   spottedBy,
   cascade,
@@ -70,7 +68,6 @@ export function AppNavigator({
           <SpotScreen
             definition={definition}
             attributes={attributes}
-            frames={frames}
             locale={locale}
             spottedBy={spottedBy}
             cascade={cascade}

@@ -1,8 +1,9 @@
-// Das visuelle Kartenlayout (GDD §4.2, §7.3, §10.1): Seltenheits-Frame als
-// Hintergrund, Objektname + Rarity-Badge, Card-Art, Attribut-Reihen, Spotted-By-
-// Tag und – für Foil-Karten – ein Schimmer-Overlay. Alle Farben/Schriften kommen
-// aus dem ThemeProvider; dieselbe Card sieht so je Variante anders aus, ohne
-// Code-Duplikat. Muss innerhalb eines <ThemeProvider> liegen.
+// Das visuelle Kartenlayout (GDD §4.2, §7.3, §10.1): prozedural gerenderter
+// Seltenheits-Frame (CardFrame, SVG) als Hintergrund, Objektname + Rarity-Badge,
+// Card-Art, Attribut-Reihen, Spotted-By-Tag und – für Foil-Karten – ein Schimmer-
+// Overlay. Alle Farben/Schriften kommen aus dem ThemeProvider; dieselbe Card sieht
+// so je Variante anders aus, ohne Code-Duplikat. Muss innerhalb eines
+// <ThemeProvider> liegen.
 
 import { Image, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
@@ -10,8 +11,8 @@ import { isFoil } from "@spotforge/game-core";
 import { DEFAULT_RADIUS, useTheme } from "../theme/ThemeProvider";
 import { Badge } from "../components/Badge";
 import { StatRow } from "../components/StatRow";
+import { CardFrame } from "./CardFrame";
 import { FoilOverlay } from "./FoilOverlay";
-import type { ResolvedCardFrames } from "./frames";
 import { rarityStyle } from "./rarity-style";
 import { toStatDisplays } from "./stat";
 
@@ -20,11 +21,6 @@ export interface CardViewProps {
   card: Card;
   /** Attribut-Schema der Kategorie (Labels/Einheiten/trumpfbar) – Quelle der Anzeige-Reihenfolge. */
   attributes: AttributeDefinition[];
-  /**
-   * Vollständige, zur Build-/Wiring-Zeit aufgelöste Frame-Map (generische
-   * Defaults ∪ Varianten-Overrides), siehe {@link resolveCardFrames}.
-   */
-  frames: ResolvedCardFrames;
   /** Card-Art-Bild; ohne Angabe wird `card.artUri` genutzt, sonst ein Platzhalter. */
   artSource?: ImageSourcePropType;
   /** Label vor dem Entdecker-Tag (z.B. lokalisiert); Default sprachneutral. */
@@ -38,7 +34,6 @@ export interface CardViewProps {
 export function CardView({
   card,
   attributes,
-  frames,
   artSource,
   spottedByLabel = "Gespottet von",
   rarityLabel,
@@ -49,18 +44,17 @@ export function CardView({
   const radius = theme.radius ?? DEFAULT_RADIUS;
   const stats = toStatDisplays(card.attributes, attributes);
   const art = artSource ?? (card.artUri !== undefined ? { uri: card.artUri } : undefined);
-  // Die Seltenheits-Frames haben einen hellen Karten-Body → On-Card-Text (Titel,
+  // Der gerenderte Rahmen hat einen hellen Karten-Body → On-Card-Text (Titel,
   // Stats, Spotted-By) wird in der dunklen Theme-Tinte gesetzt, nicht in der
   // UI-Textfarbe (die für den dunklen App-Hintergrund hell ist).
   const ink = theme.colors.secondary;
 
   return (
     <View style={[styles.root, { borderRadius: radius }]}>
-      {/* Rahmen als Karten-Hintergrund. cover statt stretch: der Frame ist
-          750×1050 = exakt 5:7 wie die Karte → randscharf ohne Verzerrung und ohne
-          den auf der New Architecture (Fabric) unzuverlässigen stretch-Pfad. Den
-          runden Eck-Clip übernimmt das root (overflow:hidden + borderRadius). */}
-      <Image source={frames[card.rarity]} resizeMode="cover" style={StyleSheet.absoluteFill} />
+      {/* Prozedural gerenderter Seltenheits-Frame als Hintergrund (SVG, #96):
+          auflösungsunabhängig, randscharf; den runden Eck-Clip übernimmt das root
+          (overflow:hidden + borderRadius). */}
+      <CardFrame rarity={card.rarity} radius={radius} />
 
       <View style={styles.content}>
         <View style={styles.header}>

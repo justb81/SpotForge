@@ -2,6 +2,12 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# Workspace-Pakete als echte Kopien (Hardlinks) statt Symlinks einbinden. Seit
+# pnpm v10 ist das Voraussetzung für `pnpm deploy` (sonst
+# ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE) – der Backend-Docker-Build erzeugt damit
+# ein self-contained `/prod/backend` mit eingebetteten game-core/api-contract.
+injectWorkspacePackages: true
+
 # --- Supply-Chain-Härtung (siehe ADR 0006) ---
 
 # Mindestalter (Quarantäne) für neu veröffentlichte Versionen: 7 Tage

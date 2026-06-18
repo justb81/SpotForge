@@ -51,7 +51,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-spotforge}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # PG18+ legt die Daten unter einem major-versionierten Unterverzeichnis ab
+      # (`/var/lib/postgresql/18/docker`) und verweigert den Start, wenn ein Volume
+      # am alten Pfad `/var/lib/postgresql/data` hängt. Daher das Volume an der
+      # neuen Wurzel `/var/lib/postgresql` einhängen (docker-library/postgres#1259).
+      - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spotforge}"]
       interval: 10s

@@ -29,7 +29,7 @@ ONNX Runtime Mobile ist auf diesem Stack damit nicht lauffähig.
 On-Device-Inferenz läuft über **`react-native-executorch`** (PyTorch ExecuTorch,
 gepflegt von Software Mansion) – New-Architecture-/Expo-nativ.
 
-- **PoC-Modell (#50):** `EfficientNet-V2-S` (ImageNet, int8/XNNPACK) als
+- **PoC-Modell (#50):** `EfficientNet-V2-S` (ImageNet, XNNPACK) als
   vorab exportiertes `.pte`, **gebündelt** ausgeliefert (`tools/fetch-models`
   bezieht es per Manifest + SHA-256; Metro-Asset). Vollständig offline.
 - ExecuTorch übernimmt Vorverarbeitung (Resize/Normalisierung) und Softmax
@@ -49,8 +49,11 @@ gepflegt von Software Mansion) – New-Architecture-/Expo-nativ.
   Normalisierung und ImageNet-Labels entfielen).
 - **Allgemeiner Export-Pfad:** jedes PyTorch-Modell lässt sich nach `.pte`
   konvertieren – tragfähig bis zur fahrzeug-spezifischen Erkennung (#9).
-- **Backends:** XNNPACK (CPU, portabel), zusätzlich Core ML/MPS (iOS),
-  Vulkan/QNN (GPU/NPU) als spätere Optimierung.
+- **Backends:** **fp32/XNNPACK (CPU)** ist der einheitliche Pfad
+  ([ADR 0014](./0014-on-device-inferenz-praezision-fp32.md)). GPU-/NPU-Delegates
+  (Core ML/MPS iOS, Vulkan/QNN Android) sind frei nutzbar für Inferenz, die **nicht**
+  den Embedding-Korpus speist (#88) — der **Embedding-Tap bleibt fp32/CPU**, weil er
+  reproduzierbar und backend-/präzisions-stabil sein muss.
 
 ## Konsequenzen
 
@@ -67,3 +70,5 @@ gepflegt von Software Mansion) – New-Architecture-/Expo-nativ.
 - Neubewertung, falls `onnxruntime-react-native` später solide
   Bridgeless-Unterstützung auf npm liefert – derzeit kein Grund für einen
   Rückwechsel.
+- **Präzision & GPU/CPU-Abgrenzung:** [ADR 0014](./0014-on-device-inferenz-praezision-fp32.md)
+  (fp32 einheitlich, kein int8; Embedding-Tap auf kanonischem fp32/CPU-Pfad).

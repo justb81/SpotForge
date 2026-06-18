@@ -23,7 +23,10 @@ schlägt der letzte Schritt mit `FileNotFoundError: 'flatc'` fehl.
     pip install executorch timm
     python tools/export-model/smoke-export.py \
         --arch vit_small_patch14_dinov2.lvd142m
-    # optional: --quantize int8   --keep   --out dist/smoke
+    # optional: --keep   --out dist/smoke
+
+Der Export ist immer fp32 (ADR 0014 – keine Quantisierung; das Embedding wird auf
+dem kanonischen fp32/CPU-Pfad berechnet).
 """
 
 from __future__ import annotations
@@ -39,8 +42,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Export-Smoke-Test für ein timm-Feature-Backbone (#88).")
     parser.add_argument("--arch", default="vit_small_patch14_dinov2.lvd142m",
                         help="timm-arch-Tag (Default: DINOv2 ViT-S/14).")
-    parser.add_argument("--quantize", choices=["none", "int8"], default="none",
-                        help="int8 = XNNPACK-PTQ (Platzhalter-Kalibrierung, nur Größen-/Machbarkeits-Indikator).")
     parser.add_argument("--out", default="", help="Zielverzeichnis; leer = Temp (mit --keep nach ./smoke-<arch>.pte).")
     parser.add_argument("--keep", action="store_true", help="Das erzeugte .pte behalten statt verwerfen.")
     args = parser.parse_args()
@@ -69,18 +70,7 @@ def main() -> int:
     print(f"Embedding-Dim = {embed_dim}")
 
     stage("torch.export")
-    if args.quantize == "int8":
-        from torch.export import export_for_training
-        from torch.ao.quantization.quantize_pt2e import prepare_pt2e, convert_pt2e
-        from executorch.backends.xnnpack.quantizer.xnnpack_quantizer import (
-            XNNPACKQuantizer, get_symmetric_quantization_config,
-        )
-        captured = export_for_training(model, sample).module()
-        prepared = prepare_pt2e(captured, XNNPACKQuantizer().set_global(get_symmetric_quantization_config()))
-        prepared(*sample)  # Platzhalter-Kalibrierung
-        exported = export(convert_pt2e(prepared), sample)
-    else:
-        exported = export(model, sample)
+    exported = export(model, sample)  # immer fp32 (ADR 0014)
     print("OK")
 
     stage("to_edge_transform_and_lower(XnnpackPartitioner)")
@@ -105,7 +95,7 @@ def main() -> int:
     print(f"  Input-Size:    {input_size[1]}x{input_size[2]}")
     print(f"  Embedding-Dim: {embed_dim}")
     print(f"  Params:        {n_params / 1e6:.1f} M")
-    print(f"  .pte ({args.quantize}):   {size_mb:.1f} MB")
+    print(f"  .pte (fp32):   {size_mb:.1f} MB")
     print("─" * 56)
     print(f"\n✓ {args.arch} lowert nach ExecuTorch (XNNPACK).")
 

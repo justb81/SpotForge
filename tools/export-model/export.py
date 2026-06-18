@@ -3,7 +3,7 @@
 
 Erzeugt aus einem Export-Config (``models/<id>.json``) reproduzierbar:
 
-* ``<id>.pte``            – das ExecuTorch-Modell (XNNPACK, optional int8),
+* ``<id>.pte``            – das ExecuTorch-Modell (XNNPACK, fp32),
 * ``<id>.labels.json``    – geordnete Labels (Index = Logit-Position),
 * ``<id>.metadata.json``  – Quelle, Revision, Version, SHA-256, Normalisierung,
 * ``<id>.manifest.json``  – fertiger Eintrag fürs Modell-Manifest (gebündelt).
@@ -19,7 +19,8 @@ Zwei Export-Backends (Config-Feld ``format``):
   oder aus einem **Checkpoint** (``.pth``, z.B. Jordo23/vehicle-classifier,
   EfficientNet-B4, 8.949 Klassen). Labels aus einer committeten JSON-Liste
   (``timm.labelsJson``, repo-relativ) oder einer CSV (``timm.labelsFile``),
-  Normalisierung aus der Config. ``quantize: "none"`` exportiert **fp32**.
+  Normalisierung aus der Config. Der Export ist immer **fp32** (ADR 0014 –
+  keine Quantisierung; int8 ist verworfen).
 
 Modell-Kontrakt (von react-native-executorch gefordert): Input
 ``float32[1,3,H,W]`` (RGB, nach ``(pixel - mean) / std``), Output ``float32[1,C]``
@@ -192,38 +193,13 @@ def export_timm(cfg: dict, model_out: Path) -> tuple[list[str], dict | None]:
 
     h, w = t["inputSize"]
     sample = (torch.randn(1, 3, h, w),)
-    exported = quantize_int8(model, sample) if cfg.get("quantize") == "int8" else export(model, sample)
+    exported = export(model, sample)  # immer fp32 (ADR 0014)
     edge = to_edge_transform_and_lower(exported, partitioner=[XnnpackPartitioner()])
     program = edge.to_executorch()
     with open(model_out, "wb") as handle:
         handle.write(program.buffer)
 
     return labels, cfg.get("preprocessor")
-
-
-def quantize_int8(model, sample):
-    """Post-Training-Quantisierung (int8, XNNPACK). Kalibrierung mit Platzhalter-
-    Tensoren – echte Kalibrierbilder verbessern die Genauigkeit (Geräte-Aufgabe).
-
-    ACHTUNG (#62): Der PT2E-Pfad unten passt nicht zur gepinnten torch-Version
-    (2.12): `torch.export.export_for_training` und `torch.ao.quantization.
-    quantize_pt2e` sind dort entfernt/nach `torchao` gewandert. fp32
-    (`quantize: "none"`) ist der gewählte Baseline-Ansatz für beide Modelle; int8
-    ist eine OPTIONALE spätere Optimierung (#62) – beim Einführen den Pfad auf die
-    aktuelle API heben und den Genauigkeitsverlust gegen fp32 evaluieren."""
-    from torch.export import export, export_for_training
-    from torch.ao.quantization.quantize_pt2e import prepare_pt2e, convert_pt2e
-    from executorch.backends.xnnpack.quantizer.xnnpack_quantizer import (
-        XNNPACKQuantizer,
-        get_symmetric_quantization_config,
-    )
-
-    captured = export_for_training(model, sample).module()
-    quantizer = XNNPACKQuantizer().set_global(get_symmetric_quantization_config())
-    prepared = prepare_pt2e(captured, quantizer)
-    prepared(*sample)  # Kalibrierung (Platzhalter)
-    converted = convert_pt2e(prepared)
-    return export(converted, sample)
 
 
 # --- Gemeinsam: Metadaten + Manifest-Eintrag --------------------------------
@@ -272,7 +248,7 @@ def main() -> int:
         "format": fmt,
         "sourceModel": cfg["sourceModel"],
         "revision": cfg["revision"],
-        "quantize": cfg.get("quantize", "none"),
+        "precision": "fp32",
         "numClasses": len(labels),
         "preprocessor": preprocessor,
         "exportedAt": datetime.now(timezone.utc).isoformat(),

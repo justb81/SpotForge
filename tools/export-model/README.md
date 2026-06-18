@@ -31,15 +31,16 @@ gebündelte Modell reproduzierbar und in sich konsistent.
 
 `optimum` nutzt `optimum-cli export executorch`; `timm` lädt das Modell (Gewichte
 vortrainiert aus dem HF-Hub via arch-Tag **oder** aus einem Checkpoint) und lowert
-es direkt über `torch.export → to_edge_transform_and_lower(XNNPACK)`. `quantize`
-ist `int8` **oder** `none` (fp32 – z.B. fürs Gate, #83).
+es direkt über `torch.export → to_edge_transform_and_lower(XNNPACK)`. Der Export ist
+immer **fp32** ([ADR 0014](../../docs/adr/0014-on-device-inferenz-praezision-fp32.md) –
+keine Quantisierung; int8 ist verworfen).
 
 ## Export-Config
 
 Pro Modell eine Datei unter `models/<id>.json`. Gemeinsame Felder: `id`
 (= Manifest-`id`/Dateinamenspräfix), `version` (semver, bei Re-Export erhöhen),
 `category` (`CategoryId`), `sourceModel` (HF-Repo), `revision`, `output`
-(Dateinamen), `preprocessor` (`normMean`/`normStd`), `quantize` (`int8`|`none`).
+(Dateinamen), `preprocessor` (`normMean`/`normStd`).
 
 `timm`-spezifisch unter `timm`: `arch`, `numClasses`, `inputSize` und je nach
 Quelle entweder
@@ -49,10 +50,6 @@ Quelle entweder
 
 dazu die Labels entweder als committete JSON-Liste (`labelsJson`, repo-relativer
 Pfad – Index = Klasse) oder als CSV (`labelsFile`, `indexColumn`, `labelColumn`).
-
-> **Quantisierung (int8):** Die XNNPACK-PTQ kalibriert mangels Bilddatensatz mit
-> Platzhalter-Tensoren – funktional, aber echte Kalibrierbilder verbessern die
-> Genauigkeit (Geräte-/Mensch-Aufgabe).
 
 ## Verwendung
 
@@ -92,15 +89,15 @@ Fahrzeugtyp-Modell könnte das nicht), erst dann wird dieses (ebenfalls gebünde
 Feinmodell **bei Bedarf** in den Speicher initialisiert.
 
 **Offene Mensch-/Geräte-Aufgaben (#9):** VMMRdb-Provenienz rechtlich gegenchecken,
-int8-Kalibrierung mit echten Bildern, Verifikation von Erkennungsqualität/Latenz
-und Größen-/Performance-Budget **auf echtem Gerät**.
+Verifikation von Erkennungsqualität/Latenz und Größen-/Performance-Budget **auf
+echtem Gerät**.
 
 ## Beispiel: Gate (ImageNet, fp32)
 
 `models/gate-imagenet-efficientnet-b0.json` exportiert das breite **Gate** der
 Kaskade (#83): **EfficientNet-B0**, ImageNet-1k, **vortrainiert** aus dem HF-Hub,
-**fp32** (`quantize: "none"` → kein Quantisierungsverlust, kleiner als das frühere
-V2-S-int8-Gate). Die Labels sind die **kanonische ImageNet-1k-Liste**
+**fp32** (ADR 0014 – kein Quantisierungsverlust). Die Labels sind die **kanonische
+ImageNet-1k-Liste**
 (`imagenet-1k.labels.json`, erstes Synonym, `_` → Leerzeichen) – committet, damit
 sie exakt der `gate.allow`-Allowlist der Varianten entsprechen.
 
@@ -120,7 +117,7 @@ Bake-off. Ausgegeben werden Embedding-Dim, Input-Size, Params und `.pte`-Größe
 ```bash
 pip install executorch timm
 python tools/export-model/smoke-export.py --arch vit_small_patch14_dinov2.lvd142m
-# optional: --quantize int8   --keep   --out dist/smoke
+# optional: --keep   --out dist/smoke
 ```
 
 > **Verifiziert (#88):** DINOv2 ViT-S/14 lowert sauber (384-d Embedding, Input

@@ -178,6 +178,15 @@ ergänzen.
   **Garage** (S3-kompatibel, self-hosted) statt MinIO; Single-Node, Image
   gepinnt, Bootstrap via `tools/garage/bootstrap.sh`. Bleibt intern bis das
   Bild-Upload-Feature es exponiert.
+- **[ADR 0014](./docs/adr/0014-on-device-inferenz-praezision-fp32.md):**
+  On-Device-Inferenz-Präzision = **fp32, einheitlich** für den Erkennungs-/
+  Embedding-Pfad (Gate, Feinmodell, künftiger Embedding-Backbone); **int8
+  verworfen**. Der **Embedding-Tap** (#88) wird auf einem kanonischen,
+  deterministischen Pfad berechnet: **fp32 auf CPU (XNNPACK)** – Backend + Präzision
+  sind Teil der Embedding-Versions-Identität. GPU/NPU-Delegates frei nutzbar für
+  Inferenz, die **nicht** den Embedding-Korpus speist. Begründung u.a.:
+  Korpus-Kompatibilität + irreversible Retention (gelöschte Fotos ⇒ Embeddings
+  unwiederbringlich). Card-Art (#11) ausgenommen.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

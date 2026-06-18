@@ -136,7 +136,7 @@ def main() -> int:
 
     if args.out:
         report = {
-            "model": {"id": cfg["id"], "arch": t["arch"], "quantize": cfg.get("quantize", "none")},
+            "model": {"id": cfg["id"], "arch": t["arch"], "precision": "fp32"},
             "topK": args.topk,
             "targetRecall": args.target_recall,
             "counts": {"vehicle": n_veh, "nonvehicle": n_non},

@@ -5,8 +5,51 @@
 export { SpotForgeApp, DEFAULT_SPOTTER } from "./SpotForgeApp";
 export type { SpotForgeAppProps } from "./SpotForgeApp";
 
+// Gemeinsame Text-Defaults + Auflösung (Override ▸ Default ▸ Schlüssel).
+export { DEFAULT_CONTENT } from "./content/defaults";
+export type { DefaultTextKey } from "./content/defaults";
+export { createTextResolver, useText } from "./content/text";
+export type { TextResolver } from "./content/text";
+
+// Navigation (generische Tab-Shell + Progressive Disclosure).
+export { AppNavigator } from "./navigation/AppNavigator";
+export type { AppNavigatorProps } from "./navigation/AppNavigator";
+export { TabBar } from "./navigation/TabBar";
+export type { TabBarProps } from "./navigation/TabBar";
+export { TABS, TAB_KEYS, visibleTabs, resolveActiveTab } from "./navigation/tabs";
+export type { TabDefinition, TabKey } from "./navigation/tabs";
+
+// Progressive Disclosure (Feature-Freischaltung).
+export {
+  FEATURES,
+  NEW_PLAYER,
+  isFeatureUnlocked,
+  unlockedFeatures,
+  featureUnlockLevel,
+} from "./progression/disclosure";
+export type { Feature, PlayerProgress } from "./progression/disclosure";
+
+// First-Time-User-Experience (Sequenz + Flow-UI).
+export { FtueFlow } from "./ftue/FtueFlow";
+export type { FtueFlowProps } from "./ftue/FtueFlow";
+export {
+  FTUE_STEPS,
+  FTUE_STEP_CONTENT,
+  FIRST_FTUE_STEP,
+  ftueStepIndex,
+  ftueProgress,
+  nextFtueStep,
+  prevFtueStep,
+  isFirstFtueStep,
+  isLastFtueStep,
+} from "./ftue/steps";
+export type { FtueStep, FtueStepContent } from "./ftue/steps";
+
 export { SpotScreen } from "./screens/SpotScreen";
 export type { SpotScreenProps } from "./screens/SpotScreen";
+
+export { FeatureScreen } from "./screens/FeatureScreen";
+export type { FeatureScreenProps } from "./screens/FeatureScreen";
 
 export { SpotCamera } from "./camera/SpotCamera";
 export type { SpotCameraProps, SpotCameraLabels } from "./camera/SpotCamera";

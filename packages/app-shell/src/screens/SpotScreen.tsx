@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
-import { DEFAULT_LOCALE, resolveText } from "@spotforge/app-config";
+import { DEFAULT_LOCALE } from "@spotforge/app-config";
 import {
   formatCascadeTimings,
   type CascadeClassifier,
@@ -9,6 +9,7 @@ import {
 } from "@spotforge/ai-engine";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { useTheme, type ResolvedCardFrames } from "@spotforge/ui";
+import { useText } from "../content/text";
 import { SpotCamera } from "../camera/SpotCamera";
 import { DraftPanel } from "../draft/DraftPanel";
 import { UnrecognizedPanel } from "./UnrecognizedPanel";
@@ -48,18 +49,11 @@ export function SpotScreen({
   spottedBy,
   cascade,
 }: SpotScreenProps) {
-  const { identity, content } = definition;
+  const { identity } = definition;
   const theme = useTheme();
 
-  // Mehrsprachige Overrides in die aktive Sprache auflösen; fehlende Schlüssel
-  // fallen auf den mitgegebenen Default zurück.
-  const text = useCallback(
-    (key: string, fallback: string) => {
-      const override = content[key];
-      return override ? resolveText(override, locale) : fallback;
-    },
-    [content, locale],
-  );
+  // Texte aus den gemeinsamen Defaults ⊕ Varianten-Overrides (siehe content/text).
+  const text = useText(definition, locale);
 
   const spotter = useMemo(
     () => (cascade ? createSpotter(definition, cascade, { locale }) : undefined),
@@ -87,7 +81,7 @@ export function SpotScreen({
       setPhotoUri(uri);
 
       if (!spotter) {
-        setError(text("spot.modelLoading", "Modell wird geladen …"));
+        setError(text("spot.modelLoading"));
         setMode("idle");
         return;
       }
@@ -97,7 +91,7 @@ export function SpotScreen({
         // erst die Top-k-Kandidaten zur Auswahl (Draft entsteht bei der Auswahl).
         setResult(await spotter({ imageUri: uri, spottedBy }));
       } catch {
-        setError(text("spot.error", "Erkennung fehlgeschlagen. Bitte erneut versuchen."));
+        setError(text("spot.error"));
       }
       setMode("idle");
     },
@@ -149,12 +143,9 @@ export function SpotScreen({
             theme={theme}
             onCapture={handleCapture}
             labels={{
-              shutter: text("spot.shutter", "Auslösen"),
-              permissionPrompt: text(
-                "spot.permissionPrompt",
-                "Für das Spotten wird Zugriff auf die Kamera benötigt.",
-              ),
-              permissionCta: text("spot.permissionCta", "Kamera erlauben"),
+              shutter: text("spot.shutter"),
+              permissionPrompt: text("spot.permissionPrompt"),
+              permissionCta: text("spot.permissionCta"),
             }}
           />
         ) : (
@@ -193,7 +184,7 @@ export function SpotScreen({
           style={[styles.captureButton, { backgroundColor: theme.colors.primary }]}
         >
           <Text style={[styles.captureLabel, { color: theme.colors.text }]}>
-            {hasResult ? text("spot.retake", "Neues Foto") : text("spot.cta", "Spotten")}
+            {hasResult ? text("spot.retake") : text("spot.cta")}
           </Text>
         </Pressable>
       ) : null}
@@ -218,20 +209,17 @@ export function SpotScreen({
           frames={frames}
           onDraftChange={setDraft}
           labels={{
-            hit: text("spot.hit", "Treffer! Draft angelegt."),
-            forgePending: text(
-              "forge.pending",
-              "Geschmiedet wird online – Verbindung erforderlich.",
-            ),
-            edit: text("draft.edit", "Bestätigen / korrigieren"),
-            spottedBy: text("card.spottedBy", "Gespottet von"),
-            draftRarity: text("draft.rarity", "Entwurf"),
+            hit: text("spot.hit"),
+            forgePending: text("forge.pending"),
+            edit: text("draft.edit"),
+            spottedBy: text("card.spottedBy"),
+            draftRarity: text("draft.rarity"),
             editor: {
-              title: text("draft.editTitle", "Draft bearbeiten"),
-              nameLabel: text("draft.nameLabel", "Marke / Modell"),
-              attributesLabel: text("draft.attributesLabel", "Werte vorschlagen"),
-              save: text("draft.save", "Übernehmen"),
-              cancel: text("draft.cancel", "Abbrechen"),
+              title: text("draft.editTitle"),
+              nameLabel: text("draft.nameLabel"),
+              attributesLabel: text("draft.attributesLabel"),
+              save: text("draft.save"),
+              cancel: text("draft.cancel"),
             },
           }}
         />
@@ -245,10 +233,10 @@ export function SpotScreen({
           rawLabel=""
           onCreate={handleManualCreate}
           labels={{
-            title: text("spot.manualTitle", "Manuell eingeben"),
-            hint: text("spot.manualHint", "Benenne Marke und Modell selbst."),
-            nameLabel: text("draft.nameLabel", "Marke / Modell"),
-            create: text("spot.manualCreate", "Als Draft anlegen"),
+            title: text("spot.manualTitle"),
+            hint: text("spot.manualHint"),
+            nameLabel: text("draft.nameLabel"),
+            create: text("spot.manualCreate"),
           }}
         />
       );
@@ -266,8 +254,8 @@ export function SpotScreen({
           onSelect={handleSelectCandidate}
           onManual={() => setManualMode(true)}
           labels={{
-            title: text("spot.pickTitle", "Erkannt – bitte auswählen:"),
-            manual: text("spot.manualEntry", "Manuell eingeben"),
+            title: text("spot.pickTitle"),
+            manual: text("spot.manualEntry"),
           }}
         />
       );
@@ -279,7 +267,7 @@ export function SpotScreen({
           <Text style={[styles.message, { color: theme.colors.text }]}>{result.message}</Text>
           {result.detectedLabel ? (
             <Text style={[styles.detected, { color: theme.colors.accent }]}>
-              {text("spot.detected", "Erkannt")}: {result.detectedLabel}
+              {text("spot.detected")}: {result.detectedLabel}
             </Text>
           ) : null}
         </View>
@@ -292,13 +280,10 @@ export function SpotScreen({
           rawLabel={result.label}
           onCreate={handleManualCreate}
           labels={{
-            title: text("spot.unrecognizedTitle", "Nicht erkannt"),
-            hint: text(
-              "spot.unrecognizedHint",
-              "Das ließ sich keinem Objekt zuordnen. Du kannst es selbst benennen.",
-            ),
-            nameLabel: text("draft.nameLabel", "Marke / Modell"),
-            create: text("spot.manualCreate", "Als Draft anlegen"),
+            title: text("spot.unrecognizedTitle"),
+            hint: text("spot.unrecognizedHint"),
+            nameLabel: text("draft.nameLabel"),
+            create: text("spot.manualCreate"),
           }}
         />
       );
@@ -307,7 +292,7 @@ export function SpotScreen({
     return (
       <View style={styles.center}>
         <Text style={[styles.placeholder, { color: theme.colors.text }]}>
-          {text("spot.resultPlaceholder", "Noch kein Spot. Nimm ein Foto auf.")}
+          {text("spot.resultPlaceholder")}
         </Text>
       </View>
     );

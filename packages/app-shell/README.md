@@ -13,11 +13,22 @@ wird mit einer `AppDefinition` parametrisiert:
 ```ts
 import { SpotForgeApp } from "@spotforge/app-shell";
 import appDefinition from "../../variants/cars/app.definition";
+import branding from "../../variants/cars/branding.config";
 
 export default function App() {
-  return <SpotForgeApp definition={appDefinition} />;
+  return (
+    <SpotForgeApp
+      definition={appDefinition}
+      theme={branding.theme}
+      frames={CARD_FRAMES}
+      attributes={CATEGORY_ATTRIBUTES}
+    />
+  );
 }
 ```
+
+Der echte Host (`apps/mobile`) reicht zusätzlich die geladene KI-Kaskade und – sobald
+vorhanden – den persistierten `initialProgress` herein.
 
 ## Verantwortung
 
@@ -36,11 +47,39 @@ Bundle-IDs. Alles Variable kommt aus `@spotforge/app-config`.
 `@spotforge/game-core`, `@spotforge/ai-engine`, `@spotforge/api-client`,
 `@spotforge/ui`, `@spotforge/app-config`.
 
-## Status
+## App-Gerüst: Navigation, Onboarding & Progressive Disclosure (#14)
 
-Gerüst. **Spot-/Draft-Flow (offline, ADR 0010):** `SpotForgeApp` startet ohne
-Login/Onboarding direkt im `SpotScreen`, der den Loop
-idle → capture → processing → Ergebnis fährt:
+`SpotForgeApp` steuert den obersten Ablauf und hostet das Theme (`ThemeProvider`):
+
+- **First-Time-User-Experience** (`FtueFlow`, GDD §11.1): Ein neuer Spieler
+  (`progress.ftueCompleted === false`) durchläuft zuerst eine kurze, geführte
+  Sequenz durch den Core Loop – Willkommen → erster Spot → **Schmiede-Animation**
+  → Duell → Tausch → Starter-Karten. Bewusst „kein langer Tutorial-Text": pro
+  Slide ein Glyph, ein Titel, ein Satz, plus Fortschrittspunkte und Überspringen.
+  Die Sequenzlogik ist rein (`ftue/steps.ts`) und getestet.
+- **Tab-Navigation** (`AppNavigator` + `TabBar`): danach die Haupt-Bereiche
+  **Spot, Sammlung, Duell, Tausch, Profil**. Schlanke, zustandsbasierte
+  Eigenimplementierung (keine nativen Navigations-Deps), barrierearm
+  (`tablist`/`tab`, Selektion, Mindest-Touch-Target). Der Spot-Tab ist der unten
+  beschriebene `SpotScreen`; die übrigen Bereiche sind generische Empty-State-
+  Platzhalter (`FeatureScreen`), bis ihre eigenen Issues sie füllen.
+- **Progressive Disclosure** (`progression/disclosure.ts`, GDD §11.2): Der
+  Kern-Loop (Spotten) ist sofort verfügbar; Sammlung/Duell/Tausch/Profil
+  schalten nach der FTUE frei; Spezial-Mechaniken (Fusion/Marktplatz/Clans) sind
+  level-gebunden. `visibleTabs(progress)` blendet noch gesperrte Tabs aus.
+- **Gemeinsame Text-Defaults** (`content/defaults.ts` + `content/text.ts`): Jede
+  sichtbare Zeichenkette lebt als mehrsprachiger Default und wird über
+  `AppDefinition.content` pro Variante überschrieben. Komponenten rufen nur
+  `t(key)`; Auflösung ist Override ▸ Default ▸ Schlüssel. Kategorie-spezifische
+  Wörter (z.B. „Marke / Modell") stehen **nicht** in der app-shell, sondern als
+  Override in der Variante.
+
+`progress` ist bewusst I/O-frei: der Host reicht `initialProgress` herein und
+erhält Änderungen über `onProgressChange` (Persistenz bleibt Sache des Hosts).
+
+## Spot-/Draft-Flow (offline, ADR 0010)
+
+Der Spot-Tab fährt den Loop idle → capture → processing → Ergebnis:
 
 - `SpotCamera` (Live-Vorschau, Permission-Handling, Auslöser via `expo-camera`)
   liefert die Foto-URI.

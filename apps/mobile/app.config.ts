@@ -35,6 +35,29 @@ const version = buildNumber > 0 ? `${baseVersion}-build.${buildNumber}` : baseVe
 // Dev-Launcher unerwünscht – er wird nur bei EXPO_USE_DEV_CLIENT=1 eingebunden.
 const useDevClient = process.env.EXPO_USE_DEV_CLIENT === "1";
 
+// Config-Plugins: expo-camera für den Capture (#49); expo-dev-client nur im
+// Development Build. expo-image-picker nur, wenn die Variante den Galerie-Import
+// aktiviert (features.imageImport) – so trägt nur eine App, die das Feature
+// wirklich nutzt, die Foto-Berechtigung. ExecuTorch (#50) braucht kein Plugin
+// (autolinked).
+const plugins: NonNullable<ExpoConfig["plugins"]> = [
+  ...(useDevClient ? ["expo-dev-client"] : []),
+  [
+    "expo-camera",
+    {
+      cameraPermission: `${app.identity.displayName} nutzt die Kamera, um Objekte zu spotten und Karten zu schmieden.`,
+    },
+  ],
+];
+if (app.features?.imageImport) {
+  plugins.push([
+    "expo-image-picker",
+    {
+      photosPermission: `${app.identity.displayName} kann ein vorhandenes Bild aus deiner Galerie laden, um es zu spotten.`,
+    },
+  ]);
+}
+
 const config: ExpoConfig = {
   name: app.identity.displayName,
   slug: app.identity.slug,
@@ -47,17 +70,7 @@ const config: ExpoConfig = {
   },
   ios: { bundleIdentifier: app.identity.ios.bundleIdentifier, buildNumber: String(buildNumber) },
   android: { package: app.identity.android.package, versionCode: Math.max(buildNumber, 1) },
-  // Config-Plugins: expo-camera für den Capture (#49); expo-dev-client nur im
-  // Development Build. ONNX (#50) braucht kein Plugin (autolinked).
-  plugins: [
-    ...(useDevClient ? ["expo-dev-client"] : []),
-    [
-      "expo-camera",
-      {
-        cameraPermission: `${app.identity.displayName} nutzt die Kamera, um Objekte zu spotten und Karten zu schmieden.`,
-      },
-    ],
-  ],
+  plugins,
   // Variante + Definition + aufgelöstes Branding zur Laufzeit verfügbar machen.
   // App.tsx liest beides aus extra und reicht es an die generische app-shell.
   extra: { appVariant: variant, appDefinition: app, appBranding: branding },

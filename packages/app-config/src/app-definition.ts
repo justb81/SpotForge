@@ -33,9 +33,39 @@ export interface AppDefinition {
   /** Text-Overrides; fehlende Schlüssel fallen auf gemeinsame Defaults zurück. */
   content: ContentOverrides;
 
+  /** Optionale Feature-Schalter der App. Fehlt das Feld, gelten alle Defaults. */
+  features?: AppFeatures;
+
   // Theme & Assets sind bewusst NICHT Teil der AppDefinition (ADR 0011): sie
   // leben als Branding (@spotforge/app-config `branding.ts`) in einer eigenen
   // Config je Variante, mit `variants/_default` als generischer Basis.
+}
+
+/**
+ * Per-Variante schaltbare Features. Jeder Schalter ist optional und standardmäßig
+ * **aus** – eine App aktiviert nur, was sie wirklich braucht (siehe
+ * {@link resolveFeatures} für die aufgelösten Defaults).
+ */
+export interface AppFeatures {
+  /**
+   * Erlaubt, zusätzlich zum Kamera-Foto ein **bestehendes Bild aus der Galerie**
+   * zu laden (eigener Button) und es durch dieselbe Spot-Kette (Gate →
+   * Feinmodell → Draft) zu schicken. Standard: aus. Primär ein Test-/QA-Komfort
+   * – so lässt sich der Spot-Flow ohne frisches Foto auf der Straße prüfen. Kein
+   * Upload: das gewählte Bild bleibt lokal und wird nur on-device klassifiziert.
+   */
+  imageImport?: boolean;
+}
+
+/**
+ * Löst die optionalen {@link AppFeatures} einer Definition auf konkrete Werte auf
+ * (fehlendes Feld/fehlender Schalter ⇒ Default). Einzige Stelle, an der die
+ * Feature-Defaults definiert sind – Konsumenten fragen nur das Ergebnis ab.
+ */
+export function resolveFeatures(definition: AppDefinition): Required<AppFeatures> {
+  return {
+    imageImport: definition.features?.imageImport ?? false,
+  };
 }
 
 /**

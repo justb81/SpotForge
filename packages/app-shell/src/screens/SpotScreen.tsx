@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
-import { DEFAULT_LOCALE } from "@spotforge/app-config";
+import { DEFAULT_LOCALE, resolveFeatures } from "@spotforge/app-config";
 import {
   formatCascadeTimings,
   type CascadeClassifier,
@@ -11,6 +11,7 @@ import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { useTheme, type ResolvedCardFrames } from "@spotforge/ui";
 import { useText } from "../content/text";
 import { SpotCamera } from "../camera/SpotCamera";
+import { pickImageFromLibrary } from "../camera/pickImage";
 import { DraftPanel } from "../draft/DraftPanel";
 import { UnrecognizedPanel } from "./UnrecognizedPanel";
 import { RecognitionPicker } from "./RecognitionPicker";
@@ -55,6 +56,11 @@ export function SpotScreen({
   // Texte aus den gemeinsamen Defaults ⊕ Varianten-Overrides (siehe content/text).
   const text = useText(definition, locale);
 
+  // Optionaler Galerie-Import (AppDefinition `features.imageImport`): blendet
+  // neben der Kamera einen Button ein, der ein bestehendes Bild durch dieselbe
+  // Spot-Kette schickt – erleichtert das Testen ohne frisches Foto.
+  const { imageImport: canImportImage } = resolveFeatures(definition);
+
   const spotter = useMemo(
     () => (cascade ? createSpotter(definition, cascade, { locale }) : undefined),
     [definition, cascade, locale],
@@ -97,6 +103,16 @@ export function SpotScreen({
     },
     [spotter, spottedBy, reset, text],
   );
+
+  // Galerie-Import (nur bei aktivem Feature): wähle ein bestehendes Bild und
+  // schicke es durch dieselbe Spot-Kette wie ein frisches Kamera-Foto. Abbruch
+  // im Picker ist ein No-op.
+  const handlePickImage = useCallback(async () => {
+    const uri = await pickImageFromLibrary();
+    if (uri) {
+      await handleCapture(uri);
+    }
+  }, [handleCapture]);
 
   // Auswahl eines Kandidaten → Draft. Für den Top-1 wird der bereits in der
   // Pipeline gebaute Draft (inkl. evtl. Vorschläge) genutzt, sonst aus dem Label.
@@ -175,18 +191,31 @@ export function SpotScreen({
       </View>
 
       {showFooter ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            reset();
-            setMode("capturing");
-          }}
-          style={[styles.captureButton, { backgroundColor: theme.colors.primary }]}
-        >
-          <Text style={[styles.captureLabel, { color: theme.colors.text }]}>
-            {hasResult ? text("spot.retake") : text("spot.cta")}
-          </Text>
-        </Pressable>
+        <View style={styles.footer}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              reset();
+              setMode("capturing");
+            }}
+            style={[styles.captureButton, { backgroundColor: theme.colors.primary }]}
+          >
+            <Text style={[styles.captureLabel, { color: theme.colors.text }]}>
+              {hasResult ? text("spot.retake") : text("spot.cta")}
+            </Text>
+          </Pressable>
+          {canImportImage ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={handlePickImage}
+              style={[styles.importButton, { borderColor: theme.colors.primary }]}
+            >
+              <Text style={[styles.importLabel, { color: theme.colors.primary }]}>
+                {text("spot.importImage")}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );
@@ -362,6 +391,9 @@ const styles = StyleSheet.create({
     opacity: 0.55,
     paddingVertical: 6,
   },
+  footer: {
+    gap: 12,
+  },
   captureButton: {
     height: 64,
     borderRadius: 32,
@@ -371,5 +403,16 @@ const styles = StyleSheet.create({
   captureLabel: {
     fontSize: 18,
     fontWeight: "700",
+  },
+  importButton: {
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  importLabel: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

@@ -1,10 +1,9 @@
 # variants/cars/assets
 
 Marken-Grafiken für CarForge: Icon, Splash, Logo und Hintergrund, referenziert in
-`../app.definition.ts`. Die Seltenheits-Kartenrahmen sind **nicht** hier – sie
-sind kategorie-neutral und liegen als generische Baseline in
-[`packages/ui/assets/frames/`](../../../packages/ui/assets/frames); CarForge nutzt
-sie unverändert.
+`../branding.config.ts`. Die Seltenheits-Kartenrahmen sind **nicht** hier – sie
+werden prozedural aus `RARITY_STYLES` + Theme gerendert (ADR 0015, #96 –
+`CardFrame` in `@spotforge/ui`), nicht als Assets gebündelt.
 
 Alle Grafiken werden aus der einzigen Markenquelle `carforge.png` (weißes
 CarForge-Logo auf Schwarz) abgeleitet. Generator:

@@ -30,10 +30,23 @@ describe("toStatDisplays", () => {
     const rows = toStatDisplays({ power: 150 }, defs);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.key).toBe("power");
+    expect(rows[0]?.present).toBe(true);
   });
 
   it("ignoriert Werte ohne passende Definition", () => {
     const rows = toStatDisplays({ power: 150, unknown: 99 }, defs);
     expect(rows.map((r) => r.key)).toEqual(["power"]);
+  });
+
+  it("gibt mit includeMissing alle Attribute als Platzhalter-Reihen aus", () => {
+    const rows = toStatDisplays({ power: 150 }, defs, { includeMissing: true });
+    expect(rows.map((r) => r.key)).toEqual(["power", "topSpeed", "seats"]);
+    expect(rows[0]).toMatchObject({ formatted: "150 PS", present: true });
+    expect(rows[1]).toMatchObject({ key: "topSpeed", formatted: "—", present: false });
+  });
+
+  it("respektiert einen eigenen Platzhalter", () => {
+    const rows = toStatDisplays({}, defs, { includeMissing: true, missingPlaceholder: "?" });
+    expect(rows.every((r) => r.formatted === "?" && !r.present)).toBe(true);
   });
 });

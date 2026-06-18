@@ -3,8 +3,9 @@ import { defineBranding } from "@spotforge/app-config";
 /**
  * CarForge-Branding: Theme + marken-spezifische Assets. Nur Abweichungen von der
  * Basis `variants/_default` (ADR 0011); `resolveBranding` merged beides. Die
- * Seltenheits-Kartenrahmen werden **nicht** überschrieben – CarForge erbt die
- * generischen Rahmen aus `_default`.
+ * Seltenheits-Kartenrahmen sind keine Assets, sondern werden prozedural gerendert
+ * (#96, ADR 0015) – ihre Farbe leitet sich aus `RARITY_STYLES` ab; das Theme
+ * (z.B. `primary`) tönt den Rahmen pro Variante.
  */
 export default defineBranding({
   theme: {

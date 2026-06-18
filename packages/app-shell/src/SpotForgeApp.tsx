@@ -3,7 +3,7 @@ import type { AppDefinition, LocaleCode, ThemeTokens } from "@spotforge/app-conf
 import { DEFAULT_LOCALE } from "@spotforge/app-config";
 import type { CascadeClassifier } from "@spotforge/ai-engine";
 import type { AttributeDefinition } from "@spotforge/game-core";
-import { ThemeProvider, type ResolvedCardFrames } from "@spotforge/ui";
+import { ThemeProvider } from "@spotforge/ui";
 import { SafeAreaView, StyleSheet } from "react-native";
 import { useText } from "./content/text";
 import { AppNavigator } from "./navigation/AppNavigator";
@@ -22,11 +22,6 @@ export interface SpotForgeAppProps {
    * App stellt es per {@link ThemeProvider} dem @spotforge/ui-Design-System bereit.
    */
   theme: ThemeTokens;
-  /**
-   * Vollständige, vom Host aufgelöste Seltenheits-Frame-Map (generische Defaults ⊕
-   * Varianten-Overrides) für das Kartenrendering (ADR 0011).
-   */
-  frames: ResolvedCardFrames;
   /**
    * Attribut-Schema der App-Kategorie (Source of Truth: `data/categories/<id>.json`).
    * Treibt die Draft-Bearbeitung und die Karten-Stats; kategorie-neutral injiziert.
@@ -68,7 +63,6 @@ export interface SpotForgeAppProps {
 export function SpotForgeApp({
   definition,
   theme,
-  frames,
   attributes,
   locale = DEFAULT_LOCALE,
   spottedBy = DEFAULT_SPOTTER,
@@ -100,7 +94,6 @@ export function SpotForgeApp({
           <AppNavigator
             definition={definition}
             attributes={attributes}
-            frames={frames}
             locale={locale}
             spottedBy={spottedBy}
             cascade={cascade}

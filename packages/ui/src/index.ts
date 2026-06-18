@@ -27,4 +27,4 @@ export type { RarityStyle } from "./card/rarity-style";
 export { cardFrameSpec, CARD_FRAME_VIEWBOX } from "./card/card-frame-style";
 export type { CardFrameSpec } from "./card/card-frame-style";
 export { toStatDisplays, formatStatValue } from "./card/stat";
-export type { StatDisplay } from "./card/stat";
+export type { StatDisplay, ToStatDisplaysOptions } from "./card/stat";

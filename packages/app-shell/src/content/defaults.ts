@@ -26,6 +26,8 @@ export const DEFAULT_CONTENT = {
   // --- Spot-Screen (Kern-Loop) ------------------------------------------------
   "spot.cta": { de: "Spotten", en: "Spot" },
   "spot.retake": { de: "Neues Foto", en: "New photo" },
+  // Sekundärer Button (nur bei `features.imageImport`): bestehendes Bild laden.
+  "spot.importImage": { de: "Bild laden", en: "Load image" },
   "spot.shutter": { de: "Auslösen", en: "Capture" },
   "spot.permissionPrompt": {
     de: "Für das Spotten wird Zugriff auf die Kamera benötigt.",

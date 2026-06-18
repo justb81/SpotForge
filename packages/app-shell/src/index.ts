@@ -54,6 +54,10 @@ export type { FeatureScreenProps } from "./screens/FeatureScreen";
 export { SpotCamera } from "./camera/SpotCamera";
 export type { SpotCameraProps, SpotCameraLabels } from "./camera/SpotCamera";
 
+// Galerie-Import (optionales Feature `features.imageImport`): liefert eine
+// lokale Bild-URI für dieselbe Spot-Kette wie das Kamera-Foto.
+export { pickImageFromLibrary } from "./camera/pickImage";
+
 // Spot-Pipeline-Wiring (Foto → Draft, ADR 0010). Das Forgen ist der Online-Schritt
 // und nicht Teil der app-shell.
 export { createSpotter } from "./spotting/createSpotter";

@@ -15,9 +15,27 @@ Eine `AppDefinition` bündelt genau die per-App variablen Dinge:
 | `identity`    | Store-Identität: Name, Slug, Scheme, iOS-Bundle, Android-Package       |
 | `category`    | Welche `game-core`-Kategorie die App schmiedet + **Guardrails**        |
 | `ai`          | **KI-Prompts** für Klassifikation, Card-Art, Fakten-Extraktion         |
-| `theme`       | **Styling**-Tokens (Farben, Typografie), konsumiert von `@spotforge/ui` |
 | `content`     | **Mehrsprachige Text-Overrides** (i18n), fällt auf gemeinsame Defaults zurück |
-| `assets`      | **Grafiken**: Icon, Splash, Logo, Kartenrahmen, Hintergründe           |
+| `features`    | **Optionale Feature-Schalter** (Default: aus), siehe unten             |
+
+Theme & Assets sind **nicht** Teil der `AppDefinition`, sondern leben als
+**Branding** in einer eigenen Config je Variante (`branding.config.ts`, ADR 0011).
+
+## Features
+
+`features` sind optionale, per-Variante schaltbare Funktionen. Jeder Schalter ist
+optional und standardmäßig **aus** – `resolveFeatures(definition)` löst auf die
+konkreten Werte (inkl. Defaults) auf. Aktuell:
+
+| Schalter      | Wirkung                                                               |
+|---------------|-----------------------------------------------------------------------|
+| `imageImport` | Zeigt neben der Kamera einen Button, der ein **bestehendes Bild aus der Galerie** durch dieselbe Spot-Kette (Gate → Feinmodell) schickt. Test-/QA-Komfort; kein Upload (rein on-device). |
+
+```ts
+features: {
+  imageImport: true,
+},
+```
 
 ## Mehrsprachigkeit
 

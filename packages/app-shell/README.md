@@ -82,6 +82,10 @@ Der Spot-Tab fährt den Loop idle → capture → processing → Ergebnis:
 
 - `SpotCamera` (Live-Vorschau, Permission-Handling, Auslöser via `expo-camera`)
   liefert die Foto-URI.
+- Optional (AppDefinition `features.imageImport`): ein zweiter Button lädt über
+  `pickImageFromLibrary` (`expo-image-picker`) ein **bestehendes Bild aus der
+  Galerie**, das dieselbe Kette durchläuft. Test-/QA-Komfort – kein frisches Foto
+  nötig, kein Upload (rein on-device).
 - `createSpotter` verdrahtet `ai-engine.createSpot` mit der vom Host injizierten
   Kaskade (Gate → Feinmodell) und den Guardrails der Variante. Drei Ergebnisse:
   - **`draft`** → positive Rückmeldung + Karten-Vorschau (`@spotforge/ui` `CardView`).

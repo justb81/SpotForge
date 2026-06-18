@@ -6,6 +6,7 @@ import type { Branding } from "./branding";
 import {
   AppDefinitionError,
   assertAppDefinition,
+  resolveFeatures,
   validateAppDefinition,
   validateBranding,
 } from "./index";
@@ -100,6 +101,32 @@ describe("validateAppDefinition", () => {
     const result = validateAppDefinition(bad);
     expect(result.valid).toBe(false);
     expect(issuePaths(result)).toContain("category.guardrails.rejectMessage.en");
+  });
+
+  it("akzeptiert den optionalen features.imageImport-Schalter", () => {
+    const def = cloneCars();
+    def.features = { imageImport: true };
+    expect(validateAppDefinition(def).valid).toBe(true);
+  });
+
+  it("lehnt einen nicht-booleschen features-Schalter ab", () => {
+    const bad = cloneCars();
+    (bad as { features?: unknown }).features = { imageImport: "ja" };
+    const result = validateAppDefinition(bad);
+    expect(result.valid).toBe(false);
+    expect(issuePaths(result)).toContain("features.imageImport");
+  });
+});
+
+describe("resolveFeatures", () => {
+  it("defaultet imageImport auf false, wenn nicht gesetzt", () => {
+    const def = cloneCars();
+    delete def.features;
+    expect(resolveFeatures(def).imageImport).toBe(false);
+  });
+
+  it("übernimmt einen gesetzten Schalter (cars aktiviert imageImport)", () => {
+    expect(resolveFeatures(carsDefinition).imageImport).toBe(true);
   });
 });
 

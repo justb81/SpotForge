@@ -52,6 +52,13 @@ const aiPromptsSchema = z.object({
   factPrompt: nonEmpty("ai.factPrompt"),
 });
 
+/** Optionale Feature-Schalter; jeder Schalter ist optional (Default: aus). */
+const featuresSchema = z
+  .object({
+    imageImport: z.boolean().optional(),
+  })
+  .optional();
+
 const themeTokensSchema = z.object({
   colors: z.object({
     primary: hexColor("theme.colors.primary"),
@@ -104,6 +111,7 @@ export const appDefinitionSchema = z
     }),
     ai: aiPromptsSchema,
     content: contentOverridesSchema,
+    features: featuresSchema,
   })
   .refine((def) => def.category.guardrails.allowed.includes(def.category.primary), {
     message: "category.guardrails.allowed muss die primäre Kategorie (category.primary) enthalten",

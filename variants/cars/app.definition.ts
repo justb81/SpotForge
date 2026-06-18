@@ -110,5 +110,12 @@ export default defineApp({
     },
   },
 
+  // Galerie-Import aktiv (eigener Button neben der Kamera): ein vorhandenes Bild
+  // durchläuft dieselbe Spot-Kette (Gate → Feinmodell). Erleichtert das Testen –
+  // kein frisches Foto auf der Straße nötig. Kein Upload (rein on-device).
+  features: {
+    imageImport: true,
+  },
+
   // Theme & Assets: siehe ./branding.config.ts (ADR 0011).
 });

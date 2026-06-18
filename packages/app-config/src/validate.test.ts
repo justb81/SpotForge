@@ -42,7 +42,6 @@ function validBranding(): Branding {
       icon: "/abs/variants/cars/assets/icon.png",
       splash: "/abs/variants/cars/assets/splash.png",
       logo: "/abs/variants/cars/assets/logo.png",
-      cardFrames: { legendary: "/abs/variants/_default/assets/frames/legendary.png" },
     },
   };
 }
@@ -158,7 +157,7 @@ describe("validateBranding", () => {
     expect(result.valid).toBe(false);
     const paths = issuePaths(result);
     expect(paths).toContain("assets.icon");
-    expect(paths).toContain("assets.cardFrames.legendary");
+    expect(paths).toContain("assets.logo");
     if (!result.valid) {
       expect(result.issues[0]?.message).toMatch(/nicht gefunden/);
     }

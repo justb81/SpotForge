@@ -1,8 +1,11 @@
-// Das visuelle Kartenlayout (GDD §4.2, §7.3, §10.1): Seltenheits-Frame als
-// Hintergrund, Objektname + Rarity-Badge, Card-Art, Attribut-Reihen, Spotted-By-
-// Tag und – für Foil-Karten – ein Schimmer-Overlay. Alle Farben/Schriften kommen
-// aus dem ThemeProvider; dieselbe Card sieht so je Variante anders aus, ohne
-// Code-Duplikat. Muss innerhalb eines <ThemeProvider> liegen.
+// Das visuelle Kartenlayout (GDD §4.2, §7.3, §10.1) im Trumpf-/Quartett-Stil:
+// prozedural gerenderter Seltenheits-Frame (CardFrame, SVG) als Hintergrund,
+// Objektname + Rarity-Badge, Card-Art im oberen Bereich und – gleichberechtigt –
+// ein prominenter **Werte-Block** mit den Kategorie-Attributen (die Werte sind Teil
+// der Karte, nicht nur das Foto). Dazu der Spotted-By-Tag und – für Foil-Karten –
+// ein Schimmer-Overlay. Alle Farben/Schriften kommen aus dem ThemeProvider;
+// dieselbe Card sieht so je Variante anders aus, ohne Code-Duplikat. Muss innerhalb
+// eines <ThemeProvider> liegen.
 
 import { Image, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
@@ -10,8 +13,9 @@ import { isFoil } from "@spotforge/game-core";
 import { DEFAULT_RADIUS, useTheme } from "../theme/ThemeProvider";
 import { Badge } from "../components/Badge";
 import { StatRow } from "../components/StatRow";
+import { CardFrame } from "./CardFrame";
+import { lighten } from "./color";
 import { FoilOverlay } from "./FoilOverlay";
-import type { ResolvedCardFrames } from "./frames";
 import { rarityStyle } from "./rarity-style";
 import { toStatDisplays } from "./stat";
 
@@ -20,11 +24,6 @@ export interface CardViewProps {
   card: Card;
   /** Attribut-Schema der Kategorie (Labels/Einheiten/trumpfbar) – Quelle der Anzeige-Reihenfolge. */
   attributes: AttributeDefinition[];
-  /**
-   * Vollständige, zur Build-/Wiring-Zeit aufgelöste Frame-Map (generische
-   * Defaults ∪ Varianten-Overrides), siehe {@link resolveCardFrames}.
-   */
-  frames: ResolvedCardFrames;
   /** Card-Art-Bild; ohne Angabe wird `card.artUri` genutzt, sonst ein Platzhalter. */
   artSource?: ImageSourcePropType;
   /** Label vor dem Entdecker-Tag (z.B. lokalisiert); Default sprachneutral. */
@@ -38,7 +37,6 @@ export interface CardViewProps {
 export function CardView({
   card,
   attributes,
-  frames,
   artSource,
   spottedByLabel = "Gespottet von",
   rarityLabel,
@@ -47,20 +45,24 @@ export function CardView({
   const theme = useTheme();
   const rarity = rarityStyle(card.rarity);
   const radius = theme.radius ?? DEFAULT_RADIUS;
-  const stats = toStatDisplays(card.attributes, attributes);
+  // Alle Kategorie-Attribute zeigen – fehlende Werte (z.B. frischer Draft) als
+  // Platzhalter, damit die Karte stets die vollständige Werte-Struktur vermittelt.
+  const stats = toStatDisplays(card.attributes, attributes, { includeMissing: true });
   const art = artSource ?? (card.artUri !== undefined ? { uri: card.artUri } : undefined);
-  // Die Seltenheits-Frames haben einen hellen Karten-Body → On-Card-Text (Titel,
+  // Der gerenderte Rahmen hat einen hellen Karten-Body → On-Card-Text (Titel,
   // Stats, Spotted-By) wird in der dunklen Theme-Tinte gesetzt, nicht in der
   // UI-Textfarbe (die für den dunklen App-Hintergrund hell ist).
   const ink = theme.colors.secondary;
+  // Weiche, stufengetönte Linien für den Werte-Block (Quartett-Look).
+  const divider = lighten(ink, 0.78);
+  const panelBorder = lighten(rarity.color, 0.35);
 
   return (
     <View style={[styles.root, { borderRadius: radius }]}>
-      {/* Rahmen als Karten-Hintergrund. cover statt stretch: der Frame ist
-          750×1050 = exakt 5:7 wie die Karte → randscharf ohne Verzerrung und ohne
-          den auf der New Architecture (Fabric) unzuverlässigen stretch-Pfad. Den
-          runden Eck-Clip übernimmt das root (overflow:hidden + borderRadius). */}
-      <Image source={frames[card.rarity]} resizeMode="cover" style={StyleSheet.absoluteFill} />
+      {/* Prozedural gerenderter Seltenheits-Frame als Hintergrund (SVG, #96):
+          auflösungsunabhängig, randscharf; den runden Eck-Clip übernimmt das root
+          (overflow:hidden + borderRadius). */}
+      <CardFrame rarity={card.rarity} radius={radius} />
 
       <View style={styles.content}>
         <View style={styles.header}>
@@ -95,14 +97,21 @@ export function CardView({
           )}
         </View>
 
-        <View style={styles.stats}>
-          {stats.map((stat) => (
-            <StatRow
+        {/* Werte-Block: gleichberechtigt zum Foto. Die Zeilen verteilen sich über
+            die Block-Höhe (Quartett-Look); fehlende Werte erscheinen als Platzhalter. */}
+        <View style={[styles.stats, { borderColor: panelBorder, borderRadius: radius / 2 }]}>
+          {stats.map((stat, i) => (
+            <View
               key={stat.key}
-              stat={stat}
-              color={ink}
-              highlighted={stat.key === highlightedAttribute}
-            />
+              style={[
+                styles.statRowWrap,
+                i < stats.length - 1
+                  ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: divider }
+                  : null,
+              ]}
+            >
+              <StatRow stat={stat} color={ink} highlighted={stat.key === highlightedAttribute} />
+            </View>
           ))}
         </View>
 
@@ -125,7 +134,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: "7%",
-    gap: 10,
+    gap: 8,
   },
   header: {
     flexDirection: "row",
@@ -139,7 +148,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   art: {
-    flex: 1,
+    // Foto im oberen Bereich; der Werte-Block darunter ist gleichberechtigt.
+    flex: 4,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
@@ -156,7 +166,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   stats: {
-    gap: 2,
+    flex: 5,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    justifyContent: "space-between",
+  },
+  statRowWrap: {
+    flex: 1,
+    justifyContent: "center",
   },
   spottedBy: {
     fontSize: 12,

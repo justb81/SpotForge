@@ -1,10 +1,18 @@
 # ADR 0011 – Branding-Config & generische Basis-Variante (`_default`)
 
-- **Status:** Akzeptiert
+- **Status:** Akzeptiert (Frame-Anteil teilweise abgelöst durch
+  [ADR 0015](./0015-prozeduraler-kartenrahmen-svg.md))
 - **Datum:** 2026-06-16
 - **Bezug:** ADR 0002 (White-Label/Multi-Tenancy); Issues #12, #16. Verfeinert das
   in ADR 0002 etablierte „neue App = neue Konfiguration"-Prinzip um eine
   **Vererbung von Theme & Assets**.
+
+> **Hinweis (ADR 0015, #96):** Die Seltenheits-**Kartenrahmen** sind **keine
+> Assets** mehr, sondern werden prozedural gerendert (`react-native-svg`). Die
+> Aussagen unten zu gebündelten Frame-PNGs (`variants/_default/assets/frames/`),
+> zur Frame-Vererbung und zu `tools/gen-ui-frames.py` sind dadurch ersetzt. Der
+> Rest dieses ADR (Theme- & Asset-Branding, `variants/_default` als Basis,
+> `resolveBranding`) gilt unverändert.
 
 ## Kontext
 

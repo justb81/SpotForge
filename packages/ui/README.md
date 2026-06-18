@@ -8,20 +8,26 @@ Geteiltes, **themebares** Design-System und Kartenrendering für die App.
   `AppDefinition` (`theme.colors`, `theme.typography`, `theme.radius`) per Context
   bereit – so bekommt jede App ihr eigenes Look-&-Feel, ohne Code-Duplikat.
 - Wiederverwendbare React-Native-Komponenten (`Button`, `Badge`, `StatRow`).
-- **Kartenlayout (`CardView`):** Seltenheits-Frame, Foil-Effekt (Level 3),
-  Spotted-By-Tag und Attribut-Anzeige einer `Card`.
+- **Kartenlayout (`CardView`):** prozedural gerenderter Seltenheits-Rahmen,
+  Foil-Effekt (Level 3), Spotted-By-Tag und Attribut-Anzeige einer `Card`.
 
-## Kartenrahmen
+## Kartenrahmen (prozedural, SVG)
 
-`CardView` bekommt eine **vollständige** `frames`-Map (`ResolvedCardFrames`) als
-Prop. Die generischen Default-Rahmen sind **keine** ui-Assets, sondern Teil des
-Brandings der Basis-Variante `variants/_default/assets/frames/` (ADR 0011);
-Varianten überschreiben einzelne Stufen über ihre `branding.config.ts`. Der
-Build-Host löst das Branding auf (`resolveBranding`) und reicht die fertige Map
-durch – `ui` bleibt rein und liest selbst keine Assets aus `variants/`.
+Der Seltenheits-Rahmen wird **gerendert, nicht gebündelt** (ADR 0015, #96):
+`CardFrame` zeichnet mit `react-native-svg` Rahmenring, Stufen-Glow, hellen
+Karten-Body, eine theme-getönte Innenlinie und Edelstein-Ornamente –
+auflösungsunabhängig (5:7) und **ohne Frame-Assets**.
 
-`mergeCardFrames(defaults, overrides?)` ist die reine Hilfsfunktion, mit der der
-Host eine vollständige Map aus Defaults + Overrides bildet.
+- **`RARITY_STYLES` ist die einzige Farbquelle** der Stufe (Badge **und** Rahmen).
+- `cardFrameSpec(rarity)` ist die reine, getestete Ableitung Stufe → Geometrie
+  (Rahmenbreite, Glow-Ringe, Edelstein-Größe, Eck-Ornamente ab Rare) – C/U/R/E/L
+  bleiben so auch über die Form unterscheidbar.
+- **Theme-Tönung statt Asset-Override:** Innenlinie (`theme.colors.primary`) und
+  Eckenradius (`theme.radius`) machen den Rahmen pro Variante rebrandbar.
+- **Foil** rendert `FoilOverlay` als diagonalen SVG-Schimmer im selben Ansatz.
+
+`CardView` nimmt **kein** `frames`-Prop mehr; es genügt, die Karte innerhalb eines
+`<ThemeProvider>` zu rendern.
 
 ## Grenzen
 
@@ -31,5 +37,6 @@ keine fest kodierten Farben/Texte. Komponenten müssen innerhalb eines
 
 ## Abhängigkeiten
 
-React Native. `@spotforge/game-core` (Card-/Attribut-Typen, `Rarity`),
-`@spotforge/app-config` (`ThemeTokens`-Typ).
+React Native, `react-native-svg` (Rahmen-/Foil-Rendering).
+`@spotforge/game-core` (Card-/Attribut-Typen, `Rarity`), `@spotforge/app-config`
+(`ThemeTokens`-Typ).

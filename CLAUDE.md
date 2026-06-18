@@ -187,6 +187,13 @@ ergänzen.
   Inferenz, die **nicht** den Embedding-Korpus speist. Begründung u.a.:
   Korpus-Kompatibilität + irreversible Retention (gelöschte Fotos ⇒ Embeddings
   unwiederbringlich). Card-Art (#11) ausgenommen.
+- **[ADR 0015](./docs/adr/0015-prozeduraler-kartenrahmen-svg.md):** Seltenheits-
+  **Kartenrahmen** werden **prozedural mit `react-native-svg` gerendert** statt als
+  PNGs gebündelt (#96; löst den Frame-Anteil von ADR 0011 ab). `RARITY_STYLES` ist
+  die einzige Farbquelle; Geometrie (Glow/Ornamente) eskaliert mit der Stufe;
+  Theme-Tokens (`primary`/`radius`) tönen den Rahmen → rebrandbar ohne Assets. Kein
+  Bild-Override auf Vorrat; Altpfad (Frame-PNGs, `gen-ui-frames.py`,
+  `ResolvedCardFrames`/`frames`-Prop, Branding-`cardFrames`) vollständig entfernt.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

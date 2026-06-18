@@ -71,13 +71,6 @@ function collectBrandingAssetPaths(assets: Branding["assets"]): { field: string;
   if (assets.background !== undefined) {
     paths.push({ field: "assets.background", path: assets.background });
   }
-  if (assets.cardFrames !== undefined) {
-    for (const [rarity, path] of Object.entries(assets.cardFrames)) {
-      if (path !== undefined) {
-        paths.push({ field: `assets.cardFrames.${rarity}`, path });
-      }
-    }
-  }
   return paths;
 }
 

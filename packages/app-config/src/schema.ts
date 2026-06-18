@@ -79,15 +79,6 @@ const assetManifestSchema = z.object({
   icon: nonEmpty("assets.icon"),
   splash: nonEmpty("assets.splash"),
   logo: nonEmpty("assets.logo"),
-  cardFrames: z
-    .object({
-      common: z.string().min(1).optional(),
-      uncommon: z.string().min(1).optional(),
-      rare: z.string().min(1).optional(),
-      epic: z.string().min(1).optional(),
-      legendary: z.string().min(1).optional(),
-    })
-    .optional(),
   background: z.string().min(1).optional(),
 });
 

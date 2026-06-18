@@ -1,5 +1,7 @@
-// Branding einer App: **Theme + Assets**, bewusst aus der {@link AppDefinition}
-// herausgelöst (ADR 0011). Jede Variante liefert nur ihre Abweichungen; die
+// Branding einer App: **Theme + Assets** (Icon/Splash/Logo/Hintergrund), bewusst
+// aus der {@link AppDefinition} herausgelöst (ADR 0011). Die Seltenheits-Karten-
+// rahmen sind **keine** Assets mehr, sondern werden prozedural gerendert (#96, ADR
+// 0015). Jede Variante liefert nur ihre Abweichungen; die
 // Basis-Variante `variants/_default` stellt die generischen Defaults bereit.
 // {@link resolveBranding} legt die Variante über die Basis (Theme tief, Assets
 // pro Feld) und liefert ein vollständiges, aufgelöstes Branding.
@@ -24,17 +26,10 @@ export interface ThemeTokens {
   radius?: number;
 }
 
-/** Seltenheits-Stufen, für die ein eigener Kartenrahmen hinterlegt werden kann. */
-export const CARD_FRAME_RARITIES = ["common", "uncommon", "rare", "epic", "legendary"] as const;
-
-export type CardFrameRarity = (typeof CARD_FRAME_RARITIES)[number];
-
 export interface AssetManifest {
   icon: string;
   splash: string;
   logo: string;
-  /** Seltenheits-Kartenrahmen (C/U/R/E/L). */
-  cardFrames?: Partial<Record<CardFrameRarity, string>>;
   background?: string;
 }
 
@@ -104,19 +99,6 @@ function pickAsset(
   return undefined;
 }
 
-function mergeCardFrames(
-  input: ResolveBrandingInput,
-): Partial<Record<CardFrameRarity, string>> | undefined {
-  const frames: Partial<Record<CardFrameRarity, string>> = {};
-  for (const rarity of CARD_FRAME_RARITIES) {
-    const variantValue = input.variant.assets?.cardFrames?.[rarity];
-    const baseValue = input.base.assets?.cardFrames?.[rarity];
-    if (variantValue !== undefined) frames[rarity] = joinAsset(input.variantDir, variantValue);
-    else if (baseValue !== undefined) frames[rarity] = joinAsset(input.baseDir, baseValue);
-  }
-  return Object.keys(frames).length > 0 ? frames : undefined;
-}
-
 /**
  * Löst das Branding einer Variante auf: Theme der Variante über das Theme der
  * Basis (tief gemergt), Assets pro Feld (Variante gewinnt, sonst Basis), jeweils
@@ -125,7 +107,6 @@ function mergeCardFrames(
  * {@link validateBranding} als fehlend gemeldet.
  */
 export function resolveBranding(input: ResolveBrandingInput): Branding {
-  const cardFrames = mergeCardFrames(input);
   const background = pickAsset("background", input);
   return {
     theme: mergeTheme(input.base.theme, input.variant.theme),
@@ -133,7 +114,6 @@ export function resolveBranding(input: ResolveBrandingInput): Branding {
       icon: pickAsset("icon", input) as string,
       splash: pickAsset("splash", input) as string,
       logo: pickAsset("logo", input) as string,
-      ...(cardFrames !== undefined ? { cardFrames } : {}),
       ...(background !== undefined ? { background } : {}),
     },
   };

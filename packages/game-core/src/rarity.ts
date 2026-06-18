@@ -1,6 +1,6 @@
 // Seltenheit einer Karte (GDD §5.3). Werte bewusst kleingeschrieben, damit sie
-// 1:1 zu den `cardFrames`-Schlüsseln der AppDefinition (@spotforge/app-config)
-// passen und sauber zu JSON serialisieren.
+// 1:1 zu den `RARITY_STYLES`-Schlüsseln (@spotforge/ui) passen und sauber zu JSON
+// serialisieren.
 
 /** Seltenheits-Stufen, aufsteigend nach Seltenheit (GDD §5.3). */
 export enum Rarity {

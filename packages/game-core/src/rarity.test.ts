@@ -11,7 +11,7 @@ import {
 } from "./rarity";
 
 describe("Rarity", () => {
-  it("nutzt kleingeschriebene Werte (kompatibel zu app-config cardFrames)", () => {
+  it("nutzt kleingeschriebene Werte (kompatibel zu ui RARITY_STYLES)", () => {
     expect(Rarity.Common).toBe("common");
     expect(Rarity.Uncommon).toBe("uncommon");
     expect(Rarity.Rare).toBe("rare");

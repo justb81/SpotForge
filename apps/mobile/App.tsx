@@ -32,28 +32,12 @@ const IMAGENET_PREPROCESSOR = {
   normMean: [0.485, 0.456, 0.406] as [number, number, number],
   normStd: [0.229, 0.224, 0.225] as [number, number, number],
 };
-// Generische Seltenheits-Kartenrahmen (variants/_default, ADR 0011) – statisch
-// gebündelt; Metro liefert je Import eine Asset-ID (ImageSourcePropType).
-import commonFrame from "../../variants/_default/assets/frames/common.png";
-import uncommonFrame from "../../variants/_default/assets/frames/uncommon.png";
-import rareFrame from "../../variants/_default/assets/frames/rare.png";
-import epicFrame from "../../variants/_default/assets/frames/epic.png";
-import legendaryFrame from "../../variants/_default/assets/frames/legendary.png";
 // Attribut-Schema je Kategorie (Source of Truth: data/categories/<id>.json). Statisch
 // gebündelt, da Metro keine dynamischen require-Pfade auflöst; die aktive Kategorie
 // wählt die App über definition.category.primary.
 import vehiclesCategory from "../../data/categories/vehicles.json";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "?";
-
-// Vollständige Frame-Map (alle Stufen gebunden), die CardView je Karte indexiert.
-const CARD_FRAMES = {
-  common: commonFrame,
-  uncommon: uncommonFrame,
-  rare: rareFrame,
-  epic: epicFrame,
-  legendary: legendaryFrame,
-};
 
 // Attribut-Schemata der bündelbaren Kategorien (aktuell nur die Auto-Kategorie).
 const CATEGORY_ATTRIBUTES: Record<string, (typeof vehiclesCategory)["attributes"]> = {
@@ -181,7 +165,6 @@ function Root() {
     <SpotForgeApp
       definition={definition}
       theme={branding.theme}
-      frames={CARD_FRAMES}
       attributes={CATEGORY_ATTRIBUTES[definition.category.primary] ?? []}
       cascade={cascade}
     />

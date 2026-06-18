@@ -20,7 +20,6 @@ export default function App() {
     <SpotForgeApp
       definition={appDefinition}
       theme={branding.theme}
-      frames={CARD_FRAMES}
       attributes={CATEGORY_ATTRIBUTES}
     />
   );
@@ -97,7 +96,8 @@ Der Spot-Tab fährt den Loop idle → capture → processing → Ergebnis:
   - **`unrecognized`** → **manuelle Kategorisierung** (`UnrecognizedPanel`): der
     Spieler benennt das Objekt selbst → `buildManualDraft` (Freigabe/Kuratierung: #77).
 
-Der Host injiziert `cascade`, das aufgelöste `frames`-Set und das `attributes`-
-Schema der Kategorie. Das **Forgen** (Online-Einreichung an die Schmiede + Reveal
+Der Host injiziert `cascade` und das `attributes`-Schema der Kategorie; der
+Seltenheits-Rahmen wird in `@spotforge/ui` prozedural gerendert (ADR 0015, kein
+durchgereichtes `frames`-Set). Das **Forgen** (Online-Einreichung an die Schmiede + Reveal
 mit autoritativer Seltenheit) ist der **Online**-Schritt und ein eigenes Issue;
 es ist bewusst nicht Teil der app-shell. Vollständig offline.

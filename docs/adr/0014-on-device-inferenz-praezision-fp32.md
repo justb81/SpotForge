@@ -93,11 +93,11 @@ fp32/CPU-Pass.
 Eine numerische GPU-/CPU-Drift im **Spot-Argmax** ist unkritisch: das Korpus-Label
 ist das vom User im Draft-Editor **bestätigte** (#88), nicht das rohe Spot-Ergebnis.
 
-**Der GPU-Spot-Pfad selbst ist eine gemessene Optimierung, kein Tagesgeschäft:**
-erst bauen, wenn die fp32/CPU-Baseline auf dem Referenz-Mid-Range-Android (#63) als
-zu langsam **gemessen** ist — die Delegate-Reife (Vulkan/QNN für B4/ViT) ist das
-offene Risiko (ADR 0007). Die obige Regel verankert die Architektur unabhängig
-davon, ob/wann der GPU-Pfad kommt.
+**Der GPU-Spot-Pfad selbst ist eine gemessene Optimierung, kein Tagesgeschäft**
+(umgesetzt in **#94**): erst bauen, wenn die fp32/CPU-Baseline auf dem
+Referenz-Mid-Range-Android (#63) als zu langsam **gemessen** ist — die
+Delegate-Reife (Vulkan/QNN für B4/ViT) ist das offene Risiko (ADR 0007). Die obige
+Regel verankert die Architektur unabhängig davon, ob/wann der GPU-Pfad kommt.
 
 ## Begründung
 

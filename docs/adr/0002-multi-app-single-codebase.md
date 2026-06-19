@@ -1,6 +1,8 @@
 # ADR 0002 – Mehrere Apps (eine pro Kategorie) aus einer Codebase
 
-- **Status:** Akzeptiert
+- **Status:** Akzeptiert – **Ablösung vorgeschlagen** durch
+  [ADR 0016](./0016-eine-app-taxonomie-sammelgebiete.md) (Entwurf: eine App mit
+  Taxonomie der Sammelgebiete statt White-Label pro Kategorie)
 - **Datum:** 2026-06-14
 - **Ersetzt teilweise:** ADR 0001 (Annahme einer einzigen Multi-Kategorie-App)
 

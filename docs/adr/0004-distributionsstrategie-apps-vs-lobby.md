@@ -1,6 +1,8 @@
 # ADR 0004 – Distributionsstrategie: separate Apps vs. eine App mit Kategorie-Lobby
 
-- **Status:** Offen – Entscheidung bewusst vertagt auf Vertikale #2
+- **Status:** Offen – Entscheidung bewusst vertagt auf Vertikale #2;
+  **Entscheidung vorgeschlagen** in [ADR 0016](./0016-eine-app-taxonomie-sammelgebiete.md)
+  (Entwurf: zugunsten *einer* App)
 - **Datum:** 2026-06-14
 - **Bezug:** ADR 0002 (White-Label, mandantenfähiger Server)
 

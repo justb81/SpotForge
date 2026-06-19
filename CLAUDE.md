@@ -194,6 +194,14 @@ ergänzen.
   Theme-Tokens (`primary`/`radius`) tönen den Rahmen → rebrandbar ohne Assets. Kein
   Bild-Override auf Vorrat; Altpfad (Frame-PNGs, `gen-ui-frames.py`,
   `ResolvedCardFrames`/`frames`-Prop, Branding-`cardFrames`) vollständig entfernt.
+- **[ADR 0016](./docs/adr/0016-vererbte-kategorie-taxonomie-je-app.md):** *(Entwurf,
+  vorgeschlagen)* **Vererbte Kategorie-Taxonomie innerhalb der White-Label-Apps** –
+  **verfeinert** ADR 0002, ohne es abzulösen. White-Label je **Oberkategorie** bleibt
+  (CarForge/PlantForge/AnimalForge, je App ein `appId`-Mandant + **ein** Fein-Modell,
+  Multi-Tenant wie ADR 0012). **Innerhalb** jeder App eine Kategorie-Taxonomie
+  (WordNet-verankert): Unterkategorien erben Attribute/Gate/Guardrails/Texte/Branding
+  per Deep-Merge entlang der Ahnenkette; Battles pro attribut-tragendem Knoten,
+  graceful degradation auf Vorfahren-Karten. Noch nicht akzeptiert.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

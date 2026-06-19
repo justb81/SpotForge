@@ -1,6 +1,8 @@
 # ADR 0002 – Mehrere Apps (eine pro Kategorie) aus einer Codebase
 
-- **Status:** Akzeptiert
+- **Status:** Akzeptiert (verfeinert durch
+  [ADR 0016](./0016-vererbte-kategorie-taxonomie-je-app.md) — Entwurf: vererbte
+  Kategorie-Taxonomie *innerhalb* jeder App; White-Label bleibt)
 - **Datum:** 2026-06-14
 - **Ersetzt teilweise:** ADR 0001 (Annahme einer einzigen Multi-Kategorie-App)
 

@@ -1,7 +1,7 @@
-import { Component, type ReactNode, useEffect, useState } from "react";
+import { Component, type ReactNode, useEffect, useMemo, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
 import type { AppDefinition, Branding } from "@spotforge/app-config";
-import { SpotForgeApp } from "@spotforge/app-shell";
+import { SpotForgeApp, createDraftStore, createExpoDraftPersistence } from "@spotforge/app-shell";
 import {
   createCascadeClassifier,
   gateConfigFromAppDefinition,
@@ -86,6 +86,14 @@ function Root() {
   // sichtbar gemacht statt verschluckt.
   const [cascade, setCascade] = useState<CascadeClassifier>();
   const [modelError, setModelError] = useState<string>();
+
+  // Persistenter, **appId-skopierter** Draft-Store (#102, ADR 0002/0012): on-device
+  // über expo-file-system, je Variante (Mandant) getrennt. Einmal je Definition
+  // gebaut, damit der Store seinen Cache hält.
+  const draftStore = useMemo(
+    () => (definition ? createDraftStore(createExpoDraftPersistence(definition.id)) : undefined),
+    [definition],
+  );
   useEffect(() => {
     if (!definition) return;
     let active = true;
@@ -167,6 +175,7 @@ function Root() {
       theme={branding.theme}
       attributes={CATEGORY_ATTRIBUTES[definition.category.primary] ?? []}
       cascade={cascade}
+      draftStore={draftStore}
     />
   );
 }

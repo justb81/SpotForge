@@ -29,6 +29,11 @@ export interface SpotScreenProps {
   spottedBy: string;
   /** Zwei-Stufen-Kaskade (Gate → Feinmodell, #8/#50); erst gesetzt, wenn die Modelle geladen sind. */
   cascade?: CascadeClassifier;
+  /**
+   * Speichert einen bestätigten/korrigierten Draft lokal in der Sammlung (#102).
+   * Ohne Handler erscheint kein Speichern-Button.
+   */
+  onSaveDraft?: (draft: Card) => void;
 }
 
 type Mode = "idle" | "capturing" | "processing";
@@ -46,6 +51,7 @@ export function SpotScreen({
   locale = DEFAULT_LOCALE,
   spottedBy,
   cascade,
+  onSaveDraft,
 }: SpotScreenProps) {
   const { identity } = definition;
   const theme = useTheme();
@@ -233,12 +239,15 @@ export function SpotScreen({
           draft={draft}
           attributes={attributes}
           onDraftChange={setDraft}
+          onSave={onSaveDraft}
           labels={{
             hit: text("spot.hit"),
             forgePending: text("forge.pending"),
             edit: text("draft.edit"),
             spottedBy: text("card.spottedBy"),
             draftRarity: text("draft.rarity"),
+            save: text("collection.save"),
+            saved: text("collection.saved"),
             editor: {
               title: text("draft.editTitle"),
               nameLabel: text("draft.nameLabel"),

@@ -73,6 +73,10 @@ export const DEFAULT_CONTENT = {
   "draft.cancel": { de: "Abbrechen", en: "Cancel" },
   "card.spottedBy": { de: "Gespottet von", en: "Spotted by" },
 
+  // --- Lokale Sammlung (#102) -------------------------------------------------
+  "collection.save": { de: "In Sammlung speichern", en: "Save to collection" },
+  "collection.saved": { de: "In Sammlung gespeichert", en: "Saved to collection" },
+
   // --- First-Time-User-Experience (GDD §11.1) ---------------------------------
   "ftue.skip": { de: "Überspringen", en: "Skip" },
   "ftue.next": { de: "Weiter", en: "Next" },

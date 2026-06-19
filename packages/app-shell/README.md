@@ -107,7 +107,9 @@ es ist bewusst nicht Teil der app-shell. Vollständig offline.
 Ein gespotteter, bestätigter/korrigierter Draft lässt sich **lokal in der Sammlung
 speichern** (`DraftPanel` „In Sammlung speichern" → `SpotScreen.onSaveDraft`); der
 `collection`-Tab (`CollectionScreen`) zeigt die gespeicherten Drafts als Karten.
-Drafts überleben Tab-Wechsel **und** App-Neustart, vollständig offline.
+Ein Tippen öffnet die **Einzelkarten-Detailansicht** (`CardDetail`: große Karte,
+Zurück, „Aus Sammlung entfernen" mit Bestätigung → `removeDraft`). Drafts überleben
+Tab-Wechsel **und** App-Neustart, vollständig offline.
 
 Die `collection/` ist in Schichten getrennt (von rein zu I/O):
 

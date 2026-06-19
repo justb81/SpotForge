@@ -1,14 +1,17 @@
 // Die Sammlung: zeigt die lokal gespeicherten Drafts als Karten (CardView). Ersetzt
-// den FeatureScreen-Platzhalter des `collection`-Tabs. Bewusst schlank – Filter/
-// Sortierung, Deck-Bau und Progression sind ein eigenes Issue (#17); hier geht es
-// nur darum, die lokal persistierten Drafts sichtbar zu machen (#102). Kategorie-
-// neutral und themebar; alle Texte über den TextResolver.
+// den FeatureScreen-Platzhalter des `collection`-Tabs. Tippen auf eine Karte öffnet
+// die Einzelkarten-Detailansicht (CardDetail). Bewusst schlank – Filter/Sortierung,
+// Deck-Bau und Progression sind ein eigenes Issue (#17); hier geht es darum, die
+// lokal persistierten Drafts sichtbar/öffenbar zu machen (#102). Kategorie-neutral
+// und themebar; alle Texte über den TextResolver.
 
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { CardView, useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
 import { draftPreviewCard } from "../draft/draft-edit";
+import { CardDetail } from "./CardDetail";
 
 export interface CollectionScreenProps {
   t: TextResolver;
@@ -16,10 +19,41 @@ export interface CollectionScreenProps {
   attributes: AttributeDefinition[];
   /** Die lokal gespeicherten Drafts (neueste zuerst). */
   drafts: Card[];
+  /** Entfernt einen Draft aus der Sammlung; ohne Handler gibt es kein Entfernen in der Detailansicht. */
+  onRemoveDraft?: (id: string) => void;
 }
 
-export function CollectionScreen({ t, attributes, drafts }: CollectionScreenProps) {
+export function CollectionScreen({ t, attributes, drafts, onRemoveDraft }: CollectionScreenProps) {
   const theme = useTheme();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Detailansicht, solange eine noch vorhandene Karte ausgewählt ist; wurde sie
+  // entfernt (oder verschwand anderweitig), fällt die Anzeige auf die Liste zurück.
+  const selected = selectedId !== null ? drafts.find((d) => d.id === selectedId) : undefined;
+  if (selected) {
+    return (
+      <CardDetail
+        card={selected}
+        attributes={attributes}
+        labels={{
+          back: t("collection.back"),
+          remove: t("collection.remove"),
+          removeConfirm: t("collection.removeConfirm"),
+          spottedBy: t("card.spottedBy"),
+          rarity: t("draft.rarity"),
+        }}
+        onBack={() => setSelectedId(null)}
+        onRemove={
+          onRemoveDraft
+            ? () => {
+                onRemoveDraft(selected.id);
+                setSelectedId(null);
+              }
+            : undefined
+        }
+      />
+    );
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
@@ -44,7 +78,11 @@ export function CollectionScreen({ t, attributes, drafts }: CollectionScreenProp
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
-            <View style={styles.cardWrap}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setSelectedId(item.id)}
+              style={styles.cardWrap}
+            >
               <CardView
                 card={draftPreviewCard(item)}
                 attributes={attributes}
@@ -52,7 +90,7 @@ export function CollectionScreen({ t, attributes, drafts }: CollectionScreenProp
                 spottedByLabel={t("card.spottedBy")}
                 rarityLabel={t("draft.rarity")}
               />
-            </View>
+            </Pressable>
           )}
         />
       )}

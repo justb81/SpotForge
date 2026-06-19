@@ -34,6 +34,8 @@ export interface AppNavigatorProps {
   drafts: Card[];
   /** Speichert einen Draft lokal in der Sammlung (#102). */
   onSaveDraft: (draft: Card) => void;
+  /** Entfernt einen Draft aus der Sammlung (#102). */
+  onRemoveDraft: (id: string) => void;
 }
 
 export function AppNavigator({
@@ -46,6 +48,7 @@ export function AppNavigator({
   t,
   drafts,
   onSaveDraft,
+  onRemoveDraft,
 }: AppNavigatorProps) {
   const theme = useTheme();
   const [active, setActive] = useState<TabKey>("spot");
@@ -82,7 +85,14 @@ export function AppNavigator({
           />
         );
       case "collection":
-        return <CollectionScreen t={t} attributes={attributes} drafts={drafts} />;
+        return (
+          <CollectionScreen
+            t={t}
+            attributes={attributes}
+            drafts={drafts}
+            onRemoveDraft={onRemoveDraft}
+          />
+        );
       case "battle":
         return <FeatureScreen t={t} titleKey="battle.title" bodyKey="battle.empty" icon="⚔" />;
       case "trade":

@@ -86,7 +86,7 @@ export function SpotForgeApp({
   // Fallback-Store nur einmal anlegen (eine Instanz hält ihren Cache); ein vom Host
   // injizierter, persistenter Store hat Vorrang.
   const fallbackStore = useMemo(() => createInMemoryDraftStore(), []);
-  const { drafts, saveDraft } = useDraftCollection(draftStore ?? fallbackStore);
+  const { drafts, saveDraft, removeDraft } = useDraftCollection(draftStore ?? fallbackStore);
 
   const updateProgress = useCallback(
     (next: PlayerProgress) => {
@@ -116,6 +116,7 @@ export function SpotForgeApp({
             t={t}
             drafts={drafts}
             onSaveDraft={saveDraft}
+            onRemoveDraft={removeDraft}
           />
         ) : (
           <FtueFlow t={t} onComplete={completeFtue} />

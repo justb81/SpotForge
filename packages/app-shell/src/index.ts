@@ -54,6 +54,9 @@ export type { FeatureScreenProps } from "./screens/FeatureScreen";
 export { CollectionScreen } from "./screens/CollectionScreen";
 export type { CollectionScreenProps } from "./screens/CollectionScreen";
 
+export { CardDetail } from "./screens/CardDetail";
+export type { CardDetailProps, CardDetailLabels } from "./screens/CardDetail";
+
 // Lokale Draft-Sammlung (#102): reine Logik, Store-Abstraktion, On-Device-Adapter
 // (expo-file-system) und React-Anbindung. Der Host baut den persistenten,
 // appId-skopierten Store und reicht ihn an SpotForgeApp.

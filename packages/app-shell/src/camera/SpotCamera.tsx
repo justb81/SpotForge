@@ -67,6 +67,10 @@ export interface SpotCameraHandle {
 const TRACK_WIDTH = 96;
 const SWIPE_ACTIVATE_RATIO = 0.6;
 const TAP_SLOP = 8;
+// Der Auto-Track ist im Ruhezustand dezent angedeutet (~33 %) und wird beim
+// Gedrückt-Halten voll sichtbar (100 %) – so ist der Toggle auffindbar, drängt
+// sich aber nicht auf (#85).
+const TRACK_IDLE_OPACITY = 0.33;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /**
@@ -102,7 +106,7 @@ export const SpotCamera = forwardRef<SpotCameraHandle, SpotCameraProps>(function
 
   // Knopf-Position (0 = links/manuell, TRACK_WIDTH = rechts/auto) und Track-Sichtbarkeit.
   const knobX = useRef(new Animated.Value(autoActive ? TRACK_WIDTH : 0)).current;
-  const trackOpacity = useRef(new Animated.Value(autoActive ? 1 : 0)).current;
+  const trackOpacity = useRef(new Animated.Value(autoActive ? 1 : TRACK_IDLE_OPACITY)).current;
 
   const takeSilentPicture = async (): Promise<string | null> => {
     if (!cameraRef.current) return null;
@@ -120,7 +124,7 @@ export const SpotCamera = forwardRef<SpotCameraHandle, SpotCameraProps>(function
       useNativeDriver: true,
     }).start();
     Animated.timing(trackOpacity, {
-      toValue: autoActive ? 1 : 0,
+      toValue: autoActive ? 1 : TRACK_IDLE_OPACITY,
       duration: 160,
       useNativeDriver: true,
     }).start();
@@ -128,7 +132,11 @@ export const SpotCamera = forwardRef<SpotCameraHandle, SpotCameraProps>(function
 
   const snapBack = () => {
     Animated.spring(knobX, { toValue: 0, useNativeDriver: true }).start();
-    Animated.timing(trackOpacity, { toValue: 0, duration: 160, useNativeDriver: true }).start();
+    Animated.timing(trackOpacity, {
+      toValue: TRACK_IDLE_OPACITY,
+      duration: 160,
+      useNativeDriver: true,
+    }).start();
   };
 
   // Hold→Swipe-Geste für den Auto-Toggle (nur relevant, solange nicht aktiv).
@@ -244,39 +252,35 @@ export const SpotCamera = forwardRef<SpotCameraHandle, SpotCameraProps>(function
                   onPress={() => onAutoActiveChange?.(false)}
                   style={[
                     styles.shutter,
-                    styles.shutterAuto,
-                    { backgroundColor: theme.colors.primary },
+                    { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
                   ]}
                 >
                   <View style={[styles.autoDot, { backgroundColor: theme.colors.text }]} />
                 </Pressable>
               </Animated.View>
             ) : (
-              // Inaktiv: Tap = Foto, Hold→Swipe = Auto an.
+              // Inaktiv: Tap = Foto, Hold→Swipe = Auto an. Runder Auslöser (kein Text).
               <Animated.View
                 accessibilityRole="button"
                 accessibilityLabel={labels.autoActivate}
                 style={[
                   styles.shutter,
-                  { backgroundColor: theme.colors.primary, transform: [{ translateX: knobX }] },
+                  { borderColor: theme.colors.text, transform: [{ translateX: knobX }] },
                 ]}
                 {...panResponder.panHandlers}
               >
-                <Text style={[styles.shutterLabel, { color: theme.colors.text }]}>
-                  {labels.shutter}
-                </Text>
+                <View style={[styles.shutterCore, { backgroundColor: theme.colors.primary }]} />
               </Animated.View>
             )}
           </View>
         ) : (
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={labels.shutter}
             onPress={handleShutter}
-            style={[styles.shutter, { backgroundColor: theme.colors.primary }]}
+            style={[styles.shutter, { borderColor: theme.colors.text }]}
           >
-            <Text style={[styles.shutterLabel, { color: theme.colors.text }]}>
-              {labels.shutter}
-            </Text>
+            <View style={[styles.shutterCore, { backgroundColor: theme.colors.primary }]} />
           </Pressable>
         )}
       </View>
@@ -334,20 +338,20 @@ const styles = StyleSheet.create({
   },
   // Container für Knopf + dahinterliegenden Auto-Track.
   autoControl: {
-    height: 56,
+    height: 72,
     justifyContent: "center",
   },
   autoTrack: {
     position: "absolute",
     left: 0,
-    height: 56,
-    width: 56 + TRACK_WIDTH,
-    borderRadius: 28,
+    height: 72,
+    width: 72 + TRACK_WIDTH,
+    borderRadius: 36,
     borderWidth: 2,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
-    paddingRight: 20,
+    paddingRight: 24,
   },
   autoWord: {
     fontSize: 14,
@@ -355,21 +359,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "lowercase",
   },
+  // Runder Auslöser im Kamera-App-Standard: äußerer Ring + gefüllter Kern (#85).
   shutter: {
-    height: 56,
-    minWidth: 56,
-    paddingHorizontal: 24,
-    borderRadius: 28,
+    height: 72,
+    width: 72,
+    borderRadius: 36,
+    borderWidth: 4,
     alignItems: "center",
     justifyContent: "center",
   },
-  shutterAuto: {
-    paddingHorizontal: 0,
+  shutterCore: {
+    height: 56,
     width: 56,
-  },
-  shutterLabel: {
-    fontSize: 16,
-    fontWeight: "700",
+    borderRadius: 28,
   },
   autoBadge: {
     position: "absolute",

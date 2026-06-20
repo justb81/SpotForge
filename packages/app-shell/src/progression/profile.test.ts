@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Rarity, type Card } from "@spotforge/game-core";
-import {
-  MAX_LEVEL,
-  clampLevel,
-  collectionStats,
-  nextTitleBand,
-  titleForLevel,
-} from "./profile";
+import { MAX_LEVEL, clampLevel, collectionStats, nextTitleBand, titleForLevel } from "./profile";
 
 function card(rarity: Rarity, status: Card["status"] = "draft"): Card {
   return {

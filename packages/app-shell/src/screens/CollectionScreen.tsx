@@ -47,7 +47,8 @@ export function CollectionScreen({
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<LibrarySort>("newest");
 
-  const deckEnabled = deck !== undefined && deckCapacity !== undefined && onToggleDeck !== undefined;
+  const deckEnabled =
+    deck !== undefined && deckCapacity !== undefined && onToggleDeck !== undefined;
 
   // Gefilterte + sortierte Bibliothek; memoisiert, da Sortierung über die Liste läuft.
   const shown = useMemo(
@@ -160,7 +161,10 @@ export function CollectionScreen({
                     ]}
                   >
                     <Text
-                      style={[styles.chipText, { color: theme.colors.text, opacity: active ? 1 : 0.7 }]}
+                      style={[
+                        styles.chipText,
+                        { color: theme.colors.text, opacity: active ? 1 : 0.7 },
+                      ]}
                     >
                       {t(`collection.sort.${option}`)}
                     </Text>

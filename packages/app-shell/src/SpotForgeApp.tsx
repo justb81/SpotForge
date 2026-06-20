@@ -11,13 +11,7 @@ import { FtueFlow } from "./ftue/FtueFlow";
 import { NEW_PLAYER, type PlayerProgress } from "./progression/disclosure";
 import { createInMemoryDraftStore, type DraftStore } from "./collection/draftStore";
 import { useDraftCollection } from "./collection/useDraftCollection";
-import {
-  EMPTY_DECK,
-  deckCapacity,
-  pruneDeck,
-  toggleInDeck,
-  type Deck,
-} from "./deck/deck";
+import { EMPTY_DECK, deckCapacity, pruneDeck, toggleInDeck, type Deck } from "./deck/deck";
 
 /** Default-Entdecker-Tag, solange es keine Accounts gibt (Auth folgt in den MVP-Issues). */
 export const DEFAULT_SPOTTER = "local";

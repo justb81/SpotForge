@@ -7,12 +7,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { RARITY_ORDER, type Card } from "@spotforge/game-core";
 import { rarityStyle, useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
-import {
-  clampLevel,
-  collectionStats,
-  nextTitleBand,
-  titleForLevel,
-} from "../progression/profile";
+import { clampLevel, collectionStats, nextTitleBand, titleForLevel } from "../progression/profile";
 
 export interface ProfileScreenProps {
   t: TextResolver;

@@ -42,7 +42,7 @@ jobs:
             --repo "${{ github.repository }}"
 
       - name: Upload artifacts (workflow)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: model-export
           path: dist/models/*

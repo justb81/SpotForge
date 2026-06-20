@@ -10,11 +10,12 @@ import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import type { CascadeClassifier } from "@spotforge/ai-engine";
-import type { AttributeDefinition } from "@spotforge/game-core";
+import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
 import type { PlayerProgress } from "../progression/disclosure";
 import { SpotScreen } from "../screens/SpotScreen";
+import { CollectionScreen } from "../screens/CollectionScreen";
 import { FeatureScreen } from "../screens/FeatureScreen";
 import { TabBar } from "./TabBar";
 import { resolveActiveTab, visibleTabs, type TabKey } from "./tabs";
@@ -29,6 +30,12 @@ export interface AppNavigatorProps {
   progress: PlayerProgress;
   /** Aufgelöster Text-Resolver (Defaults ⊕ Varianten-Overrides). */
   t: TextResolver;
+  /** Lokal gespeicherte Drafts (neueste zuerst) für die Sammlung (#102). */
+  drafts: Card[];
+  /** Speichert einen Draft lokal in der Sammlung (#102). */
+  onSaveDraft: (draft: Card) => void;
+  /** Entfernt einen Draft aus der Sammlung (#102). */
+  onRemoveDraft: (id: string) => void;
 }
 
 export function AppNavigator({
@@ -39,6 +46,9 @@ export function AppNavigator({
   cascade,
   progress,
   t,
+  drafts,
+  onSaveDraft,
+  onRemoveDraft,
 }: AppNavigatorProps) {
   const theme = useTheme();
   const [active, setActive] = useState<TabKey>("spot");
@@ -71,11 +81,17 @@ export function AppNavigator({
             locale={locale}
             spottedBy={spottedBy}
             cascade={cascade}
+            onSaveDraft={onSaveDraft}
           />
         );
       case "collection":
         return (
-          <FeatureScreen t={t} titleKey="collection.title" bodyKey="collection.empty" icon="▦" />
+          <CollectionScreen
+            t={t}
+            attributes={attributes}
+            drafts={drafts}
+            onRemoveDraft={onRemoveDraft}
+          />
         );
       case "battle":
         return <FeatureScreen t={t} titleKey="battle.title" bodyKey="battle.empty" icon="⚔" />;

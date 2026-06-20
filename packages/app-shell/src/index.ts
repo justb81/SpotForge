@@ -51,6 +51,29 @@ export type { SpotScreenProps } from "./screens/SpotScreen";
 export { FeatureScreen } from "./screens/FeatureScreen";
 export type { FeatureScreenProps } from "./screens/FeatureScreen";
 
+export { CollectionScreen } from "./screens/CollectionScreen";
+export type { CollectionScreenProps } from "./screens/CollectionScreen";
+
+export { CardDetail } from "./screens/CardDetail";
+export type { CardDetailProps, CardDetailLabels } from "./screens/CardDetail";
+
+// Lokale Draft-Sammlung (#102): reine Logik, Store-Abstraktion, On-Device-Adapter
+// (expo-file-system) und React-Anbindung. Der Host baut den persistenten,
+// appId-skopierten Store und reicht ihn an SpotForgeApp.
+export {
+  upsertDraft,
+  removeDraftById,
+  sortByNewest,
+  serializeDrafts,
+  parseDrafts,
+  draftScopeSegment,
+} from "./collection/draft-collection";
+export { createDraftStore, createInMemoryDraftStore } from "./collection/draftStore";
+export type { DraftStore, DraftPersistence } from "./collection/draftStore";
+export { createExpoDraftPersistence } from "./collection/expoDraftPersistence";
+export { useDraftCollection } from "./collection/useDraftCollection";
+export type { DraftCollection } from "./collection/useDraftCollection";
+
 export { SpotCamera } from "./camera/SpotCamera";
 export type { SpotCameraProps, SpotCameraLabels } from "./camera/SpotCamera";
 

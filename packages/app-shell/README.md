@@ -101,3 +101,43 @@ Seltenheits-Rahmen wird in `@spotforge/ui` prozedural gerendert (ADR 0015, kein
 durchgereichtes `frames`-Set). Das **Forgen** (Online-Einreichung an die Schmiede + Reveal
 mit autoritativer Seltenheit) ist der **Online**-Schritt und ein eigenes Issue;
 es ist bewusst nicht Teil der app-shell. Vollständig offline.
+
+## Lokale Draft-Sammlung (offline, #102)
+
+Ein gespotteter, bestätigter/korrigierter Draft lässt sich **lokal in der Sammlung
+speichern** (`DraftPanel` „In Sammlung speichern" → `SpotScreen.onSaveDraft`); der
+`collection`-Tab (`CollectionScreen`) zeigt die gespeicherten Drafts als Karten.
+Ein Tippen öffnet die **Einzelkarten-Detailansicht** (`CardDetail`: große Karte,
+Zurück, „Aus Sammlung entfernen" mit Bestätigung → `removeDraft`). Drafts überleben
+Tab-Wechsel **und** App-Neustart, vollständig offline.
+
+Die `collection/` ist in Schichten getrennt (von rein zu I/O):
+
+- **`draft-collection.ts`** – reine, RN-/I/O-freie Logik: `upsertDraft` (idempotent
+  per `id`), `removeDraftById`, `sortByNewest`, (De-)Serialisierung (tolerant gegen
+  korrupte Dateien) und `draftScopeSegment(appId)` für die **Mandantentrennung**.
+- **`draftStore.ts`** – `DraftStore` (CRUD) über einer injizierten
+  `DraftPersistence`; `createInMemoryDraftStore` als Default/Test-Variante.
+- **`expoDraftPersistence.ts`** – der **einzige** I/O-Berührungspunkt:
+  `createExpoDraftPersistence(appId)` legt die Sammlung **`appId`-skopiert** unter
+  `…/spotforge/<appId>/drafts.json` ab (`expo-file-system`), sodass zwei
+  White-Label-Apps niemals dieselbe Sammlung sehen (ADR 0002/0012).
+- **`useDraftCollection.ts`** – React-Anbindung (lädt beim Mount, Mutationen
+  schreiben durch).
+
+Der Host baut den persistenten Store und reicht ihn herein:
+
+```ts
+import { createDraftStore, createExpoDraftPersistence } from "@spotforge/app-shell";
+
+<SpotForgeApp
+  definition={definition}
+  draftStore={createDraftStore(createExpoDraftPersistence(definition.id))}
+  …
+/>
+```
+
+Ohne `draftStore` nutzt `SpotForgeApp` einen In-Memory-Store (überlebt keinen
+Neustart) – praktisch für Tests/Previews. Privacy-first: Fotos bleiben lokale
+URIs und verlassen das Gerät nicht (ADR 0010). Der **Server-Sync** der Sammlung
+(#19) und das **Online-Forgen** (#81) sind eigene, spätere Schritte.

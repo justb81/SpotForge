@@ -18,6 +18,7 @@
   },
   "peerDependencies": {
     "expo-camera": "*",
+    "expo-file-system": "*",
     "expo-image-picker": "*",
     "react": "*",
     "react-native": "*"
@@ -25,6 +26,7 @@
   "devDependencies": {
     "@types/react": "~19.2.2",
     "expo-camera": "^56.0.8",
+    "expo-file-system": "^56.0.8",
     "expo-image-picker": "^56.0.17",
     "react": "19.2.3",
     "react-native": "0.85.3"

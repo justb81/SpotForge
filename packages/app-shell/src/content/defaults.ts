@@ -73,6 +73,13 @@ export const DEFAULT_CONTENT = {
   "draft.cancel": { de: "Abbrechen", en: "Cancel" },
   "card.spottedBy": { de: "Gespottet von", en: "Spotted by" },
 
+  // --- Lokale Sammlung (#102) -------------------------------------------------
+  "collection.save": { de: "In Sammlung speichern", en: "Save to collection" },
+  "collection.saved": { de: "In Sammlung gespeichert", en: "Saved to collection" },
+  "collection.back": { de: "Zurück", en: "Back" },
+  "collection.remove": { de: "Aus Sammlung entfernen", en: "Remove from collection" },
+  "collection.removeConfirm": { de: "Wirklich entfernen?", en: "Remove for good?" },
+
   // --- First-Time-User-Experience (GDD §11.1) ---------------------------------
   "ftue.skip": { de: "Überspringen", en: "Skip" },
   "ftue.next": { de: "Weiter", en: "Next" },

@@ -3,7 +3,7 @@
 // der **Online**-Schritt (ADR 0010) und nicht Teil dieses Panels – ein Hinweis
 // macht das sichtbar. Kategorie-neutral: Texte/Theme kommen von außen.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { Button, CardView, useTheme } from "@spotforge/ui";
@@ -21,6 +21,10 @@ export interface DraftPanelLabels {
   spottedBy: string;
   /** Rarity-Badge-Text des noch ungeschmiedeten Drafts. */
   draftRarity: string;
+  /** Button, der den Draft in der Sammlung speichert (nur bei `onSave`). */
+  save?: string;
+  /** Bestätigung, dass der Draft gespeichert wurde (nur bei `onSave`). */
+  saved?: string;
   /** Beschriftungen des Editors. */
   editor: DraftEditorLabels;
 }
@@ -34,11 +38,23 @@ export interface DraftPanelProps {
   labels: DraftPanelLabels;
   /** Hebt einen korrigierten Draft nach oben (Quelle der Wahrheit bleibt der Parent). */
   onDraftChange: (draft: Card) => void;
+  /**
+   * Speichert den (bestätigten/korrigierten) Draft lokal in der Sammlung (#102).
+   * Ohne Handler erscheint kein Speichern-Button (z.B. FTUE-Vorschau).
+   */
+  onSave?: (draft: Card) => void;
 }
 
-export function DraftPanel({ draft, attributes, labels, onDraftChange }: DraftPanelProps) {
+export function DraftPanel({ draft, attributes, labels, onDraftChange, onSave }: DraftPanelProps) {
   const theme = useTheme();
   const [editing, setEditing] = useState(false);
+  // Speichern-Bestätigung; zurückgesetzt, sobald sich der Draft ändert (neue
+  // Auswahl oder Korrektur erzeugt ein neues Card-Objekt), damit ein korrigierter
+  // Draft erneut gespeichert werden kann.
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    setSaved(false);
+  }, [draft]);
 
   if (editing) {
     return (
@@ -71,6 +87,19 @@ export function DraftPanel({ draft, attributes, labels, onDraftChange }: DraftPa
       </ScrollView>
       <Text style={[styles.pending, { color: theme.colors.text }]}>{labels.forgePending}</Text>
       <Button label={labels.edit} variant="secondary" onPress={() => setEditing(true)} />
+      {onSave && labels.save ? (
+        saved ? (
+          <Text style={[styles.saved, { color: theme.colors.accent }]}>{labels.saved}</Text>
+        ) : (
+          <Button
+            label={labels.save}
+            onPress={() => {
+              onSave(draft);
+              setSaved(true);
+            }}
+          />
+        )
+      ) : null}
     </View>
   );
 }
@@ -94,5 +123,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     opacity: 0.7,
     textAlign: "center",
+  },
+  saved: {
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "center",
+    paddingVertical: 8,
   },
 });

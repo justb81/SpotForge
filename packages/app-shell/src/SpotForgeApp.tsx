@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { AppDefinition, LocaleCode, ThemeTokens } from "@spotforge/app-config";
 import { DEFAULT_LOCALE } from "@spotforge/app-config";
 import type { CascadeClassifier } from "@spotforge/ai-engine";
@@ -9,6 +9,8 @@ import { useText } from "./content/text";
 import { AppNavigator } from "./navigation/AppNavigator";
 import { FtueFlow } from "./ftue/FtueFlow";
 import { NEW_PLAYER, type PlayerProgress } from "./progression/disclosure";
+import { createInMemoryDraftStore, type DraftStore } from "./collection/draftStore";
+import { useDraftCollection } from "./collection/useDraftCollection";
 
 /** Default-Entdecker-Tag, solange es keine Accounts gibt (Auth folgt in den MVP-Issues). */
 export const DEFAULT_SPOTTER = "local";
@@ -48,6 +50,13 @@ export interface SpotForgeAppProps {
    * damit der Host ihn persistieren kann. app-shell bleibt bewusst I/O-frei.
    */
   onProgressChange?: (progress: PlayerProgress) => void;
+  /**
+   * Lokaler Draft-Store für die Sammlung (#102). Der Host injiziert die persistente,
+   * `appId`-skopierte Variante (`createDraftStore(createExpoDraftPersistence(definition.id))`);
+   * ohne Angabe wird ein In-Memory-Store genutzt (überlebt keinen App-Neustart) –
+   * praktisch für Tests/Previews.
+   */
+  draftStore?: DraftStore;
 }
 
 /**
@@ -69,9 +78,15 @@ export function SpotForgeApp({
   cascade,
   initialProgress = NEW_PLAYER,
   onProgressChange,
+  draftStore,
 }: SpotForgeAppProps) {
   const [progress, setProgress] = useState<PlayerProgress>(initialProgress);
   const t = useText(definition, locale);
+
+  // Fallback-Store nur einmal anlegen (eine Instanz hält ihren Cache); ein vom Host
+  // injizierter, persistenter Store hat Vorrang.
+  const fallbackStore = useMemo(() => createInMemoryDraftStore(), []);
+  const { drafts, saveDraft, removeDraft } = useDraftCollection(draftStore ?? fallbackStore);
 
   const updateProgress = useCallback(
     (next: PlayerProgress) => {
@@ -99,6 +114,9 @@ export function SpotForgeApp({
             cascade={cascade}
             progress={progress}
             t={t}
+            drafts={drafts}
+            onSaveDraft={saveDraft}
+            onRemoveDraft={removeDraft}
           />
         ) : (
           <FtueFlow t={t} onComplete={completeFtue} />

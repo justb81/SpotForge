@@ -36,14 +36,16 @@ export interface SpotScreenProps {
   onSaveDraft?: (draft: Card) => void;
 }
 
-type Mode = "idle" | "capturing" | "processing";
+type Mode = "capturing" | "processing" | "result";
 
 /**
  * Der Kern-Loop in der UI (ADR 0010, GDD §5.1): **Spotten** erzeugt offline einen
- * **Draft**. idle (CTA) → capturing (Live-Kamera) → processing (Kaskade + Draft) →
- * Ergebnis (`draft` | `rejected` | `unrecognized`). Ein Draft lässt sich bestätigen/
- * korrigieren und mit Attribut-Vorschlägen versehen. Das **Forgen** ist der
- * Online-Schritt und liegt außerhalb dieses Screens.
+ * **Draft**. Der Screen startet direkt in der Live-Kamera (capturing) mit Auslöser
+ * auf dem Bild und – falls aktiviert – einem Galerie-Import unten links;
+ * processing (Kaskade + Draft) → result (`draft` | `rejected` | `unrecognized`,
+ * mit „Neues Foto"). Ein Draft lässt sich bestätigen/korrigieren und mit
+ * Attribut-Vorschlägen versehen. Das **Forgen** ist der Online-Schritt und liegt
+ * außerhalb dieses Screens.
  */
 export function SpotScreen({
   definition,
@@ -69,7 +71,7 @@ export function SpotScreen({
     [definition, cascade, locale],
   );
 
-  const [mode, setMode] = useState<Mode>("idle");
+  const [mode, setMode] = useState<Mode>("capturing");
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [result, setResult] = useState<SpotResult | null>(null);
   const [draft, setDraft] = useState<Card | null>(null);
@@ -91,7 +93,7 @@ export function SpotScreen({
 
       if (!spotter) {
         setError(text("spot.modelLoading"));
-        setMode("idle");
+        setMode("result");
         return;
       }
 
@@ -102,10 +104,17 @@ export function SpotScreen({
       } catch {
         setError(text("spot.error"));
       }
-      setMode("idle");
+      setMode("result");
     },
     [spotter, spottedBy, reset, text],
   );
+
+  // „Neues Foto": zurück zur Live-Kamera für einen weiteren Spot.
+  const retake = useCallback(() => {
+    reset();
+    setPhotoUri(null);
+    setMode("capturing");
+  }, [reset]);
 
   // Galerie-Import (nur bei aktivem Feature): wähle ein bestehendes Bild und
   // schicke es durch dieselbe Spot-Kette wie ein frisches Kamera-Foto. Abbruch
@@ -142,9 +151,6 @@ export function SpotScreen({
     [definition, photoUri, spottedBy],
   );
 
-  const showFooter = mode === "idle";
-  const hasResult = result !== null || error !== null;
-
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <View style={styles.header}>
@@ -161,10 +167,13 @@ export function SpotScreen({
           <SpotCamera
             theme={theme}
             onCapture={handleCapture}
+            // Galerie-Import unten links – nur wenn die Variante das Feature aktiviert.
+            onPickImage={canImportImage ? handlePickImage : undefined}
             labels={{
               shutter: text("spot.shutter"),
               permissionPrompt: text("spot.permissionPrompt"),
               permissionCta: text("spot.permissionCta"),
+              importImage: text("spot.importImage"),
             }}
           />
         ) : (
@@ -193,31 +202,17 @@ export function SpotScreen({
         )}
       </View>
 
-      {showFooter ? (
+      {mode === "result" ? (
         <View style={styles.footer}>
           <Pressable
             accessibilityRole="button"
-            onPress={() => {
-              reset();
-              setMode("capturing");
-            }}
+            onPress={retake}
             style={[styles.captureButton, { backgroundColor: theme.colors.primary }]}
           >
             <Text style={[styles.captureLabel, { color: theme.colors.text }]}>
-              {hasResult ? text("spot.retake") : text("spot.cta")}
+              {text("spot.retake")}
             </Text>
           </Pressable>
-          {canImportImage ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={handlePickImage}
-              style={[styles.importButton, { borderColor: theme.colors.primary }]}
-            >
-              <Text style={[styles.importLabel, { color: theme.colors.primary }]}>
-                {text("spot.importImage")}
-              </Text>
-            </Pressable>
-          ) : null}
         </View>
       ) : null}
     </View>
@@ -408,16 +403,5 @@ const styles = StyleSheet.create({
   captureLabel: {
     fontSize: 18,
     fontWeight: "700",
-  },
-  importButton: {
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  importLabel: {
-    fontSize: 16,
-    fontWeight: "600",
   },
 });

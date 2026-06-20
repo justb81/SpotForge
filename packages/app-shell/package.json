@@ -21,7 +21,8 @@
     "expo-file-system": "*",
     "expo-image-picker": "*",
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-safe-area-context": "*"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -29,6 +30,7 @@
     "expo-file-system": "^56.0.8",
     "expo-image-picker": "^56.0.17",
     "react": "19.2.3",
-    "react-native": "0.85.3"
+    "react-native": "0.85.3",
+    "react-native-safe-area-context": "5.7.0"
   }
 }

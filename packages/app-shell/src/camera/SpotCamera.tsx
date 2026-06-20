@@ -10,6 +10,8 @@ export interface SpotCameraLabels {
   permissionPrompt: string;
   /** Button, der die Berechtigung anfragt. */
   permissionCta: string;
+  /** Barrierefreies Label des Galerie-Import-Buttons (nur bei aktivem Feature). */
+  importImage: string;
 }
 
 export interface SpotCameraProps {
@@ -17,6 +19,13 @@ export interface SpotCameraProps {
   labels: SpotCameraLabels;
   /** Wird mit der lokalen URI des aufgenommenen Originalfotos aufgerufen. */
   onCapture: (uri: string) => void;
+  /**
+   * Optionaler Galerie-Import (AppDefinition `features.imageImport`): ist der
+   * Handler gesetzt, erscheint links unten – direkt über der Live-Vorschau –
+   * ein Symbol-Button, der ein bestehendes Bild durch dieselbe Spot-Kette
+   * schickt. Ohne Handler bleibt die Ansicht reine Kamera mit Auslöser.
+   */
+  onPickImage?: () => void;
 }
 
 /**
@@ -25,7 +34,7 @@ export interface SpotCameraProps {
  * nach oben gereicht (Aufbereitung/Anzeige übernimmt der SpotScreen). Vollständig
  * on-device – kein Upload.
  */
-export function SpotCamera({ theme, labels, onCapture }: SpotCameraProps) {
+export function SpotCamera({ theme, labels, onCapture, onPickImage }: SpotCameraProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
@@ -73,6 +82,20 @@ export function SpotCamera({ theme, labels, onCapture }: SpotCameraProps) {
           <Text style={[styles.shutterLabel, { color: theme.colors.text }]}>{labels.shutter}</Text>
         </Pressable>
       </View>
+      {onPickImage ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={labels.importImage}
+          onPress={onPickImage}
+          style={[
+            styles.importButton,
+            { backgroundColor: theme.colors.surface, borderColor: theme.colors.primary },
+          ]}
+        >
+          {/* Galerie-Symbol für „Foto hochladen" – on-device, kein Upload. */}
+          <Text style={styles.importIcon}>🖼️</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -120,5 +143,20 @@ const styles = StyleSheet.create({
   shutterLabel: {
     fontSize: 16,
     fontWeight: "700",
+  },
+  // Galerie-Import unten links, vertikal etwa mittig zum Auslöser ausgerichtet.
+  importButton: {
+    position: "absolute",
+    bottom: 18,
+    left: 24,
+    height: 52,
+    width: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  importIcon: {
+    fontSize: 24,
   },
 });

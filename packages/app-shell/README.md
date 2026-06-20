@@ -103,14 +103,16 @@ Nachträglich änderbar im **Profil ▸ Einstellungen** (`SettingsScreen`): ein 
 
 ## Spot-/Draft-Flow (offline, ADR 0010)
 
-Der Spot-Tab fährt den Loop idle → capture → processing → Ergebnis:
+Der Spot-Tab fährt den Loop capture → processing → Ergebnis:
 
 - `SpotCamera` (Live-Vorschau, Permission-Handling, Auslöser via `expo-camera`)
-  liefert die Foto-URI.
-- Optional (AppDefinition `features.imageImport`): ein zweiter Button lädt über
-  `pickImageFromLibrary` (`expo-image-picker`) ein **bestehendes Bild aus der
-  Galerie**, das dieselbe Kette durchläuft. Test-/QA-Komfort – kein frisches Foto
-  nötig, kein Upload (rein on-device).
+  liefert die Foto-URI. Der Tab startet **direkt in der Live-Kamera**; der
+  Auslöser liegt auf dem Bild.
+- Optional (AppDefinition `features.imageImport`): ein Symbol-Button **links
+  unten auf der Live-Vorschau** lädt über `pickImageFromLibrary`
+  (`expo-image-picker`) ein **bestehendes Bild aus der Galerie**, das dieselbe
+  Kette durchläuft. Test-/QA-Komfort – kein frisches Foto nötig, kein Upload
+  (rein on-device).
 - `createSpotter` verdrahtet `ai-engine.createSpot` mit der vom Host injizierten
   Kaskade (Gate → Feinmodell) und den Guardrails der Variante. Drei Ergebnisse:
   - **`draft`** → positive Rückmeldung + Karten-Vorschau (`@spotforge/ui` `CardView`).

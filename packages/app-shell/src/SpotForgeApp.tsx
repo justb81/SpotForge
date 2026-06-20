@@ -4,7 +4,13 @@ import { DEFAULT_LOCALE } from "@spotforge/app-config";
 import type { CascadeClassifier } from "@spotforge/ai-engine";
 import type { AttributeDefinition } from "@spotforge/game-core";
 import { ThemeProvider } from "@spotforge/ui";
-import { SafeAreaView, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
+// SafeAreaView aus react-native-safe-area-context (nicht aus react-native): nur
+// diese Variante respektiert die System-Insets auch auf Android (edge-to-edge,
+// Expo SDK 56) – der App-Inhalt beginnt damit unter dem System-Header und endet
+// über dem System-Footer, statt sich mit ihnen zu überschneiden. Der Host
+// (apps/mobile) stellt den zugehörigen SafeAreaProvider bereit.
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useText } from "./content/text";
 import { AppNavigator } from "./navigation/AppNavigator";
 import { FtueFlow } from "./ftue/FtueFlow";

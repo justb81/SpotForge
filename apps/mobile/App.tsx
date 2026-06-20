@@ -1,5 +1,6 @@
 import { Component, type ReactNode, useEffect, useMemo, useState } from "react";
-import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import type { AppDefinition, Branding } from "@spotforge/app-config";
 import {
   SpotForgeApp,
@@ -221,10 +222,16 @@ function Root() {
 }
 
 export default function App() {
+  // SafeAreaProvider stellt die System-Insets (Status-/Navigationsleiste,
+  // Notch) bereit. Pflicht, weil Expo SDK 56 / Android edge-to-edge zeichnet:
+  // ohne sie läge der App-Inhalt unter den System-Leisten. Ganz außen, damit
+  // auch die Fehler-/Lade-SafeAreaViews der Boundary korrekte Insets erhalten.
   return (
-    <StartupErrorBoundary>
-      <Root />
-    </StartupErrorBoundary>
+    <SafeAreaProvider>
+      <StartupErrorBoundary>
+        <Root />
+      </StartupErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 

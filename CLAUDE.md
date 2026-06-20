@@ -269,6 +269,10 @@ committet & gepusht werden.
   liegen in `@spotforge/config` (ESLint/Prettier/tsconfig).
 - Git-Push: `git push -u origin <branch>`; nach dem Push einen PR (ready for
   review) eröffnen, falls noch keiner existiert.
+- **Claude Cloud / Remote-Umgebung:** Das `send_later`-Tool (geplante
+  Selbst-Erinnerung) ist hier **nicht verfügbar** – nicht danach suchen.
+  PR-Nachverfolgung (CI-Abschluss, neue Pushes) stattdessen über einen
+  `Monitor`-Poll abdecken, da Webhooks den CI-Erfolg nicht liefern.
 
 ---
 

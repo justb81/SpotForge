@@ -20,6 +20,7 @@ import { createSpotter } from "../spotting/createSpotter";
 import { useAutoSpot } from "../spotting/useAutoSpot";
 import { resolveAutoSpotInterval } from "../spotting/autoSpot";
 import { buildManualDraft } from "../draft/manual-draft";
+import type { PhotoSanitizer } from "../upload/createUploadSanitizer";
 import { DEFAULT_PREFERENCES, type Preferences } from "../preferences/preferences";
 
 export interface SpotScreenProps {
@@ -33,6 +34,13 @@ export interface SpotScreenProps {
   spottedBy: string;
   /** Zwei-Stufen-Kaskade (Gate → Feinmodell, #8/#50); erst gesetzt, wenn die Modelle geladen sind. */
   cascade?: CascadeClassifier;
+  /**
+   * On-Device-**Foto-Sanitisierung** (#89). Ist sie gesetzt, hält **jeder Draft nur
+   * das bereinigte Foto** (EXIF/GPS entfernt, Gesichter/Kennzeichen redigiert) –
+   * das Original dient allein der Erkennung. Erst verfügbar, wenn die Detektor-
+   * Modelle gebündelt sind; bis dahin bleibt die Original-URI (Übergangszustand).
+   */
+  photoSanitizer?: PhotoSanitizer;
   /**
    * Speichert einen bestätigten/korrigierten Draft lokal in der Sammlung (#102).
    * Ohne Handler erscheint kein Speichern-Button.
@@ -68,6 +76,7 @@ export function SpotScreen({
   locale = DEFAULT_LOCALE,
   spottedBy,
   cascade,
+  photoSanitizer,
   onSaveDraft,
   preferences = DEFAULT_PREFERENCES,
   onPreferencesChange,
@@ -85,8 +94,14 @@ export function SpotScreen({
   const { imageImport: canImportImage, autoSpot: autoSpotAvailable } = resolveFeatures(definition);
 
   const spotter = useMemo(
-    () => (cascade ? createSpotter(definition, cascade, { locale }) : undefined),
-    [definition, cascade, locale],
+    () =>
+      cascade
+        ? createSpotter(definition, cascade, {
+            locale,
+            ...(photoSanitizer !== undefined ? { sanitizer: photoSanitizer } : {}),
+          })
+        : undefined,
+    [definition, cascade, locale, photoSanitizer],
   );
 
   const [mode, setMode] = useState<Mode>("capturing");
@@ -200,29 +215,37 @@ export function SpotScreen({
     }
   }, [handleCapture]);
 
+  // Persist-/Draft-Foto: die vom Spotter gelieferte **sanitisierte** URI (#89) –
+  // das Original (Kamera-State `photoUri`) diente nur der Erkennung. Fallback auf
+  // das Original nur, solange kein Sanitizer verdrahtet ist (Übergangszustand).
+  const persistUri = result?.photoUri ?? photoUri;
+
   // Auswahl eines Kandidaten → Draft. Für den Top-1 wird der bereits in der
-  // Pipeline gebaute Draft (inkl. evtl. Vorschläge) genutzt, sonst aus dem Label.
+  // Pipeline gebaute Draft (inkl. evtl. Vorschläge, bereinigtes Foto) genutzt,
+  // sonst aus dem Label – immer mit dem sanitisierten Foto.
   const handleSelectCandidate = useCallback(
     (index: number, label: string) => {
       if (index === 0 && result?.kind === "draft") {
         setDraft(result.card);
         return;
       }
-      if (!photoUri) return;
-      setDraft(buildManualDraft(definition, { objectName: label, photoUri, spottedBy }));
+      if (!persistUri) return;
+      setDraft(
+        buildManualDraft(definition, { objectName: label, photoUri: persistUri, spottedBy }),
+      );
     },
-    [definition, photoUri, spottedBy, result],
+    [definition, persistUri, spottedBy, result],
   );
 
   const handleManualCreate = useCallback(
     (objectName: string) => {
-      if (!photoUri) return;
-      const card = buildManualDraft(definition, { objectName, photoUri, spottedBy });
+      if (!persistUri) return;
+      const card = buildManualDraft(definition, { objectName, photoUri: persistUri, spottedBy });
       setManualMode(false);
       setDraft(card);
-      setResult({ kind: "draft", card });
+      setResult({ kind: "draft", card, photoUri: persistUri });
     },
-    [definition, photoUri, spottedBy],
+    [definition, persistUri, spottedBy],
   );
 
   return (
@@ -274,14 +297,16 @@ export function SpotScreen({
           <>
             {/* Aufgenommenes Foto bleibt als Hintergrund sichtbar (Verarbeitung +
                 Ergebnis/Picker); ein dezenter Scrim hält Texte lesbar. */}
-            {photoUri ? (
+            {/* Sobald das Ergebnis da ist, zeigt der Hintergrund das **sanitisierte**
+                Foto (#89); während der Verarbeitung kurz das Original. */}
+            {persistUri ? (
               <Image
-                source={{ uri: photoUri }}
+                source={{ uri: persistUri }}
                 style={StyleSheet.absoluteFill}
                 resizeMode="cover"
               />
             ) : null}
-            {photoUri ? <View style={[StyleSheet.absoluteFill, styles.scrim]} /> : null}
+            {persistUri ? <View style={[StyleSheet.absoluteFill, styles.scrim]} /> : null}
             {mode === "processing" ? (
               <View style={styles.center}>
                 <ActivityIndicator color={theme.colors.primary} />

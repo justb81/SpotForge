@@ -16,6 +16,7 @@ import type { TextResolver } from "../content/text";
 import type { PlayerProgress } from "../progression/disclosure";
 import type { Preferences } from "../preferences/preferences";
 import { SpotScreen } from "../screens/SpotScreen";
+import type { PhotoSanitizer } from "../upload/createUploadSanitizer";
 import { CollectionScreen } from "../screens/CollectionScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { FeatureScreen } from "../screens/FeatureScreen";
@@ -29,6 +30,8 @@ export interface AppNavigatorProps {
   locale: LocaleCode;
   spottedBy: string;
   cascade?: CascadeClassifier;
+  /** On-Device-Foto-Sanitisierung (#89) – jeder Draft hält dann nur das bereinigte Foto. */
+  photoSanitizer?: PhotoSanitizer;
   /** Spielfortschritt – steuert, welche Tabs/Features sichtbar sind. */
   progress: PlayerProgress;
   /** Aufgelöster Text-Resolver (Defaults ⊕ Varianten-Overrides). */
@@ -57,6 +60,7 @@ export function AppNavigator({
   locale,
   spottedBy,
   cascade,
+  photoSanitizer,
   progress,
   t,
   drafts,
@@ -105,6 +109,7 @@ export function AppNavigator({
             locale={locale}
             spottedBy={spottedBy}
             cascade={cascade}
+            photoSanitizer={photoSanitizer}
             onSaveDraft={onSaveDraft}
             preferences={preferences}
             onPreferencesChange={onPreferencesChange}

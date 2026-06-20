@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AppDefinition, LocaleCode, ThemeTokens } from "@spotforge/app-config";
 import { DEFAULT_LOCALE } from "@spotforge/app-config";
 import type { CascadeClassifier } from "@spotforge/ai-engine";
+import type { PhotoSanitizer } from "./upload/createUploadSanitizer";
 import type { AttributeDefinition } from "@spotforge/game-core";
 import { ThemeProvider } from "@spotforge/ui";
 import { StyleSheet } from "react-native";
@@ -51,6 +52,13 @@ export interface SpotForgeAppProps {
    * einen Lade-/Bereitschaftshinweis statt eines Spot-Ergebnisses.
    */
   cascade?: CascadeClassifier;
+  /**
+   * On-Device-**Foto-Sanitisierung** (#89). Vom Host injiziert (native Detektoren +
+   * Skia-Prozessor, sobald die Detektor-Modelle gebündelt sind). Ist sie gesetzt,
+   * hält **jeder Draft nur das bereinigte Foto** – das Original dient allein der
+   * Erkennung und wird **nicht** persistiert (Goldene Regel 5).
+   */
+  photoSanitizer?: PhotoSanitizer;
   /**
    * Anfänglicher Spielfortschritt – steuert FTUE und Progressive Disclosure. Der
    * Host kann hier einen persistierten Stand einreichen; Default ist ein neuer
@@ -112,6 +120,7 @@ export function SpotForgeApp({
   locale = DEFAULT_LOCALE,
   spottedBy = DEFAULT_SPOTTER,
   cascade,
+  photoSanitizer,
   initialProgress = NEW_PLAYER,
   onProgressChange,
   initialPreferences = DEFAULT_PREFERENCES,
@@ -202,6 +211,7 @@ export function SpotForgeApp({
             locale={locale}
             spottedBy={spottedBy}
             cascade={cascade}
+            photoSanitizer={photoSanitizer}
             progress={progress}
             t={t}
             drafts={drafts}

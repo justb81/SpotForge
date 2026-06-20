@@ -80,6 +80,56 @@ export const DEFAULT_CONTENT = {
   "collection.remove": { de: "Aus Sammlung entfernen", en: "Remove from collection" },
   "collection.removeConfirm": { de: "Wirklich entfernen?", en: "Remove for good?" },
 
+  // --- Kartenbibliothek: Filter/Sortierung (#17) ------------------------------
+  "collection.search": { de: "Suchen …", en: "Search …" },
+  "collection.noMatches": {
+    de: "Keine Karte passt zur Suche.",
+    en: "No card matches your search.",
+  },
+  "collection.sort.newest": { de: "Neueste", en: "Newest" },
+  "collection.sort.oldest": { de: "Älteste", en: "Oldest" },
+  "collection.sort.name": { de: "Name", en: "Name" },
+  "collection.sort.rarity": { de: "Seltenheit", en: "Rarity" },
+
+  // --- Deck-Management (GDD §7.2, #17) ----------------------------------------
+  "deck.manage": { de: "Deck", en: "Deck" },
+  "deck.back": { de: "Zurück", en: "Back" },
+  // `{count}` Karten im Deck von `{capacity}` Plätzen.
+  "deck.count": { de: "{count} / {capacity}", en: "{count} / {capacity}" },
+  "deck.inDeck": { de: "Im Deck", en: "In deck" },
+  "deck.add": { de: "Tippen zum Hinzufügen", en: "Tap to add" },
+  "deck.full": { de: "Deck voll", en: "Deck full" },
+  "deck.empty": {
+    de: "Sammle erst ein paar Karten für dein Deck.",
+    en: "Collect some cards for your deck first.",
+  },
+
+  // --- Seltenheits-Stufen (GDD §5.3) ------------------------------------------
+  "rarity.common": { de: "Gewöhnlich", en: "Common" },
+  "rarity.uncommon": { de: "Ungewöhnlich", en: "Uncommon" },
+  "rarity.rare": { de: "Selten", en: "Rare" },
+  "rarity.epic": { de: "Episch", en: "Epic" },
+  "rarity.legendary": { de: "Legendär", en: "Legendary" },
+
+  // --- Profil & Progression (GDD §7.1, #17) -----------------------------------
+  "profile.level": { de: "Level {level}", en: "Level {level}" },
+  "profile.nextTitle": {
+    de: "Nächster Titel: {title} ab Level {level}",
+    en: "Next title: {title} at level {level}",
+  },
+  "profile.maxTitle": { de: "Höchster Titel erreicht", en: "Highest title reached" },
+  "profile.stats": { de: "Statistiken", en: "Statistics" },
+  "profile.byRarity": { de: "Nach Seltenheit", en: "By rarity" },
+  "profile.stat.spotted": { de: "Gespottet", en: "Spotted" },
+  "profile.stat.forged": { de: "Geschmiedet", en: "Forged" },
+  "profile.stat.rarityScore": { de: "Seltenheits-Score", en: "Rarity score" },
+  // Titel-System (GDD §7.1).
+  "profile.title.rookie": { de: "Rookie-Spotter", en: "Rookie Spotter" },
+  "profile.title.pro": { de: "Profi-Spotter", en: "Pro Spotter" },
+  "profile.title.expert": { de: "Experten-Schmied", en: "Expert Forge" },
+  "profile.title.master": { de: "Meister-Schmied", en: "Master Forge" },
+  "profile.title.legendary": { de: "Legendärer Spotter", en: "Legendary Spotter" },
+
   // --- First-Time-User-Experience (GDD §11.1) ---------------------------------
   "ftue.skip": { de: "Überspringen", en: "Skip" },
   "ftue.next": { de: "Weiter", en: "Next" },
@@ -129,10 +179,6 @@ export const DEFAULT_CONTENT = {
   "trade.empty": {
     de: "Tausche Dubletten, sobald du welche hast.",
     en: "Trade duplicates once you have some.",
-  },
-  "profile.empty": {
-    de: "Hier entstehen Statistiken und Fortschritt.",
-    en: "Stats and progress will live here.",
   },
 
   // --- Progressive Disclosure (GDD §11.2) -------------------------------------

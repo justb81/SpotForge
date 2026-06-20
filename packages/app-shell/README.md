@@ -59,9 +59,9 @@ Bundle-IDs. Alles Variable kommt aus `@spotforge/app-config`.
 - **Tab-Navigation** (`AppNavigator` + `TabBar`): danach die Haupt-Bereiche
   **Spot, Sammlung, Duell, Tausch, Profil**. Schlanke, zustandsbasierte
   Eigenimplementierung (keine nativen Navigations-Deps), barrierearm
-  (`tablist`/`tab`, Selektion, Mindest-Touch-Target). Der Spot-Tab ist der unten
-  beschriebene `SpotScreen`; die übrigen Bereiche sind generische Empty-State-
-  Platzhalter (`FeatureScreen`), bis ihre eigenen Issues sie füllen.
+  (`tablist`/`tab`, Selektion, Mindest-Touch-Target). Spot, Sammlung und Profil
+  sind ausgefüllt (siehe unten); **Duell** und **Tausch** sind noch generische
+  Empty-State-Platzhalter (`FeatureScreen`), bis ihre eigenen Issues sie füllen.
 - **Progressive Disclosure** (`progression/disclosure.ts`, GDD §11.2): Der
   Kern-Loop (Spotten) ist sofort verfügbar; Sammlung/Duell/Tausch/Profil
   schalten nach der FTUE frei; Spezial-Mechaniken (Fusion/Marktplatz/Clans) sind
@@ -141,3 +141,34 @@ Ohne `draftStore` nutzt `SpotForgeApp` einen In-Memory-Store (überlebt keinen
 Neustart) – praktisch für Tests/Previews. Privacy-first: Fotos bleiben lokale
 URIs und verlassen das Gerät nicht (ADR 0010). Der **Server-Sync** der Sammlung
 (#19) und das **Online-Forgen** (#81) sind eigene, spätere Schritte.
+
+## Sammlung, Deck-Management & Progression (GDD §7, #17)
+
+Aufbauend auf der lokalen Sammlung erweitern drei reine Logik-Schichten +
+zugehörige Screens den `collection`- und `profile`-Tab:
+
+- **Kartenbibliothek** (`collection/library.ts`): Filter (`filterCards`) +
+  Sortierung (`sortCards`) über der Sammlung, kombiniert in `queryLibrary`.
+  Sortierungen: `newest`/`oldest`/`name`/`rarity` (alle deterministisch mit
+  stabilem Tiebreak). Der `CollectionScreen` exponiert Freitextsuche + Sortier-
+  Chips; die Filterlogik trägt zusätzlich Seltenheits-/Status-Filter für den
+  Online-Forge-Pfad (#81).
+- **Deck-Management** (`deck/deck.ts`, GDD §7.2): ein **Deck** ist eine geordnete
+  Auswahl eigener Karten (per `id`) für Battles. Basis-Kapazität **50**
+  (`DEFAULT_DECK_CAPACITY`); `deckCapacity(expansions)` ist der **Erweiterungs-
+  Hook** (Level-Ups/IAP heben die Kapazität, ohne Logikänderung). Der
+  `DeckScreen` (erreichbar aus der Sammlung) baut das Deck per Tippen; volle Decks
+  lassen nur noch das Entfernen zu. `SpotForgeApp` hält den Deck-Zustand I/O-frei
+  (`initialDeck`/`onDeckChange`/`deckExpansions`) und hält ihn über `pruneDeck`
+  konsistent zur Sammlung (gelöschte Karten fallen automatisch aus dem Deck).
+- **Profil & Progression** (`progression/profile.ts`, GDD §7.1): Level-Grenzen
+  (`clampLevel`, 1–100), **Titel-System** (`titleForLevel`/`nextTitleBand`:
+  Rookie → Pro → Expert → Master → Legendary) und aus der Sammlung abgeleitete
+  **Statistiken** (`collectionStats`: gespottet/geschmiedet, Seltenheits-
+  Verteilung, Seltenheits-Score). Der `ProfileScreen` ersetzt den bisherigen
+  Platzhalter des `profile`-Tabs.
+
+Das Level kommt weiterhin aus dem `PlayerProgress` (Progressive Disclosure);
+Sieg-/Tauschstatistiken folgen mit dem Battle- bzw. Tausch-Feature. Die
+**Upgrade-UI** (Duplikate → Stufen/Foil) wartet auf die game-core-Upgrade-Logik
+(#7) und ist hier bewusst noch nicht enthalten.

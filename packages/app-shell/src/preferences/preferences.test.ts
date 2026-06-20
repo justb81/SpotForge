@@ -9,11 +9,12 @@ import {
 } from "./preferences";
 
 describe("Preferences", () => {
-  it("zeigt das Tutorial standardmäßig und hat Auto-Spot aus", () => {
+  it("zeigt das Tutorial standardmäßig, hat Auto-Spot aus und startet im Spot-Tab", () => {
     expect(DEFAULT_PREFERENCES.skipTutorial).toBe(false);
     expect(DEFAULT_PREFERENCES.autoSpotEnabled).toBe(false);
     expect(DEFAULT_PREFERENCES.autoSpotCoachmarkSeen).toBe(false);
     expect(DEFAULT_PREFERENCES.autoSpotIntervalMs).toBeUndefined();
+    expect(DEFAULT_PREFERENCES.defaultView).toBe("spot");
   });
 
   it("serialisiert und liest verlustfrei zurück", () => {
@@ -22,8 +23,14 @@ describe("Preferences", () => {
       autoSpotEnabled: true,
       autoSpotCoachmarkSeen: true,
       autoSpotIntervalMs: 2500,
+      defaultView: "battle",
     };
     expect(parsePreferences(serializePreferences(prefs))).toEqual(prefs);
+  });
+
+  it("fällt bei unbekannter Start-Ansicht auf den Default zurück", () => {
+    expect(parsePreferences('{"defaultView":"garage"}')).toEqual(DEFAULT_PREFERENCES);
+    expect(parsePreferences('{"defaultView":42}')).toEqual(DEFAULT_PREFERENCES);
   });
 
   it("schreibt das Intervall nur, wenn der Nutzer es überschrieben hat", () => {

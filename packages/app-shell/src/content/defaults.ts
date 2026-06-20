@@ -164,6 +164,12 @@ export const DEFAULT_CONTENT = {
     de: "Aus: Beim nächsten Start geht es direkt ins Spotten.",
     en: "Off: jump straight to spotting on the next start.",
   },
+  // Start-Ansicht: welche Tab-Leisten-Ansicht beim App-Start zuerst erscheint.
+  "settings.defaultView.label": { de: "Start-Ansicht", en: "Start view" },
+  "settings.defaultView.hint": {
+    de: "Ansicht, die beim Öffnen der App zuerst erscheint. Greift beim nächsten Start.",
+    en: "View shown first when the app opens. Applies on the next start.",
+  },
   // Auto-Spot (#85): Schalter als Fallback zur Geste + Intervall-Einstellung.
   "settings.autoSpot.label": { de: "Auto-Spot", en: "Auto-spot" },
   "settings.autoSpot.hint": {

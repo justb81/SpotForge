@@ -5,6 +5,7 @@
 // den TextResolver. Die Tutorial-Wahl wirkt erst beim nächsten Start, der
 // Auto-Spot-Schalter sofort.
 
+import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import type { AppDefinition } from "@spotforge/app-config";
 import {
@@ -16,6 +17,7 @@ import {
 import { useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
 import type { Preferences } from "../preferences/preferences";
+import { TABS, type TabKey } from "../navigation/tabs";
 import { resolveAutoSpotInterval } from "../spotting/autoSpot";
 
 /** Schrittweite der Intervall-Einstellung in ms (barrierefreier Fallback zum Slider). */
@@ -46,6 +48,19 @@ export function SettingsScreen({
 
   const setIntervalMs = (next: number) => {
     onPreferencesChange({ ...preferences, autoSpotIntervalMs: clampAutoSpotInterval(next) });
+  };
+
+  // Auswahl der Start-Ansicht als aufklappbares Drop-down. Die Optionen leiten
+  // sich direkt aus der Tab-Definition ab und passen sich automatisch an, wenn
+  // sich die Navigation künftig ändert (Tabs hinzukommen/wegfallen).
+  const [viewPickerOpen, setViewPickerOpen] = useState(false);
+  // Label der aktuell gewählten Start-Ansicht (Fallback „Spot", falls der gespeicherte
+  // Tab nach einer Navigations-Änderung nicht mehr existiert).
+  const currentViewLabelKey =
+    TABS.find((tab) => tab.key === preferences.defaultView)?.labelKey ?? "nav.spot";
+  const selectDefaultView = (key: TabKey) => {
+    onPreferencesChange({ ...preferences, defaultView: key });
+    setViewPickerOpen(false);
   };
 
   return (
@@ -80,6 +95,61 @@ export function SettingsScreen({
             }
             trackColor={{ true: theme.colors.primary, false: theme.colors.background }}
           />
+        </View>
+
+        {/* Start-Ansicht: Drop-down über alle Tab-Leisten-Ansichten. */}
+        <View style={styles.field}>
+          <View style={[styles.row, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.rowText}>
+              <Text style={[styles.rowLabel, { color: theme.colors.text }]}>
+                {t("settings.defaultView.label")}
+              </Text>
+              <Text style={[styles.rowHint, { color: theme.colors.text }]}>
+                {t("settings.defaultView.hint")}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("settings.defaultView.label")}
+              accessibilityState={{ expanded: viewPickerOpen }}
+              onPress={() => setViewPickerOpen((open) => !open)}
+              style={[styles.select, { borderColor: theme.colors.primary }]}
+            >
+              <Text style={[styles.selectValue, { color: theme.colors.text }]} numberOfLines={1}>
+                {t(currentViewLabelKey)}
+              </Text>
+              <Text style={[styles.selectChevron, { color: theme.colors.primary }]}>
+                {viewPickerOpen ? "▴" : "▾"}
+              </Text>
+            </Pressable>
+          </View>
+
+          {viewPickerOpen ? (
+            <View style={[styles.options, { backgroundColor: theme.colors.surface }]}>
+              {TABS.map((tab) => {
+                const selected = tab.key === preferences.defaultView;
+                return (
+                  <Pressable
+                    key={tab.key}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => selectDefaultView(tab.key)}
+                    style={styles.option}
+                  >
+                    <Text style={[styles.optionIcon, { color: theme.colors.accent }]}>
+                      {tab.icon}
+                    </Text>
+                    <Text style={[styles.optionLabel, { color: theme.colors.text }]}>
+                      {t(tab.labelKey)}
+                    </Text>
+                    {selected ? (
+                      <Text style={[styles.optionCheck, { color: theme.colors.primary }]}>✓</Text>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
         </View>
 
         {/* Auto-Spot (#85): nur bei Varianten mit dem Feature. Schalter = Fallback zur
@@ -209,6 +279,53 @@ const styles = StyleSheet.create({
   rowText: {
     flex: 1,
     gap: 4,
+  },
+  field: {
+    gap: 8,
+  },
+  select: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    minHeight: 44,
+    maxWidth: 160,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  selectValue: {
+    flexShrink: 1,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  selectChevron: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  options: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    overflow: "hidden",
+  },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    minHeight: 48,
+    paddingVertical: 8,
+  },
+  optionIcon: {
+    fontSize: 18,
+    width: 24,
+    textAlign: "center",
+  },
+  optionLabel: {
+    flex: 1,
+    fontSize: 16,
+  },
+  optionCheck: {
+    fontSize: 18,
+    fontWeight: "800",
   },
   rowLabel: {
     fontSize: 16,

@@ -1,0 +1,20 @@
+{
+  "$comment": "Gesichts-Detektor der Foto-Sanitisierung (#89, ADR 0008/0014: fp32/XNNPACK, kein OTA). Einklassiges YOLOv8n (nano, ~3.2M Params → ~12-14 MB .pte) auf den react-native-executorch ObjectDetectionModule.fromCustomModel-Kontrakt gewrappt (3 Output-Tensoren: Boxen[4N]/Scores[N]/Klassen[N]). Quelle: vortrainiertes YOLOv8n-face (WIDERFace) aus dem HF-Hub. Wird vor jedem Foto-Upload genutzt, um Gesichter Unbeteiligter zu blurren (Goldene Regel 5). Export via .github/workflows/model-export.yml; danach Manifest-Eintrag in tools/fetch-models/models.manifest.json übernehmen und in apps/mobile/App.tsx als RegionDetectorModel bündeln. Schwellen-/Recall-Kalibrierung + Korrektheit des Decodes: Geräte-Verifikation (#63). HINWEIS: sourceModel/checkpointFile auf das tatsächlich genutzte HF-Repo setzen (z.B. lindevs/yolov8-face oder akanametov/yolo-face) und die Lizenz prüfen, bevor gebündelt wird.",
+  "id": "face-detector-yolov8n",
+  "name": "YOLOv8n-Face (1 Klasse, fp32/XNNPACK) – Gesichts-Detektor (Sanitisierung)",
+  "version": "1.0.0",
+  "category": "sanitization",
+  "format": "yolo",
+  "sourceModel": "lindevs/yolov8-face",
+  "revision": "main",
+  "yolo": {
+    "checkpointFile": "yolov8n-face-lindevs.pt",
+    "inputSize": [640, 640],
+    "labels": ["face"]
+  },
+  "preprocessor": null,
+  "output": {
+    "model": "face_detector_yolov8n_fp32.pte",
+    "labels": "face_detector_yolov8n.labels.json"
+  }
+}

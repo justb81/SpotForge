@@ -12,28 +12,42 @@ URL + SHA-256 bezogen und **fest ins APK gebündelt** (kein Nachladen/OTA).
 
 ## Modell-Kontrakt
 
-`react-native-executorch` (`ClassificationModule.fromCustomModel`) erwartet:
+**Klassifikation** (`ClassificationModule.fromCustomModel`):
 
 - **Input:** `float32[1,3,H,W]` (RGB), Werte in `[0,1]` nach `(pixel − mean) / std`.
 - **Output:** `float32[1,C]` rohe Logits, **gleiche Reihenfolge** wie die Labels;
   Resize/Normalisierung/Softmax übernimmt das native Runtime.
 
+**Detektion** (`ObjectDetectionModule.fromCustomModel`, für die Foto-Sanitisierung #89):
+
+- **Input:** `float32[1,3,H,W]` (RGB), Werte in `[0,1]`.
+- **Output:** **drei** Tensoren – Boxen `[4·N]` (x1,y1,x2,y2 im Modell-Input-
+  Pixelraum), Scores `[N]`, Klassen-Indizes `[N]`; Threshold/NMS/Rückskalierung
+  übernimmt das native Runtime.
+
 Normalisierung (`normMean`/`normStd`) und Labels reisen **mit dem Modell** (gleiche
 Version) – siehe Manifest-Eintrag/`labels.json` –, nicht im App-Code. So ist das
 gebündelte Modell reproduzierbar und in sich konsistent.
 
-## Zwei Export-Backends (`format`)
+## Drei Export-Backends (`format`)
 
 | `format`  | Quelle                                            | Labels / Norm                          |
 |-----------|---------------------------------------------------|----------------------------------------|
 | `optimum` | HF-*transformers*-Modell                          | `config.json` (`id2label`) / `preprocessor_config.json` |
 | `timm`    | timm-Modell: **vortrainiert** (HF-Hub) oder Checkpoint (`.pth`) | JSON-Liste (`labelsJson`) oder CSV (`labelsFile`) / `preprocessor` aus Config |
+| `yolo`    | Ultralytics-YOLO-**Detektor** (`.pt` aus HF-Hub)  | `yolo.labels` (Config); keine Norm (`[0,1]`) |
 
 `optimum` nutzt `optimum-cli export executorch`; `timm` lädt das Modell (Gewichte
 vortrainiert aus dem HF-Hub via arch-Tag **oder** aus einem Checkpoint) und lowert
-es direkt über `torch.export → to_edge_transform_and_lower(XNNPACK)`. Der Export ist
-immer **fp32** ([ADR 0014](../../docs/adr/0014-on-device-inferenz-praezision-fp32.md) –
+es direkt über `torch.export → to_edge_transform_and_lower(XNNPACK)`. `yolo` lädt ein
+einklassiges Ultralytics-Detektionsmodell, **wrappt** dessen Ausgabe auf den
+3-Tensor-Detektions-Kontrakt (xywh→xyxy, max-Klasse) und lowert ebenso nach XNNPACK.
+Der Export ist immer **fp32** ([ADR 0014](../../docs/adr/0014-on-device-inferenz-praezision-fp32.md) –
 keine Quantisierung; int8 ist verworfen).
+
+> **`yolo`-Decode auf dem Gerät verifizieren (#63):** der Decode ist auf den
+> dokumentierten rne-Kontrakt ausgelegt; die exakte Übereinstimmung mit dem nativen
+> Postprocess (NMS/Threshold) sowie Schwellen/Recall werden am echten Gerät geprüft.
 
 ## Export-Config
 
@@ -50,6 +64,14 @@ Quelle entweder
 
 dazu die Labels entweder als committete JSON-Liste (`labelsJson`, repo-relativer
 Pfad – Index = Klasse) oder als CSV (`labelsFile`, `indexColumn`, `labelColumn`).
+
+`yolo`-spezifisch unter `yolo`: `checkpointFile` (`.pt` im HF-Repo `sourceModel`),
+`inputSize` (z.B. `[640,640]`) und `labels` (i.d.R. genau eine Klasse, z.B.
+`["face"]` / `["license_plate"]`); `preprocessor` bleibt `null` ([0,1] ohne
+Norm). Die Detektor-Configs der Sanitisierung (#89) liegen unter
+`models/face-yolov8n.json` und `models/license-plate-yolov8n.json` – vor dem
+Bündeln `sourceModel`/`checkpointFile` auf das tatsächlich genutzte HF-Repo setzen
+und dessen **Lizenz** prüfen.
 
 ## Verwendung
 

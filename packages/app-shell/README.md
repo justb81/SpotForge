@@ -55,7 +55,11 @@ Bundle-IDs. Alles Variable kommt aus `@spotforge/app-config`.
   Sequenz durch den Core Loop – Willkommen → erster Spot → **Schmiede-Animation**
   → Duell → Tausch → Starter-Karten. Bewusst „kein langer Tutorial-Text": pro
   Slide ein Glyph, ein Titel, ein Satz, plus Fortschrittspunkte und Überspringen.
-  Die Sequenzlogik ist rein (`ftue/steps.ts`) und getestet.
+  Die Sequenzlogik ist rein (`ftue/steps.ts`) und getestet. **Überspringen** öffnet
+  einen In-App-Dialog „Beim nächsten Start wieder anzeigen?": **Ja** führt direkt in
+  die Spot-Ansicht (Tutorial erscheint beim nächsten Start erneut), **Nein** speichert
+  die Auswahl `skip_tutorial` (siehe Einstellungen) und überspringt das Tutorial
+  künftig automatisch.
 - **Tab-Navigation** (`AppNavigator` + `TabBar`): danach die Haupt-Bereiche
   **Spot, Sammlung, Duell, Tausch, Profil**. Schlanke, zustandsbasierte
   Eigenimplementierung (keine nativen Navigations-Deps), barrierearm
@@ -75,6 +79,27 @@ Bundle-IDs. Alles Variable kommt aus `@spotforge/app-config`.
 
 `progress` ist bewusst I/O-frei: der Host reicht `initialProgress` herein und
 erhält Änderungen über `onProgressChange` (Persistenz bleibt Sache des Hosts).
+
+## Nutzer-Einstellungen (`preferences/`)
+
+Persistierbare Nutzer-Wahl getrennt vom Spielfortschritt – aktuell `skipTutorial`
+(„skip_tutorial"). Wie der Fortschritt **I/O-frei**: der Host lädt die Einstellungen
+**vor** dem Mounten (damit die Start-Entscheidung FTUE vs. Spot ohne Aufblitzen
+feststeht) und persistiert Änderungen über `onPreferencesChange`.
+
+- **`preferences.ts`** – reine Logik: `Preferences`, `DEFAULT_PREFERENCES`, tolerante
+  (De-)Serialisierung und `resolveInitialProgress(progress, preferences)`: ein dauerhaft
+  übersprungenes Tutorial wird **einmalig beim Start** als „FTUE erledigt, Level ≥ 1"
+  eingerechnet – sonst blieben Profil/**Einstellungen** verschlossen und die Auswahl
+  ließe sich nie zurücknehmen. Ein späteres Umschalten greift erst beim nächsten Start
+  (kein Mid-Session-Sprung ins Tutorial).
+- **`preferencesStore.ts`** – `PreferencesStore` (`load`/`save`) über injizierter
+  Persistenz; In-Memory-Variante für Tests/Previews.
+- **`expoPreferencesPersistence.ts`** – On-Device-Adapter (`expo-file-system`),
+  **`appId`-skopiert** (`…/spotforge/<appId>/preferences.json`).
+
+Nachträglich änderbar im **Profil ▸ Einstellungen** (`SettingsScreen`): ein Schalter
+„Tutorial beim Start anzeigen" (Negation von `skipTutorial`).
 
 ## Spot-/Draft-Flow (offline, ADR 0010)
 

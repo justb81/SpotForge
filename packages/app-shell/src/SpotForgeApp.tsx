@@ -9,6 +9,11 @@ import { useText } from "./content/text";
 import { AppNavigator } from "./navigation/AppNavigator";
 import { FtueFlow } from "./ftue/FtueFlow";
 import { NEW_PLAYER, type PlayerProgress } from "./progression/disclosure";
+import {
+  DEFAULT_PREFERENCES,
+  resolveInitialProgress,
+  type Preferences,
+} from "./preferences/preferences";
 import { createInMemoryDraftStore, type DraftStore } from "./collection/draftStore";
 import { useDraftCollection } from "./collection/useDraftCollection";
 import { EMPTY_DECK, deckCapacity, pruneDeck, toggleInDeck, type Deck } from "./deck/deck";
@@ -52,6 +57,17 @@ export interface SpotForgeAppProps {
    */
   onProgressChange?: (progress: PlayerProgress) => void;
   /**
+   * Persistierte Nutzer-Einstellungen (z.B. „skip_tutorial"). Der Host lädt sie
+   * **vor** dem Mounten und reicht sie herein; Default sind die {@link DEFAULT_PREFERENCES}
+   * (Tutorial wird gezeigt). Steuert beim Start, ob die FTUE übersprungen wird.
+   */
+  initialPreferences?: Preferences;
+  /**
+   * Wird aufgerufen, wenn der Nutzer die Einstellungen ändert (Überspringen-Dialog
+   * oder Profil ▸ Einstellungen), damit der Host sie persistiert. app-shell bleibt I/O-frei.
+   */
+  onPreferencesChange?: (preferences: Preferences) => void;
+  /**
    * Lokaler Draft-Store für die Sammlung (#102). Der Host injiziert die persistente,
    * `appId`-skopierte Variante (`createDraftStore(createExpoDraftPersistence(definition.id))`);
    * ohne Angabe wird ein In-Memory-Store genutzt (überlebt keinen App-Neustart) –
@@ -92,12 +108,20 @@ export function SpotForgeApp({
   cascade,
   initialProgress = NEW_PLAYER,
   onProgressChange,
+  initialPreferences = DEFAULT_PREFERENCES,
+  onPreferencesChange,
   draftStore,
   initialDeck = EMPTY_DECK,
   onDeckChange,
   deckExpansions = 0,
 }: SpotForgeAppProps) {
-  const [progress, setProgress] = useState<PlayerProgress>(initialProgress);
+  // Sitzungs-Fortschritt: ein dauerhaft übersprungenes Tutorial (`skipTutorial`)
+  // wird einmalig beim Start eingerechnet (FTUE gilt als erledigt, Basis-Bereiche
+  // frei) – ein späteres Umschalten der Einstellung greift erst beim nächsten Start.
+  const [progress, setProgress] = useState<PlayerProgress>(() =>
+    resolveInitialProgress(initialProgress, initialPreferences),
+  );
+  const [preferences, setPreferences] = useState<Preferences>(initialPreferences);
   const t = useText(definition, locale);
 
   // Fallback-Store nur einmal anlegen (eine Instanz hält ihren Cache); ein vom Host
@@ -111,6 +135,14 @@ export function SpotForgeApp({
       onProgressChange?.(next);
     },
     [onProgressChange],
+  );
+
+  const updatePreferences = useCallback(
+    (next: Preferences) => {
+      setPreferences(next);
+      onPreferencesChange?.(next);
+    },
+    [onPreferencesChange],
   );
 
   // Deck-Zustand (#17). Bewusst I/O-frei: der Host reicht `initialDeck` herein und
@@ -146,6 +178,14 @@ export function SpotForgeApp({
     updateProgress({ ftueCompleted: true, level: Math.max(progress.level, 1) });
   }, [progress.level, updateProgress]);
 
+  // „Nein, nicht wieder anzeigen": Auswahl „skip_tutorial" speichern und in die App
+  // führen (FTUE für diese Sitzung abschließen). Beim nächsten Start greift dann
+  // `resolveInitialProgress` und überspringt das Tutorial automatisch.
+  const skipTutorialForever = useCallback(() => {
+    updatePreferences({ ...preferences, skipTutorial: true });
+    completeFtue();
+  }, [preferences, updatePreferences, completeFtue]);
+
   return (
     <ThemeProvider theme={theme}>
       <SafeAreaView style={[styles.root, { backgroundColor: theme.colors.background }]}>
@@ -164,9 +204,11 @@ export function SpotForgeApp({
             deck={prunedDeck}
             deckCapacity={capacity}
             onToggleDeck={toggleDeck}
+            preferences={preferences}
+            onPreferencesChange={updatePreferences}
           />
         ) : (
-          <FtueFlow t={t} onComplete={completeFtue} />
+          <FtueFlow t={t} onComplete={completeFtue} onSkipForever={skipTutorialForever} />
         )}
       </SafeAreaView>
     </ThemeProvider>

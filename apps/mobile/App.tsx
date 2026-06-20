@@ -1,7 +1,14 @@
 import { Component, type ReactNode, useEffect, useMemo, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text } from "react-native";
 import type { AppDefinition, Branding } from "@spotforge/app-config";
-import { SpotForgeApp, createDraftStore, createExpoDraftPersistence } from "@spotforge/app-shell";
+import {
+  SpotForgeApp,
+  createDraftStore,
+  createExpoDraftPersistence,
+  createPreferencesStore,
+  createExpoPreferencesPersistence,
+  type Preferences,
+} from "@spotforge/app-shell";
 import {
   createCascadeClassifier,
   gateConfigFromAppDefinition,
@@ -94,6 +101,28 @@ function Root() {
     () => (definition ? createDraftStore(createExpoDraftPersistence(definition.id)) : undefined),
     [definition],
   );
+
+  // Persistente, **appId-skopierte** Nutzer-Einstellungen (z.B. „skip_tutorial").
+  // Werden **vor** dem Mounten geladen, damit die FTUE-Entscheidung beim Start ohne
+  // Aufblitzen feststeht; Änderungen schreibt die app-shell über onPreferencesChange.
+  const preferencesStore = useMemo(
+    () =>
+      definition
+        ? createPreferencesStore(createExpoPreferencesPersistence(definition.id))
+        : undefined,
+    [definition],
+  );
+  const [preferences, setPreferences] = useState<Preferences>();
+  useEffect(() => {
+    if (!preferencesStore) return;
+    let active = true;
+    void preferencesStore.load().then((loaded) => {
+      if (active) setPreferences(loaded);
+    });
+    return () => {
+      active = false;
+    };
+  }, [preferencesStore]);
   useEffect(() => {
     if (!definition) return;
     let active = true;
@@ -169,6 +198,14 @@ function Root() {
     );
   }
 
+  // Auf die geladenen Einstellungen warten, damit der Start-Bildschirm (FTUE vs.
+  // Spot) ohne Umschalt-Flackern feststeht. Kurzer, neutraler Halt im App-Hintergrund.
+  if (!preferences) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: branding.theme.colors.background }} />
+    );
+  }
+
   return (
     <SpotForgeApp
       definition={definition}
@@ -176,6 +213,11 @@ function Root() {
       attributes={CATEGORY_ATTRIBUTES[definition.category.primary] ?? []}
       cascade={cascade}
       draftStore={draftStore}
+      initialPreferences={preferences}
+      onPreferencesChange={(next) => {
+        setPreferences(next);
+        if (preferencesStore) void preferencesStore.save(next);
+      }}
     />
   );
 }

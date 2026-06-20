@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
-import { useTheme } from "@spotforge/ui";
+import { Button, useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
 import {
   FIRST_FTUE_STEP,
@@ -21,8 +21,18 @@ import {
 
 export interface FtueFlowProps {
   t: TextResolver;
-  /** Wird aufgerufen, wenn die Sequenz abgeschlossen oder übersprungen wurde. */
+  /**
+   * Wird aufgerufen, wenn die Sequenz regulär beendet oder einmalig übersprungen
+   * wurde („Ja, beim nächsten Start wieder anzeigen"): direkt in die App, ohne die
+   * Einstellung zu ändern – die FTUE erscheint beim nächsten Start erneut.
+   */
   onComplete: () => void;
+  /**
+   * Wird aufgerufen, wenn der Nutzer das Tutorial überspringt und es **nicht** wieder
+   * sehen möchte („Nein"): speichert die Auswahl „skip_tutorial" und führt in die App
+   * – beim nächsten Start wird das Tutorial automatisch übersprungen.
+   */
+  onSkipForever: () => void;
 }
 
 /** Kategorie-neutrales Leitglyph je Schritt (spiegelt den Core Loop wider). */
@@ -35,9 +45,12 @@ const STEP_ICON: Record<FtueStep, string> = {
   gift: "★",
 };
 
-export function FtueFlow({ t, onComplete }: FtueFlowProps) {
+export function FtueFlow({ t, onComplete, onSkipForever }: FtueFlowProps) {
   const theme = useTheme();
   const [step, setStep] = useState<FtueStep>(FIRST_FTUE_STEP);
+  // Überspringen öffnet zuerst die Abfrage „beim nächsten Start wieder anzeigen?";
+  // erst die Antwort führt in die App (Ja) bzw. speichert „skip_tutorial" (Nein).
+  const [askSkip, setAskSkip] = useState(false);
 
   const content = FTUE_STEP_CONTENT[step];
   const last = isLastFtueStep(step);
@@ -46,7 +59,7 @@ export function FtueFlow({ t, onComplete }: FtueFlowProps) {
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
       <View style={styles.topRow}>
         {!last ? (
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={onComplete}>
+          <Pressable accessibilityRole="button" hitSlop={8} onPress={() => setAskSkip(true)}>
             <Text style={[styles.skip, { color: theme.colors.text }]}>{t("ftue.skip")}</Text>
           </Pressable>
         ) : (
@@ -109,6 +122,63 @@ export function FtueFlow({ t, onComplete }: FtueFlowProps) {
             {t(last ? "ftue.finish" : "ftue.next")}
           </Text>
         </Pressable>
+      </View>
+
+      {askSkip ? (
+        <SkipDialog
+          t={t}
+          onShowAgain={() => {
+            setAskSkip(false);
+            onComplete();
+          }}
+          onSkipForever={() => {
+            setAskSkip(false);
+            onSkipForever();
+          }}
+          onDismiss={() => setAskSkip(false)}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Abfrage beim Überspringen (GDD §11.1): „Beim nächsten Start wieder anzeigen?".
+ * Bewusst ein In-App-Overlay statt eines nativen `Alert` – themebar, deterministisch
+ * und plattform-neutral (wie die übrigen Bestätigungen der app-shell). Ein Tap auf
+ * den Hintergrund bricht ab und kehrt ins Tutorial zurück.
+ */
+function SkipDialog({
+  t,
+  onShowAgain,
+  onSkipForever,
+  onDismiss,
+}: {
+  t: TextResolver;
+  onShowAgain: () => void;
+  onSkipForever: () => void;
+  onDismiss: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={styles.dialogOverlay}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t("ftue.skipConfirm.dismiss")}
+        style={styles.dialogBackdrop}
+        onPress={onDismiss}
+      />
+      <View style={[styles.dialogCard, { backgroundColor: theme.colors.surface }]}>
+        <Text
+          accessibilityRole="header"
+          style={[styles.dialogTitle, { color: theme.colors.text }]}
+        >
+          {t("ftue.skipConfirm.title")}
+        </Text>
+        <View style={styles.dialogActions}>
+          <Button label={t("ftue.skipConfirm.yes")} variant="secondary" onPress={onShowAgain} />
+          <Button label={t("ftue.skipConfirm.no")} variant="primary" onPress={onSkipForever} />
+        </View>
       </View>
     </View>
   );
@@ -233,5 +303,38 @@ const styles = StyleSheet.create({
   primaryLabel: {
     fontSize: 17,
     fontWeight: "700",
+  },
+  dialogOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  dialogBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  dialogCard: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 20,
+    padding: 24,
+    gap: 20,
+  },
+  dialogTitle: {
+    fontSize: 19,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  dialogActions: {
+    gap: 12,
   },
 });

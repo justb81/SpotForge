@@ -14,6 +14,7 @@ import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
 import type { PlayerProgress } from "../progression/disclosure";
+import type { Preferences } from "../preferences/preferences";
 import { SpotScreen } from "../screens/SpotScreen";
 import { CollectionScreen } from "../screens/CollectionScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
@@ -44,6 +45,10 @@ export interface AppNavigatorProps {
   deckCapacity: number;
   /** Schaltet eine Karte ins Deck bzw. heraus (#17). */
   onToggleDeck: (id: string) => void;
+  /** Aktuelle Nutzer-Einstellungen (für das Profil ▸ Einstellungen). */
+  preferences: Preferences;
+  /** Ändert die Nutzer-Einstellungen (z.B. Tutorial beim Start). */
+  onPreferencesChange: (preferences: Preferences) => void;
 }
 
 export function AppNavigator({
@@ -60,6 +65,8 @@ export function AppNavigator({
   deck,
   deckCapacity,
   onToggleDeck,
+  preferences,
+  onPreferencesChange,
 }: AppNavigatorProps) {
   const theme = useTheme();
   const [active, setActive] = useState<TabKey>("spot");
@@ -112,7 +119,15 @@ export function AppNavigator({
       case "trade":
         return <FeatureScreen t={t} titleKey="trade.title" bodyKey="trade.empty" icon="⇄" />;
       case "profile":
-        return <ProfileScreen t={t} level={progress.level} cards={drafts} />;
+        return (
+          <ProfileScreen
+            t={t}
+            level={progress.level}
+            cards={drafts}
+            preferences={preferences}
+            onPreferencesChange={onPreferencesChange}
+          />
+        );
     }
   }
 }

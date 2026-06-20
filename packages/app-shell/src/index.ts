@@ -29,6 +29,23 @@ export {
 } from "./progression/disclosure";
 export type { Feature, PlayerProgress } from "./progression/disclosure";
 
+// Nutzer-Einstellungen (z.B. „skip_tutorial"): reine Logik, Store-Abstraktion und
+// On-Device-Adapter (expo-file-system). Der Host lädt sie vor dem Mounten und
+// persistiert Änderungen – app-shell bleibt I/O-frei.
+export {
+  DEFAULT_PREFERENCES,
+  serializePreferences,
+  parsePreferences,
+  resolveInitialProgress,
+} from "./preferences/preferences";
+export type { Preferences } from "./preferences/preferences";
+export {
+  createPreferencesStore,
+  createInMemoryPreferencesStore,
+} from "./preferences/preferencesStore";
+export type { PreferencesStore, PreferencesPersistence } from "./preferences/preferencesStore";
+export { createExpoPreferencesPersistence } from "./preferences/expoPreferencesPersistence";
+
 // First-Time-User-Experience (Sequenz + Flow-UI).
 export { FtueFlow } from "./ftue/FtueFlow";
 export type { FtueFlowProps } from "./ftue/FtueFlow";
@@ -59,6 +76,9 @@ export type { CardDetailProps, CardDetailLabels } from "./screens/CardDetail";
 
 export { ProfileScreen } from "./screens/ProfileScreen";
 export type { ProfileScreenProps } from "./screens/ProfileScreen";
+
+export { SettingsScreen } from "./screens/SettingsScreen";
+export type { SettingsScreenProps } from "./screens/SettingsScreen";
 
 export { DeckScreen } from "./screens/DeckScreen";
 export type { DeckScreenProps } from "./screens/DeckScreen";

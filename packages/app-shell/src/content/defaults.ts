@@ -129,9 +129,31 @@ export const DEFAULT_CONTENT = {
   "profile.title.expert": { de: "Experten-Schmied", en: "Expert Forge" },
   "profile.title.master": { de: "Meister-Schmied", en: "Master Forge" },
   "profile.title.legendary": { de: "Legendärer Spotter", en: "Legendary Spotter" },
+  // Unterpunkt im Profil, der die Einstellungen öffnet.
+  "profile.settings": { de: "Einstellungen", en: "Settings" },
+
+  // --- Einstellungen (Profil ▸ Einstellungen) ---------------------------------
+  "settings.title": { de: "Einstellungen", en: "Settings" },
+  "settings.back": { de: "Zurück", en: "Back" },
+  "settings.tutorial.label": {
+    de: "Tutorial beim Start anzeigen",
+    en: "Show tutorial on start",
+  },
+  "settings.tutorial.hint": {
+    de: "Aus: Beim nächsten Start geht es direkt ins Spotten.",
+    en: "Off: jump straight to spotting on the next start.",
+  },
 
   // --- First-Time-User-Experience (GDD §11.1) ---------------------------------
   "ftue.skip": { de: "Überspringen", en: "Skip" },
+  // Abfrage beim Überspringen: ob das Tutorial beim nächsten Start wieder erscheint.
+  "ftue.skipConfirm.title": {
+    de: "Beim nächsten Start wieder anzeigen?",
+    en: "Show again on next start?",
+  },
+  "ftue.skipConfirm.yes": { de: "Ja", en: "Yes" },
+  "ftue.skipConfirm.no": { de: "Nein", en: "No" },
+  "ftue.skipConfirm.dismiss": { de: "Abbrechen", en: "Cancel" },
   "ftue.next": { de: "Weiter", en: "Next" },
   "ftue.back": { de: "Zurück", en: "Back" },
   "ftue.finish": { de: "Loslegen", en: "Start playing" },

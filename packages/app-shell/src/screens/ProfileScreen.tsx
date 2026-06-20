@@ -3,11 +3,14 @@
 // TextResolver. Reine Anzeige – Level kommt aus dem Fortschritt, Kennzahlen aus
 // der Sammlung (`collectionStats`).
 
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { RARITY_ORDER, type Card } from "@spotforge/game-core";
 import { rarityStyle, useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
+import type { Preferences } from "../preferences/preferences";
 import { clampLevel, collectionStats, nextTitleBand, titleForLevel } from "../progression/profile";
+import { SettingsScreen } from "./SettingsScreen";
 
 export interface ProfileScreenProps {
   t: TextResolver;
@@ -15,14 +18,38 @@ export interface ProfileScreenProps {
   level: number;
   /** Die Sammlung des Spielers (Drafts + geforgte Karten) für die Kennzahlen. */
   cards: Card[];
+  /** Aktuelle Nutzer-Einstellungen (für den Unterpunkt „Einstellungen"). */
+  preferences: Preferences;
+  /** Ändert die Nutzer-Einstellungen (persistiert vom Host). */
+  onPreferencesChange: (preferences: Preferences) => void;
 }
 
-export function ProfileScreen({ t, level, cards }: ProfileScreenProps) {
+export function ProfileScreen({
+  t,
+  level,
+  cards,
+  preferences,
+  onPreferencesChange,
+}: ProfileScreenProps) {
   const theme = useTheme();
+  // Profil und Einstellungen teilen sich den Profil-Tab; der Unterpunkt
+  // „Einstellungen" blendet die Einstellungen ein (eigener Screen, kein Tab).
+  const [showSettings, setShowSettings] = useState(false);
   const displayLevel = clampLevel(level);
   const title = titleForLevel(displayLevel);
   const next = nextTitleBand(displayLevel);
   const stats = collectionStats(cards);
+
+  if (showSettings) {
+    return (
+      <SettingsScreen
+        t={t}
+        preferences={preferences}
+        onPreferencesChange={onPreferencesChange}
+        onBack={() => setShowSettings(false)}
+      />
+    );
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
@@ -101,6 +128,18 @@ export function ProfileScreen({ t, level, cards }: ProfileScreenProps) {
             </View>
           ))}
         </View>
+
+        {/* Einstellungen (Unterpunkt) */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setShowSettings(true)}
+          style={[styles.settingsRow, { backgroundColor: theme.colors.surface }]}
+        >
+          <Text style={[styles.settingsLabel, { color: theme.colors.text }]}>
+            {t("profile.settings")}
+          </Text>
+          <Text style={[styles.settingsChevron, { color: theme.colors.primary }]}>›</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -215,6 +254,22 @@ const styles = StyleSheet.create({
   },
   rarityCount: {
     fontSize: 15,
+    fontWeight: "700",
+  },
+  settingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 4,
+  },
+  settingsLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  settingsChevron: {
+    fontSize: 22,
     fontWeight: "700",
   },
 });

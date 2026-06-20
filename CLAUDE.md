@@ -207,8 +207,10 @@ ergänzen.
   #10/#76. **Zwei-Schichten-Korpus:** Identitäts-Layer aus **Wikidata (CC0)** (+ optional
   **NHTSA vPIC**, gemeinfrei) für den Objekt-ID-Raum (#72); **Stat-Layer nur für den
   erkennbaren Labelsatz (#9)**, weil Wikidatas trumpfbare Performance-Stats (`power`/
-  `acceleration`/`topSpeed`) ≪ 5 % Coverage haben. Lizenz-Leitplanke: **CC0 bevorzugt**,
-  CC-BY-SA (DBpedia) nur bewusst/gekennzeichnet (viral aufs Daten-Artefakt). Beschaffung
+  `acceleration`/`topSpeed`) ≪ 5 % Coverage haben. `power`/`weight` aus **EEA (CC-BY)**,
+  `acceleration`/`topSpeed`/`price` kuratiert (CC0) bzw. DBpedia. Lizenz-Leitplanke:
+  **CC0 bevorzugt**, CC-BY zulässig, CC-BY-SA (DBpedia) nur bewusst/gekennzeichnet
+  (viral aufs Daten-Artefakt). Beschaffung
   reproduzierbar/gepinnt unter `tools/fetch-world-data` (ADR 0006) inkl. Provenienz/Lizenz.
   Noch nicht akzeptiert.
 

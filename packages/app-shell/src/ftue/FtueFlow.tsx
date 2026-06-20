@@ -169,10 +169,7 @@ function SkipDialog({
         onPress={onDismiss}
       />
       <View style={[styles.dialogCard, { backgroundColor: theme.colors.surface }]}>
-        <Text
-          accessibilityRole="header"
-          style={[styles.dialogTitle, { color: theme.colors.text }]}
-        >
+        <Text accessibilityRole="header" style={[styles.dialogTitle, { color: theme.colors.text }]}>
           {t("ftue.skipConfirm.title")}
         </Text>
         <View style={styles.dialogActions}>

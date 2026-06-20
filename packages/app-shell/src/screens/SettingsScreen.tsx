@@ -18,7 +18,12 @@ export interface SettingsScreenProps {
   onBack: () => void;
 }
 
-export function SettingsScreen({ t, preferences, onPreferencesChange, onBack }: SettingsScreenProps) {
+export function SettingsScreen({
+  t,
+  preferences,
+  onPreferencesChange,
+  onBack,
+}: SettingsScreenProps) {
   const theme = useTheme();
 
   return (

@@ -201,9 +201,7 @@ function Root() {
   // Auf die geladenen Einstellungen warten, damit der Start-Bildschirm (FTUE vs.
   // Spot) ohne Umschalt-Flackern feststeht. Kurzer, neutraler Halt im App-Hintergrund.
   if (!preferences) {
-    return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: branding.theme.colors.background }} />
-    );
+    return <SafeAreaView style={{ flex: 1, backgroundColor: branding.theme.colors.background }} />;
   }
 
   return (

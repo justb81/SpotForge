@@ -31,6 +31,17 @@ export type SpotResult = {
    * Kaskade) `undefined`.
    */
   timings?: CascadeTimings;
+  /**
+   * Summierte Gate-Masse (`P(im Scope)`, siehe {@link GateDecision.mass}) dieses
+   * Schusses – unabhängig davon, ob das Gate über {@link GateConfig.minConfidence}
+   * akzeptiert hat. Aus dem Klassifikations-Lauf befüllt; bei manuell angelegten
+   * Drafts (ohne Kaskade) `undefined`. Der **Auto-Spot** (#85) nutzt sie als
+   * single-frame-Signal für seine eigene, strengere `autoFireMinConfidence` (vgl.
+   * `evaluateAutoFire` in @spotforge/app-shell): die normale Pipeline darf bei der
+   * manuellen Schwelle akzeptieren, der getaktete Auto-Modus „feuert" aber erst
+   * über der strengeren Auto-Schwelle.
+   */
+  gateMass?: number;
 } & (
   | {
       kind: "draft";
@@ -137,6 +148,7 @@ export function createSpot(
 
   return async function spot(input: SpotInput): Promise<SpotResult> {
     const { decision, gate, fine, timings } = await cascade.classify({ imageUri: input.imageUri });
+    const gateMass = decision.mass;
 
     // 1) Gate-Guardrail: nicht im Scope → Reject (mit erkanntem Top-Label für die UX).
     if (!decision.accepted) {
@@ -146,19 +158,20 @@ export function createSpot(
         message: resolveText(appDef.category.guardrails.rejectMessage, locale),
         ...(detectedLabel !== undefined ? { detectedLabel } : {}),
         timings,
+        gateMass,
       };
     }
 
     // 2) Feinmodell ohne verwertbares Ergebnis → unrecognized.
     const topFine = fine?.candidates[0];
     if (topFine === undefined || topFine.label.trim() === "") {
-      return { kind: "unrecognized", label: gate.candidates[0]?.label ?? "", timings };
+      return { kind: "unrecognized", label: gate.candidates[0]?.label ?? "", timings, gateMass };
     }
 
     // 3) Label → Domänen-Objekt (Default-Resolver; #72 produktiv).
     const resolution = resolver.resolve(topFine.label);
     if (resolution === undefined) {
-      return { kind: "unrecognized", label: topFine.label, timings };
+      return { kind: "unrecognized", label: topFine.label, timings, gateMass };
     }
 
     // 4) Optionale provisorische Offline-Vorschläge (#10) – nicht autoritativ.
@@ -176,6 +189,12 @@ export function createSpot(
       ...(input.geoRegion !== undefined ? { geoRegion: input.geoRegion } : {}),
     });
 
-    return { kind: "draft", card, timings, ...(fine !== undefined ? { recognition: fine } : {}) };
+    return {
+      kind: "draft",
+      card,
+      timings,
+      gateMass,
+      ...(fine !== undefined ? { recognition: fine } : {}),
+    };
   };
 }

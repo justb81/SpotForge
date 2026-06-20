@@ -40,10 +40,25 @@ const guardrailsSchema = z.object({
   rejectMessage: localizedTextSchema,
 });
 
+/** Auto-Spot-Parameter (#85): getaktetes Intervall + strengere Auto-Feuer-Schwelle. */
+const autoSpotSchema = z
+  .object({
+    intervalMs: z
+      .number()
+      .int("gate.auto.intervalMs muss eine ganze Zahl sein")
+      .positive("gate.auto.intervalMs muss > 0 sein"),
+    autoFireMinConfidence: z
+      .number()
+      .min(0, "gate.auto.autoFireMinConfidence muss ≥ 0 sein")
+      .max(1, "gate.auto.autoFireMinConfidence muss ≤ 1 sein"),
+  })
+  .optional();
+
 const gateSchema = z.object({
   allow: z
     .array(nonEmpty("gate.allow[]"))
     .min(1, "category.gate.allow muss mindestens ein Label enthalten"),
+  auto: autoSpotSchema,
 });
 
 const aiPromptsSchema = z.object({
@@ -56,6 +71,7 @@ const aiPromptsSchema = z.object({
 const featuresSchema = z
   .object({
     imageImport: z.boolean().optional(),
+    autoSpot: z.boolean().optional(),
   })
   .optional();
 

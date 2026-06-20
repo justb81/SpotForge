@@ -106,6 +106,8 @@ describe("createSpot", () => {
     expect(out.kind).toBe("draft");
     // Kaskaden-Latenzen werden für die On-Screen-Geräte-Verifikation (#63) durchgereicht.
     expect(out.timings).toEqual({ gateMs: 12, fineMs: 30, totalMs: 42 });
+    // Summierte Gate-Masse für die Auto-Spot-Schwelle (#85) durchgereicht.
+    expect(out.gateMass).toBeCloseTo(0.9);
     if (out.kind === "draft") {
       expect(out.card.status).toBe("draft");
       expect(out.card.objectName).toBe("VW Golf VII");
@@ -127,6 +129,8 @@ describe("createSpot", () => {
 
     const out = await spot({ imageUri: "file:///cat.jpg", spottedBy: "user-42" });
     expect(out.kind).toBe("rejected");
+    // Auch im Reject-Pfad wird die (niedrige) Gate-Masse durchgereicht (#85).
+    expect(out.gateMass).toBe(0);
     if (out.kind === "rejected") {
       expect(out.message).toBe("Kein Fahrzeug.");
       expect(out.detectedLabel).toBe("tabby cat");

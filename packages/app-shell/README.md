@@ -129,6 +129,29 @@ durchgereichtes `frames`-Set). Das **Forgen** (Online-Einreichung an die Schmied
 mit autoritativer Seltenheit) ist der **Online**-Schritt und ein eigenes Issue;
 es ist bewusst nicht Teil der app-shell. Vollständig offline.
 
+### Auto-Spot (#85, opt-in)
+
+Bei Varianten mit `features.autoSpot` trägt der Auslöser eine versteckte
+Zweitfunktion (progressive disclosure): **Tippen** = manuelles Foto wie bisher,
+**Halten → nach rechts wischen** aktiviert den **Auto-Modus**, der in festem Takt
+selbst stille Stills aufnimmt und durch dieselbe Spot-Kette schickt (kein
+Frame-Processor – nur der getaktete Normal-Flow, vermeidet den nativen
+Bridgeless-Pfad). Bausteine:
+
+- `autoSpot.ts` (rein, vitest-getestet): `createAutoSpotRunner` ist der
+  **Back-Pressure-Loop** (kein Überlappen, Timer-Restart erst nach dem Ergebnis,
+  Pause/Resume); `evaluateAutoFire` schwellt die **summierte Gate-Masse**
+  (`SpotResult.gateMass`) gegen die strengere `autoFireMinConfidence`;
+  `resolveAutoSpotInterval` löst das Intervall (User-Override ▸ Varianten-Default) auf.
+- `useAutoSpot` verdrahtet den Loop mit React und **pausiert im Hintergrund**
+  (AppState). `SpotCamera` liefert per Ref `captureSilently()` (kein Auslöse-Ton)
+  und rendert die Hold→Swipe-Geste + Aktiv-Badge.
+- `AutoSpotCoachmark` erklärt die Geste einmalig (+ Akku-/Privacy-Hinweis);
+  „gesehen" und der Aktiv-Zustand liegen in den `Preferences`. Als
+  barrierefreier Fallback gibt es Auto-Spot **zusätzlich** als Schalter + Intervall
+  in den App-Einstellungen (`SettingsScreen`). Nach dem Draft-Review bleibt
+  Auto-Spot **aktiv** und läuft weiter.
+
 ## Lokale Draft-Sammlung (offline, #102)
 
 Ein gespotteter, bestätigter/korrigierter Draft lässt sich **lokal in der Sammlung

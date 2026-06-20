@@ -59,6 +59,27 @@ export const DEFAULT_CONTENT = {
     en: "This couldn't be matched to an object. You can name it yourself.",
   },
 
+  // --- Auto-Spot (#85): versteckte Geste am Auslöser + Coachmark --------------
+  "spot.auto": { de: "auto", en: "auto" },
+  "spot.auto.activate": {
+    de: "Auslöser halten und nach rechts wischen, um den Auto-Modus zu aktivieren",
+    en: "Hold the shutter and swipe right to turn on auto mode",
+  },
+  "spot.auto.active": { de: "Auto-Spot aktiv", en: "Auto-spot active" },
+  "spot.auto.deactivate": {
+    de: "Tippen, um den Auto-Modus zu deaktivieren",
+    en: "Tap to turn off auto mode",
+  },
+  "spot.auto.coachmark.title": {
+    de: "Auto-Spot: freihändig spotten",
+    en: "Auto-spot: hands-free spotting",
+  },
+  "spot.auto.coachmark.body": {
+    de: "Halte den Auslöser gedrückt und wische nach rechts – dann spottet die Kamera in festem Takt von selbst. Alles bleibt on-device (kein Upload); im Dauerbetrieb verbraucht es mehr Akku.",
+    en: "Hold the shutter and swipe right — the camera then spots on its own at a fixed pace. Everything stays on-device (no upload); running continuously uses more battery.",
+  },
+  "spot.auto.coachmark.dismiss": { de: "Verstanden", en: "Got it" },
+
   // --- Draft / Forge ----------------------------------------------------------
   "forge.pending": {
     de: "Geschmiedet wird online – Verbindung erforderlich.",
@@ -143,6 +164,17 @@ export const DEFAULT_CONTENT = {
     de: "Aus: Beim nächsten Start geht es direkt ins Spotten.",
     en: "Off: jump straight to spotting on the next start.",
   },
+  // Auto-Spot (#85): Schalter als Fallback zur Geste + Intervall-Einstellung.
+  "settings.autoSpot.label": { de: "Auto-Spot", en: "Auto-spot" },
+  "settings.autoSpot.hint": {
+    de: "Nimmt in festem Takt selbst Fotos auf und spottet on-device. Mehr Akkuverbrauch.",
+    en: "Captures photos on a fixed cadence and spots on-device. Uses more battery.",
+  },
+  "settings.autoSpot.interval.label": { de: "Aufnahme-Intervall", en: "Capture interval" },
+  // `{seconds}` = Intervall in Sekunden (eine Nachkommastelle).
+  "settings.autoSpot.interval.value": { de: "alle {seconds} s", en: "every {seconds} s" },
+  "settings.autoSpot.interval.decrease": { de: "Intervall verkürzen", en: "Shorten interval" },
+  "settings.autoSpot.interval.increase": { de: "Intervall verlängern", en: "Lengthen interval" },
 
   // --- First-Time-User-Experience (GDD §11.1) ---------------------------------
   "ftue.skip": { de: "Überspringen", en: "Skip" },

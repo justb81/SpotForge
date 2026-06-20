@@ -92,7 +92,8 @@ describe("createPhotoSanitizer", () => {
 
     expect(result.report.blurred).toEqual({ face: 1, licensePlate: 2 });
     // Alle erkannten Regionen gehen – korrekt getaggt – an den Prozessor.
-    const req = (processor.process as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as ProcessImageRequest;
+    const req = (processor.process as ReturnType<typeof vi.fn>).mock
+      .calls[0]?.[0] as ProcessImageRequest;
     expect(req.blurRegions).toHaveLength(3);
     expect(req.blurRegions.filter((r) => r.kind === "licensePlate")).toHaveLength(2);
     expect(req.blurRegions.filter((r) => r.kind === "face")).toHaveLength(1);
@@ -109,7 +110,8 @@ describe("createPhotoSanitizer", () => {
     const result = await sanitize({ imageUri: "file://raw.jpg" });
 
     expect(result.report.blurred).toEqual({ face: 0, licensePlate: 0 });
-    const req = (processor.process as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as ProcessImageRequest;
+    const req = (processor.process as ReturnType<typeof vi.fn>).mock
+      .calls[0]?.[0] as ProcessImageRequest;
     expect(req.blurRegions).toHaveLength(0);
     expect(result.report.metadataStripped).toBe(true);
   });
@@ -120,15 +122,21 @@ describe("createPhotoSanitizer", () => {
       processor: okProcessor(),
     });
 
-    await expect(sanitize({ imageUri: "file://raw.jpg" })).rejects.toBeInstanceOf(SanitizationError);
+    await expect(sanitize({ imageUri: "file://raw.jpg" })).rejects.toBeInstanceOf(
+      SanitizationError,
+    );
   });
 
   it("blockt den Upload, wenn die Detektion fehlschlägt (kein Rohbild-Fallback)", async () => {
     const processor = okProcessor();
-    const failing: RegionDetector = { detect: vi.fn(async () => Promise.reject(new Error("boom"))) };
+    const failing: RegionDetector = {
+      detect: vi.fn(async () => Promise.reject(new Error("boom"))),
+    };
     const sanitize = createPhotoSanitizer(config(), { detectors: { face: failing }, processor });
 
-    await expect(sanitize({ imageUri: "file://raw.jpg" })).rejects.toBeInstanceOf(SanitizationError);
+    await expect(sanitize({ imageUri: "file://raw.jpg" })).rejects.toBeInstanceOf(
+      SanitizationError,
+    );
     // Der Prozessor (und damit ein etwaiger Upload) wird gar nicht erst erreicht.
     expect(processor.process).not.toHaveBeenCalled();
   });
@@ -139,6 +147,8 @@ describe("createPhotoSanitizer", () => {
       processor: okProcessor({ metadataStripped: false }),
     });
 
-    await expect(sanitize({ imageUri: "file://raw.jpg" })).rejects.toBeInstanceOf(SanitizationError);
+    await expect(sanitize({ imageUri: "file://raw.jpg" })).rejects.toBeInstanceOf(
+      SanitizationError,
+    );
   });
 });

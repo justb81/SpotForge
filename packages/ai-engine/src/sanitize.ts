@@ -188,10 +188,9 @@ export function createPhotoSanitizer(
         encode: config.encode,
       });
     } catch (cause) {
-      throw new SanitizationError(
-        "Bildverarbeitung (Strip/Blur/Re-Enkodierung) fehlgeschlagen.",
-        { cause },
-      );
+      throw new SanitizationError("Bildverarbeitung (Strip/Blur/Re-Enkodierung) fehlgeschlagen.", {
+        cause,
+      });
     }
 
     // 3) Harte Vorbedingung: ohne bestätigtes Metadaten-Stripping kein Upload.

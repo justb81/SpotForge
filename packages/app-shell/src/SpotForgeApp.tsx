@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AppDefinition, LocaleCode, ThemeTokens } from "@spotforge/app-config";
 import { DEFAULT_LOCALE } from "@spotforge/app-config";
 import type { CascadeClassifier } from "@spotforge/ai-engine";
@@ -11,6 +11,7 @@ import { FtueFlow } from "./ftue/FtueFlow";
 import { NEW_PLAYER, type PlayerProgress } from "./progression/disclosure";
 import { createInMemoryDraftStore, type DraftStore } from "./collection/draftStore";
 import { useDraftCollection } from "./collection/useDraftCollection";
+import { EMPTY_DECK, deckCapacity, pruneDeck, toggleInDeck, type Deck } from "./deck/deck";
 
 /** Default-Entdecker-Tag, solange es keine Accounts gibt (Auth folgt in den MVP-Issues). */
 export const DEFAULT_SPOTTER = "local";
@@ -57,6 +58,19 @@ export interface SpotForgeAppProps {
    * praktisch für Tests/Previews.
    */
   draftStore?: DraftStore;
+  /**
+   * Anfängliches Deck (#17). Der Host kann ein persistiertes Deck einreichen;
+   * Default ist ein leeres Deck. app-shell bleibt I/O-frei.
+   */
+  initialDeck?: Deck;
+  /** Wird bei Deck-Änderungen aufgerufen, damit der Host das Deck persistieren kann. */
+  onDeckChange?: (deck: Deck) => void;
+  /**
+   * Deck-Kapazitäts-**Erweiterungen** über die Basis 50 hinaus (GDD §7.2):
+   * Level-Ups oder In-App-Käufe. Default 0; der Host reicht den freigeschalteten
+   * Wert herein – die Deck-Logik bleibt unverändert (Erweiterungs-Hook).
+   */
+  deckExpansions?: number;
 }
 
 /**
@@ -79,6 +93,9 @@ export function SpotForgeApp({
   initialProgress = NEW_PLAYER,
   onProgressChange,
   draftStore,
+  initialDeck = EMPTY_DECK,
+  onDeckChange,
+  deckExpansions = 0,
 }: SpotForgeAppProps) {
   const [progress, setProgress] = useState<PlayerProgress>(initialProgress);
   const t = useText(definition, locale);
@@ -94,6 +111,33 @@ export function SpotForgeApp({
       onProgressChange?.(next);
     },
     [onProgressChange],
+  );
+
+  // Deck-Zustand (#17). Bewusst I/O-frei: der Host reicht `initialDeck` herein und
+  // erhält Änderungen über `onDeckChange`.
+  const [deck, setDeck] = useState<Deck>(initialDeck);
+  const capacity = deckCapacity(deckExpansions);
+
+  const updateDeck = useCallback(
+    (next: Deck) => {
+      setDeck(next);
+      onDeckChange?.(next);
+    },
+    [onDeckChange],
+  );
+
+  // Hält das Deck konsistent zur Sammlung: aus der Sammlung entfernte Karten fallen
+  // automatisch aus dem Deck. `pruneDeck` gibt dasselbe Deck zurück, wenn nichts zu
+  // tun ist – der Effekt löst dann keine Aktualisierung aus.
+  const ownedIds = useMemo(() => drafts.map((d) => d.id), [drafts]);
+  const prunedDeck = useMemo(() => pruneDeck(deck, ownedIds), [deck, ownedIds]);
+  useEffect(() => {
+    if (prunedDeck !== deck) updateDeck(prunedDeck);
+  }, [prunedDeck, deck, updateDeck]);
+
+  const toggleDeck = useCallback(
+    (id: string) => updateDeck(toggleInDeck(prunedDeck, id, capacity)),
+    [prunedDeck, capacity, updateDeck],
   );
 
   // FTUE abschließen: als gespielt markieren und auf mindestens Level 1 heben,
@@ -117,6 +161,9 @@ export function SpotForgeApp({
             drafts={drafts}
             onSaveDraft={saveDraft}
             onRemoveDraft={removeDraft}
+            deck={prunedDeck}
+            deckCapacity={capacity}
+            onToggleDeck={toggleDeck}
           />
         ) : (
           <FtueFlow t={t} onComplete={completeFtue} />

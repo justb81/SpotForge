@@ -57,6 +57,45 @@ export type { CollectionScreenProps } from "./screens/CollectionScreen";
 export { CardDetail } from "./screens/CardDetail";
 export type { CardDetailProps, CardDetailLabels } from "./screens/CardDetail";
 
+export { ProfileScreen } from "./screens/ProfileScreen";
+export type { ProfileScreenProps } from "./screens/ProfileScreen";
+
+export { DeckScreen } from "./screens/DeckScreen";
+export type { DeckScreenProps } from "./screens/DeckScreen";
+
+// Profil/Progression (GDD §7.1): Level-Grenzen, Titel-System, Sammlungs-Kennzahlen.
+export {
+  MAX_LEVEL,
+  MIN_LEVEL,
+  TITLE_BANDS,
+  clampLevel,
+  titleForLevel,
+  nextTitleBand,
+  collectionStats,
+} from "./progression/profile";
+export type { PlayerTitle, TitleBand, CollectionStats } from "./progression/profile";
+
+// Deck-Management (GDD §7.2): reine Logik (Kapazität, Mitgliedschaft, Auflösung).
+export {
+  DEFAULT_DECK_CAPACITY,
+  EMPTY_DECK,
+  deckCapacity,
+  deckSize,
+  isInDeck,
+  isDeckFull,
+  deckRemaining,
+  addToDeck,
+  removeFromDeck,
+  toggleInDeck,
+  pruneDeck,
+  deckCards,
+} from "./deck/deck";
+export type { Deck } from "./deck/deck";
+
+// Kartenbibliothek (GDD §7.2): Filter + Sortierung über der Sammlung.
+export { LIBRARY_SORTS, filterCards, sortCards, queryLibrary } from "./collection/library";
+export type { LibrarySort, LibraryFilter, LibraryQuery } from "./collection/library";
+
 // Lokale Draft-Sammlung (#102): reine Logik, Store-Abstraktion, On-Device-Adapter
 // (expo-file-system) und React-Anbindung. Der Host baut den persistenten,
 // appId-skopierten Store und reicht ihn an SpotForgeApp.

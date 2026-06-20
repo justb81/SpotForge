@@ -16,7 +16,9 @@ import type { TextResolver } from "../content/text";
 import type { PlayerProgress } from "../progression/disclosure";
 import { SpotScreen } from "../screens/SpotScreen";
 import { CollectionScreen } from "../screens/CollectionScreen";
+import { ProfileScreen } from "../screens/ProfileScreen";
 import { FeatureScreen } from "../screens/FeatureScreen";
+import type { Deck } from "../deck/deck";
 import { TabBar } from "./TabBar";
 import { resolveActiveTab, visibleTabs, type TabKey } from "./tabs";
 
@@ -36,6 +38,12 @@ export interface AppNavigatorProps {
   onSaveDraft: (draft: Card) => void;
   /** Entfernt einen Draft aus der Sammlung (#102). */
   onRemoveDraft: (id: string) => void;
+  /** Aktuelles Deck für den Deck-Builder (#17). */
+  deck: Deck;
+  /** Deck-Kapazität (Basis 50 + Erweiterungen, GDD §7.2). */
+  deckCapacity: number;
+  /** Schaltet eine Karte ins Deck bzw. heraus (#17). */
+  onToggleDeck: (id: string) => void;
 }
 
 export function AppNavigator({
@@ -49,6 +57,9 @@ export function AppNavigator({
   drafts,
   onSaveDraft,
   onRemoveDraft,
+  deck,
+  deckCapacity,
+  onToggleDeck,
 }: AppNavigatorProps) {
   const theme = useTheme();
   const [active, setActive] = useState<TabKey>("spot");
@@ -91,6 +102,9 @@ export function AppNavigator({
             attributes={attributes}
             drafts={drafts}
             onRemoveDraft={onRemoveDraft}
+            deck={deck}
+            deckCapacity={deckCapacity}
+            onToggleDeck={onToggleDeck}
           />
         );
       case "battle":
@@ -98,7 +112,7 @@ export function AppNavigator({
       case "trade":
         return <FeatureScreen t={t} titleKey="trade.title" bodyKey="trade.empty" icon="⇄" />;
       case "profile":
-        return <FeatureScreen t={t} titleKey="profile.title" bodyKey="profile.empty" icon="◍" />;
+        return <ProfileScreen t={t} level={progress.level} cards={drafts} />;
     }
   }
 }

@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
-import { DEFAULT_LOCALE, resolveFeatures } from "@spotforge/app-config";
+import { DEFAULT_LOCALE, resolveAutoSpot, resolveFeatures } from "@spotforge/app-config";
 import {
   formatCascadeTimings,
   type CascadeClassifier,
@@ -10,13 +10,17 @@ import {
 import type { AttributeDefinition, Card } from "@spotforge/game-core";
 import { useTheme } from "@spotforge/ui";
 import { useText } from "../content/text";
-import { SpotCamera } from "../camera/SpotCamera";
+import { SpotCamera, type SpotCameraHandle } from "../camera/SpotCamera";
 import { pickImageFromLibrary } from "../camera/pickImage";
 import { DraftPanel } from "../draft/DraftPanel";
 import { UnrecognizedPanel } from "./UnrecognizedPanel";
 import { RecognitionPicker } from "./RecognitionPicker";
+import { AutoSpotCoachmark } from "./AutoSpotCoachmark";
 import { createSpotter } from "../spotting/createSpotter";
+import { useAutoSpot } from "../spotting/useAutoSpot";
+import { resolveAutoSpotInterval } from "../spotting/autoSpot";
 import { buildManualDraft } from "../draft/manual-draft";
+import { DEFAULT_PREFERENCES, type Preferences } from "../preferences/preferences";
 
 export interface SpotScreenProps {
   /** Aktive Variante – liefert Texte und Guardrails (das Theme kommt aus dem ThemeProvider). */
@@ -34,6 +38,17 @@ export interface SpotScreenProps {
    * Ohne Handler erscheint kein Speichern-Button.
    */
   onSaveDraft?: (draft: Card) => void;
+  /**
+   * Nutzer-Einstellungen – steuern den **Auto-Spot** (#85): ob er aktiv ist
+   * ({@link Preferences.autoSpotEnabled}), das Intervall-Override und ob der
+   * Gesten-Coachmark schon gezeigt wurde. Default: {@link DEFAULT_PREFERENCES}.
+   */
+  preferences?: Preferences;
+  /**
+   * Persistiert Einstellungs-Änderungen (Auto-Toggle per Geste, „Coachmark gesehen").
+   * Ohne Handler bleibt Auto-Spot nur lokal umschaltbar (kein Persistieren).
+   */
+  onPreferencesChange?: (preferences: Preferences) => void;
 }
 
 type Mode = "capturing" | "processing" | "result";
@@ -54,6 +69,8 @@ export function SpotScreen({
   spottedBy,
   cascade,
   onSaveDraft,
+  preferences = DEFAULT_PREFERENCES,
+  onPreferencesChange,
 }: SpotScreenProps) {
   const { identity } = definition;
   const theme = useTheme();
@@ -63,8 +80,9 @@ export function SpotScreen({
 
   // Optionaler Galerie-Import (AppDefinition `features.imageImport`): blendet
   // neben der Kamera einen Button ein, der ein bestehendes Bild durch dieselbe
-  // Spot-Kette schickt – erleichtert das Testen ohne frisches Foto.
-  const { imageImport: canImportImage } = resolveFeatures(definition);
+  // Spot-Kette schickt – erleichtert das Testen ohne frisches Foto. `autoSpot`
+  // (#85) schaltet den intervallgesteuerten Auto-Modus frei.
+  const { imageImport: canImportImage, autoSpot: autoSpotAvailable } = resolveFeatures(definition);
 
   const spotter = useMemo(
     () => (cascade ? createSpotter(definition, cascade, { locale }) : undefined),
@@ -84,6 +102,62 @@ export function SpotScreen({
     setManualMode(false);
     setError(null);
   }, []);
+
+  // --- Auto-Spot (#85) -------------------------------------------------------
+  // Aktiv nur, wenn die Variante das Feature freischaltet UND der Nutzer ihn
+  // umgeschaltet hat. Der Loop selbst läuft, solange die Kamera sichtbar ist.
+  const cameraRef = useRef<SpotCameraHandle>(null);
+  const autoActive = autoSpotAvailable && preferences.autoSpotEnabled;
+  const { autoFireMinConfidence } = resolveAutoSpot(definition);
+  const autoIntervalMs = resolveAutoSpotInterval(definition, preferences);
+
+  // Umschalten (Geste am Auslöser oder Settings) persistiert die Wahl.
+  const setAutoActive = useCallback(
+    (on: boolean) => {
+      onPreferencesChange?.({ ...preferences, autoSpotEnabled: on });
+    },
+    [preferences, onPreferencesChange],
+  );
+
+  // Treffer im Auto-Modus: direkt mit dem fertigen Ergebnis in den Result-Flow
+  // (RecognitionPicker / unrecognized), ohne erneute Klassifikation.
+  const handleAutoFire = useCallback(
+    (uri: string, spotResult: SpotResult) => {
+      reset();
+      setPhotoUri(uri);
+      setResult(spotResult);
+      setMode("result");
+    },
+    [reset],
+  );
+
+  // Stille Aufnahme über die Kamera-Ref (kein Auslöse-Ton/keine Animation).
+  const autoCapture = useCallback(
+    () => cameraRef.current?.captureSilently() ?? Promise.resolve(null),
+    [],
+  );
+  const autoClassify = useCallback(
+    (uri: string): Promise<SpotResult> =>
+      spotter ? spotter({ imageUri: uri, spottedBy }) : Promise.reject(new Error("spotter")),
+    [spotter, spottedBy],
+  );
+
+  useAutoSpot({
+    active: mode === "capturing" && autoActive && spotter !== undefined,
+    intervalMs: autoIntervalMs,
+    autoFireMinConfidence,
+    capture: autoCapture,
+    classify: autoClassify,
+    onFire: handleAutoFire,
+  });
+
+  // Einmaliger Coachmark für die versteckte Geste (nur bei aktivem Feature, solange
+  // die Kamera sichtbar ist und der Hinweis noch nicht gesehen wurde).
+  const showCoachmark =
+    autoSpotAvailable && mode === "capturing" && !preferences.autoSpotCoachmarkSeen;
+  const dismissCoachmark = useCallback(() => {
+    onPreferencesChange?.({ ...preferences, autoSpotCoachmarkSeen: true });
+  }, [preferences, onPreferencesChange]);
 
   const handleCapture = useCallback(
     async (uri: string) => {
@@ -164,18 +238,38 @@ export function SpotScreen({
         ]}
       >
         {mode === "capturing" ? (
-          <SpotCamera
-            theme={theme}
-            onCapture={handleCapture}
-            // Galerie-Import unten links – nur wenn die Variante das Feature aktiviert.
-            onPickImage={canImportImage ? handlePickImage : undefined}
-            labels={{
-              shutter: text("spot.shutter"),
-              permissionPrompt: text("spot.permissionPrompt"),
-              permissionCta: text("spot.permissionCta"),
-              importImage: text("spot.importImage"),
-            }}
-          />
+          <>
+            <SpotCamera
+              ref={cameraRef}
+              theme={theme}
+              onCapture={handleCapture}
+              // Galerie-Import unten links – nur wenn die Variante das Feature aktiviert.
+              onPickImage={canImportImage ? handlePickImage : undefined}
+              autoAvailable={autoSpotAvailable}
+              autoActive={autoActive}
+              onAutoActiveChange={setAutoActive}
+              labels={{
+                shutter: text("spot.shutter"),
+                permissionPrompt: text("spot.permissionPrompt"),
+                permissionCta: text("spot.permissionCta"),
+                importImage: text("spot.importImage"),
+                auto: text("spot.auto"),
+                autoActivate: text("spot.auto.activate"),
+                autoActive: text("spot.auto.active"),
+                autoDeactivate: text("spot.auto.deactivate"),
+              }}
+            />
+            {showCoachmark ? (
+              <AutoSpotCoachmark
+                onDismiss={dismissCoachmark}
+                labels={{
+                  title: text("spot.auto.coachmark.title"),
+                  body: text("spot.auto.coachmark.body"),
+                  dismiss: text("spot.auto.coachmark.dismiss"),
+                }}
+              />
+            ) : null}
+          </>
         ) : (
           <>
             {/* Aufgenommenes Foto bleibt als Hintergrund sichtbar (Verarbeitung +

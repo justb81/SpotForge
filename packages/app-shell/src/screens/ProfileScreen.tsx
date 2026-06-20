@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import type { AppDefinition } from "@spotforge/app-config";
 import { RARITY_ORDER, type Card } from "@spotforge/game-core";
 import { rarityStyle, useTheme } from "@spotforge/ui";
 import type { TextResolver } from "../content/text";
@@ -14,6 +15,8 @@ import { SettingsScreen } from "./SettingsScreen";
 
 export interface ProfileScreenProps {
   t: TextResolver;
+  /** Aktive Variante – liefert die Auto-Spot-Verfügbarkeit/Defaults für die Einstellungen (#85). */
+  definition: AppDefinition;
   /** Aktuelles Spieler-Level (wird auf 1–100 geklemmt angezeigt). */
   level: number;
   /** Die Sammlung des Spielers (Drafts + geforgte Karten) für die Kennzahlen. */
@@ -26,6 +29,7 @@ export interface ProfileScreenProps {
 
 export function ProfileScreen({
   t,
+  definition,
   level,
   cards,
   preferences,
@@ -44,6 +48,7 @@ export function ProfileScreen({
     return (
       <SettingsScreen
         t={t}
+        definition={definition}
         preferences={preferences}
         onPreferencesChange={onPreferencesChange}
         onBack={() => setShowSettings(false)}

@@ -134,7 +134,25 @@ export { useDraftCollection } from "./collection/useDraftCollection";
 export type { DraftCollection } from "./collection/useDraftCollection";
 
 export { SpotCamera } from "./camera/SpotCamera";
-export type { SpotCameraProps, SpotCameraLabels } from "./camera/SpotCamera";
+export type { SpotCameraProps, SpotCameraLabels, SpotCameraHandle } from "./camera/SpotCamera";
+
+// Auto-Spot (#85): reine Loop-Logik + React-/AppState-Verdrahtung. Der getaktete
+// Auslöser wiederholt den normalen Foto→Draft-Flow (kein Frame-Processor).
+export {
+  createAutoSpotRunner,
+  evaluateAutoFire,
+  resolveAutoSpotInterval,
+} from "./spotting/autoSpot";
+export type {
+  AutoSpotRunner,
+  AutoSpotRunnerDeps,
+  AutoSpotScheduler,
+  AutoSpotState,
+} from "./spotting/autoSpot";
+export { useAutoSpot } from "./spotting/useAutoSpot";
+export type { UseAutoSpotParams } from "./spotting/useAutoSpot";
+export { AutoSpotCoachmark } from "./screens/AutoSpotCoachmark";
+export type { AutoSpotCoachmarkProps, AutoSpotCoachmarkLabels } from "./screens/AutoSpotCoachmark";
 
 // Galerie-Import (optionales Feature `features.imageImport`): liefert eine
 // lokale Bild-URI für dieselbe Spot-Kette wie das Kamera-Foto.

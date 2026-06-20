@@ -62,6 +62,12 @@ spot(photo, { gate, guardrails })
   kompakte On-Screen-Zeile für die Geräte-Verifikation (kein Profiler im
   Standalone-Release). Protokoll + Budgets:
   [`docs/verification/ai-cascade-device-verification.md`](../../docs/verification/ai-cascade-device-verification.md).
+- **Gate-Masse (`SpotResult.gateMass`, #85):** jedes `SpotResult` führt die
+  summierte Gate-Masse (`P(im Scope)`) dieses Schusses mit — unabhängig von der
+  Annahme-Entscheidung. Der **Auto-Spot** (app-shell) nutzt sie als single-frame-
+  Signal für seine eigene, **strengere** `autoFireMinConfidence`: die Pipeline darf
+  bei der manuellen Schwelle akzeptieren, der getaktete Auto-Modus „feuert" aber
+  erst über der Auto-Schwelle.
 - **Ein generisches Gate für ganz SpotForge (White-Label):** dasselbe breite
   fp32-Modell (EfficientNet-B0/ImageNet) ist das Gate für **alle** Apps; jede App
   liefert nur ihre Allowlist (Auto-App → Fahrzeug-Synsets, Tier-App → Tier-Synsets).

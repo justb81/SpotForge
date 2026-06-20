@@ -55,6 +55,15 @@ export interface AppFeatures {
    * Upload: das gewählte Bild bleibt lokal und wird nur on-device klassifiziert.
    */
   imageImport?: boolean;
+  /**
+   * Master-Schalter für den **Auto-Spot**-Modus (#85, ADR 0010): statt jedes Mal
+   * manuell auszulösen, nimmt die App in einem festen Intervall selbst ein Foto
+   * auf und schickt es durch die normale Spot→Draft-Pipeline. Standard: aus –
+   * der manuelle Tap-Auslöser bleibt der Default. Ist der Schalter aus, erscheinen
+   * weder die Hold→Swipe-Geste noch der Settings-Schalter. Die Detail-Parameter
+   * (Intervall, Auto-Feuer-Schwelle) liefert {@link CategoryGate.auto}.
+   */
+  autoSpot?: boolean;
 }
 
 /**
@@ -65,6 +74,7 @@ export interface AppFeatures {
 export function resolveFeatures(definition: AppDefinition): Required<AppFeatures> {
   return {
     imageImport: definition.features?.imageImport ?? false,
+    autoSpot: definition.features?.autoSpot ?? false,
   };
 }
 
@@ -120,6 +130,79 @@ export interface CategoryGuardrails {
 export interface CategoryGate {
   /** Erlaubte rohe Gate-Labels (mind. eines), exakt im Vokabular des Gate-Modells. */
   allow: string[];
+  /**
+   * Parameter des **Auto-Spot**-Modus (#85). Nur relevant, wenn die Variante das
+   * Feature aktiviert ({@link AppFeatures.autoSpot}); fehlt das Feld, gelten die
+   * {@link DEFAULT_AUTO_SPOT}-Werte (siehe {@link resolveAutoSpot}).
+   */
+  auto?: AutoSpotConfig;
+}
+
+/**
+ * Defaults des **Auto-Spot**-Loops (#85). Bewusst getaktet bei ~0,5 fps statt als
+ * kontinuierlicher Frame-Processor (vermeidet den nativen Bridgeless-Pfad, vgl.
+ * „Gelernte Fallstricke" in CLAUDE.md). Die Auto-Feuer-Schwelle ist **strenger**
+ * als die manuelle {@link CategoryGuardrails.minConfidence}: beim manuellen Tap
+ * zielt der Nutzer bewusst, im Auto-Modus schwenkt die Kamera über viele Szenen
+ * und darf nicht auf ein flüchtiges auto-ähnliches Etwas fehlauslösen.
+ */
+export interface AutoSpotConfig {
+  /**
+   * Intervall zwischen zwei Auto-Schüssen in Millisekunden (per User-Setting
+   * überschreibbar). Untergrenze über die Back-Pressure: dauert ein
+   * Klassifikations-Lauf länger, läuft Auto-Spot „so schnell wie das Gerät kann".
+   */
+  intervalMs: number;
+  /**
+   * **Strengere** Auto-Feuer-Schwelle (single-frame) auf die summierte Gate-Masse
+   * (`P(im Scope)`), Default höher als {@link CategoryGuardrails.minConfidence}.
+   * Kalibrierbar über `tools/export-model/prescreen.py`.
+   */
+  autoFireMinConfidence: number;
+}
+
+/**
+ * Default-Parameter des Auto-Spot-Loops (#85), genutzt von {@link resolveAutoSpot},
+ * wenn eine Variante {@link CategoryGate.auto} nicht (vollständig) setzt.
+ */
+export const DEFAULT_AUTO_SPOT: AutoSpotConfig = {
+  intervalMs: 2000,
+  autoFireMinConfidence: 0.6,
+};
+
+/**
+ * Erlaubter Bereich für das (per User-Setting überschreibbare) Auto-Spot-Intervall
+ * in Millisekunden. Untergrenze hält den Dauerbetrieb akku-/thermik-verträglich
+ * (#63), Obergrenze verhindert ein gefühlt „totes" Auto.
+ */
+export const AUTO_SPOT_INTERVAL_MIN_MS = 1000;
+export const AUTO_SPOT_INTERVAL_MAX_MS = 10000;
+
+/**
+ * Löst die Auto-Spot-Parameter einer Definition auf konkrete Werte auf:
+ * {@link CategoryGate.auto} überschreibt feldweise die {@link DEFAULT_AUTO_SPOT}.
+ * Einzige Stelle der Auto-Defaults – Konsumenten (App-Shell-Loop, Settings) fragen
+ * nur das Ergebnis ab. Sagt **nichts** darüber aus, ob das Feature aktiv ist
+ * (das entscheidet {@link AppFeatures.autoSpot} über {@link resolveFeatures}).
+ */
+export function resolveAutoSpot(definition: AppDefinition): AutoSpotConfig {
+  const auto = definition.category.gate.auto;
+  return {
+    intervalMs: auto?.intervalMs ?? DEFAULT_AUTO_SPOT.intervalMs,
+    autoFireMinConfidence: auto?.autoFireMinConfidence ?? DEFAULT_AUTO_SPOT.autoFireMinConfidence,
+  };
+}
+
+/**
+ * Klemmt ein (z.B. aus einem User-Setting stammendes) Auto-Spot-Intervall auf den
+ * erlaubten Bereich {@link AUTO_SPOT_INTERVAL_MIN_MS}…{@link AUTO_SPOT_INTERVAL_MAX_MS}.
+ */
+export function clampAutoSpotInterval(intervalMs: number): number {
+  if (!Number.isFinite(intervalMs)) return DEFAULT_AUTO_SPOT.intervalMs;
+  return Math.min(
+    AUTO_SPOT_INTERVAL_MAX_MS,
+    Math.max(AUTO_SPOT_INTERVAL_MIN_MS, Math.round(intervalMs)),
+  );
 }
 
 export interface AiPrompts {

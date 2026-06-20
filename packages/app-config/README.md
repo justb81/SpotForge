@@ -30,10 +30,30 @@ konkreten Werte (inkl. Defaults) auf. Aktuell:
 | Schalter      | Wirkung                                                               |
 |---------------|-----------------------------------------------------------------------|
 | `imageImport` | Zeigt neben der Kamera einen Button, der ein **bestehendes Bild aus der Galerie** durch dieselbe Spot-Kette (Gate → Feinmodell) schickt. Test-/QA-Komfort; kein Upload (rein on-device). |
+| `autoSpot`    | Schaltet den **Auto-Spot**-Modus frei (#85): ein intervallgesteuerter Auslöser, der den normalen Foto→Draft-Flow getaktet wiederholt („Point & Forge"). Opt-in; der manuelle Tap bleibt Default (ADR 0010). Parameter unter `category.gate.auto`. |
 
 ```ts
 features: {
   imageImport: true,
+  autoSpot: true,
+},
+```
+
+### Auto-Spot-Parameter (`category.gate.auto`)
+
+Bei aktivem `features.autoSpot` liefert `category.gate.auto` die getakteten
+Parameter; `resolveAutoSpot(definition)` löst sie gegen `DEFAULT_AUTO_SPOT`
+(2000 ms / 0.6) auf. Die **`autoFireMinConfidence`** ist bewusst **strenger** als
+die manuelle `guardrails.minConfidence`: beim Schwenken über viele Szenen soll
+nichts auf ein flüchtiges auto-ähnliches Etwas fehlauslösen. Das Intervall ist per
+User-Setting überschreibbar (`clampAutoSpotInterval` klemmt auf 1000…10000 ms).
+
+```ts
+category: {
+  gate: {
+    allow: ["sports car", "convertible" /* … */],
+    auto: { intervalMs: 2000, autoFireMinConfidence: 0.6 },
+  },
 },
 ```
 

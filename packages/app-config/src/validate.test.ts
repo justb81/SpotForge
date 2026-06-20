@@ -5,7 +5,12 @@ import type { AppDefinition } from "./app-definition";
 import type { Branding } from "./branding";
 import {
   AppDefinitionError,
+  AUTO_SPOT_INTERVAL_MAX_MS,
+  AUTO_SPOT_INTERVAL_MIN_MS,
   assertAppDefinition,
+  clampAutoSpotInterval,
+  DEFAULT_AUTO_SPOT,
+  resolveAutoSpot,
   resolveFeatures,
   validateAppDefinition,
   validateBranding,
@@ -116,17 +121,66 @@ describe("validateAppDefinition", () => {
     expect(result.valid).toBe(false);
     expect(issuePaths(result)).toContain("features.imageImport");
   });
+
+  it("akzeptiert die optionalen Auto-Spot-Parameter (#85)", () => {
+    const def = cloneCars();
+    def.category.gate.auto = { intervalMs: 2500, autoFireMinConfidence: 0.7 };
+    def.features = { autoSpot: true };
+    expect(validateAppDefinition(def).valid).toBe(true);
+  });
+
+  it("lehnt eine Auto-Feuer-Schwelle außerhalb 0..1 ab (#85)", () => {
+    const bad = cloneCars();
+    bad.category.gate.auto = { intervalMs: 2000, autoFireMinConfidence: 1.4 };
+    const result = validateAppDefinition(bad);
+    expect(result.valid).toBe(false);
+    expect(issuePaths(result)).toContain("category.gate.auto.autoFireMinConfidence");
+  });
+
+  it("lehnt ein nicht-positives Auto-Spot-Intervall ab (#85)", () => {
+    const bad = cloneCars();
+    bad.category.gate.auto = { intervalMs: 0, autoFireMinConfidence: 0.6 };
+    const result = validateAppDefinition(bad);
+    expect(result.valid).toBe(false);
+    expect(issuePaths(result)).toContain("category.gate.auto.intervalMs");
+  });
 });
 
 describe("resolveFeatures", () => {
-  it("defaultet imageImport auf false, wenn nicht gesetzt", () => {
+  it("defaultet imageImport/autoSpot auf false, wenn nicht gesetzt", () => {
     const def = cloneCars();
     delete def.features;
-    expect(resolveFeatures(def).imageImport).toBe(false);
+    expect(resolveFeatures(def)).toEqual({ imageImport: false, autoSpot: false });
   });
 
   it("übernimmt einen gesetzten Schalter (cars aktiviert imageImport)", () => {
     expect(resolveFeatures(carsDefinition).imageImport).toBe(true);
+  });
+});
+
+describe("resolveAutoSpot (#85)", () => {
+  it("fällt feldweise auf die Defaults zurück, wenn gate.auto fehlt", () => {
+    const def = cloneCars();
+    delete def.category.gate.auto;
+    expect(resolveAutoSpot(def)).toEqual(DEFAULT_AUTO_SPOT);
+  });
+
+  it("überschreibt die Defaults mit den Varianten-Werten", () => {
+    const def = cloneCars();
+    def.category.gate.auto = { intervalMs: 3000, autoFireMinConfidence: 0.75 };
+    expect(resolveAutoSpot(def)).toEqual({ intervalMs: 3000, autoFireMinConfidence: 0.75 });
+  });
+});
+
+describe("clampAutoSpotInterval (#85)", () => {
+  it("klemmt auf den erlaubten Bereich und rundet", () => {
+    expect(clampAutoSpotInterval(200)).toBe(AUTO_SPOT_INTERVAL_MIN_MS);
+    expect(clampAutoSpotInterval(99999)).toBe(AUTO_SPOT_INTERVAL_MAX_MS);
+    expect(clampAutoSpotInterval(2499.6)).toBe(2500);
+  });
+
+  it("fällt bei nicht-endlichen Werten auf das Default-Intervall zurück", () => {
+    expect(clampAutoSpotInterval(Number.NaN)).toBe(DEFAULT_AUTO_SPOT.intervalMs);
   });
 });
 

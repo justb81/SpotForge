@@ -85,6 +85,15 @@ export default defineApp({
         "grille",
         "car mirror",
       ],
+      // Auto-Spot (#85): getakteter Auslöser (~0,5 fps) statt Frame-Processor.
+      // Die Auto-Feuer-Schwelle ist bewusst strenger als die manuelle
+      // `guardrails.minConfidence` (0.35) – beim Schwenken über viele Szenen soll
+      // nichts auf ein flüchtiges auto-ähnliches Etwas fehlauslösen. Startwert;
+      // final kalibriert über tools/export-model/prescreen.py + Geräte-Test (#63).
+      auto: {
+        intervalMs: 2000,
+        autoFireMinConfidence: 0.6,
+      },
     },
   },
 
@@ -113,8 +122,11 @@ export default defineApp({
   // Galerie-Import aktiv (eigener Button neben der Kamera): ein vorhandenes Bild
   // durchläuft dieselbe Spot-Kette (Gate → Feinmodell). Erleichtert das Testen –
   // kein frisches Foto auf der Straße nötig. Kein Upload (rein on-device).
+  // Auto-Spot (#85): intervallgesteuerter Auslöser („Point & Forge") – opt-in,
+  // der manuelle Tap bleibt Default (ADR 0010). Parameter: category.gate.auto.
   features: {
     imageImport: true,
+    autoSpot: true,
   },
 
   // Theme & Assets: siehe ./branding.config.ts (ADR 0011).

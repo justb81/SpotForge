@@ -14,36 +14,80 @@ export interface Preferences {
    * den „Nein"-Pfad des Überspringen-Dialogs oder die Einstellungen im Profil.
    */
   skipTutorial: boolean;
+  /**
+   * Ob der **Auto-Spot**-Modus (#85) aktiv ist. Wird per Hold→Swipe-Geste am
+   * Auslöser **oder** über den Settings-Schalter (Fallback/Barrierefreiheit)
+   * umgeschaltet und überdauert die Sitzung. Greift nur, wenn die Variante das
+   * Feature überhaupt aktiviert ({@link @spotforge/app-config!AppFeatures.autoSpot}).
+   */
+  autoSpotEnabled: boolean;
+  /**
+   * User-Override des Auto-Spot-Intervalls in **Millisekunden**. `undefined` ⇒
+   * der Varianten-Default ({@link @spotforge/app-config!resolveAutoSpot}) gilt.
+   * Wird beim Anwenden auf den erlaubten Bereich geklemmt (`clampAutoSpotInterval`).
+   */
+  autoSpotIntervalMs?: number;
+  /**
+   * Ob der einmalige Onboarding-Coachmark für die Auto-Spot-Geste schon gezeigt
+   * wurde. Ohne diesen Hinweis ist der versteckte Toggle praktisch unauffindbar
+   * (#85); nach dem ersten Mal bleibt er aus.
+   */
+  autoSpotCoachmarkSeen: boolean;
 }
 
-/** Ausgangszustand: Tutorial wird beim Start gezeigt. */
-export const DEFAULT_PREFERENCES: Preferences = { skipTutorial: false };
+/** Ausgangszustand: Tutorial sichtbar, Auto-Spot aus, Coachmark noch ungesehen. */
+export const DEFAULT_PREFERENCES: Preferences = {
+  skipTutorial: false,
+  autoSpotEnabled: false,
+  autoSpotCoachmarkSeen: false,
+};
 
 /**
- * Serialisiert die Einstellungen für die Persistenz (vom Host geschrieben).
+ * Serialisiert die Einstellungen für die Persistenz (vom Host geschrieben). Das
+ * optionale Intervall wird nur geschrieben, wenn der Nutzer es überschrieben hat.
  */
 export function serializePreferences(preferences: Preferences): string {
-  return JSON.stringify({ skipTutorial: preferences.skipTutorial });
+  return JSON.stringify({
+    skipTutorial: preferences.skipTutorial,
+    autoSpotEnabled: preferences.autoSpotEnabled,
+    autoSpotCoachmarkSeen: preferences.autoSpotCoachmarkSeen,
+    ...(preferences.autoSpotIntervalMs !== undefined
+      ? { autoSpotIntervalMs: preferences.autoSpotIntervalMs }
+      : {}),
+  });
 }
 
 /**
  * Liest Einstellungen aus dem gespeicherten JSON. Tolerant: fehlt die Datei
- * (`null`) oder ist sie beschädigt/unvollständig, gelten die {@link DEFAULT_PREFERENCES}
- * – ein kaputter Eintrag darf den App-Start nie blockieren.
+ * (`null`) oder ist sie beschädigt/unvollständig, gelten feldweise die
+ * {@link DEFAULT_PREFERENCES} – ein kaputter Eintrag darf den App-Start nie
+ * blockieren.
  */
 export function parsePreferences(raw: string | null): Preferences {
   if (raw === null) return { ...DEFAULT_PREFERENCES };
   try {
     const parsed = JSON.parse(raw) as Partial<Preferences> | null;
+    const interval = parsed?.autoSpotIntervalMs;
     return {
-      skipTutorial:
-        typeof parsed?.skipTutorial === "boolean"
-          ? parsed.skipTutorial
-          : DEFAULT_PREFERENCES.skipTutorial,
+      skipTutorial: bool(parsed?.skipTutorial, DEFAULT_PREFERENCES.skipTutorial),
+      autoSpotEnabled: bool(parsed?.autoSpotEnabled, DEFAULT_PREFERENCES.autoSpotEnabled),
+      autoSpotCoachmarkSeen: bool(
+        parsed?.autoSpotCoachmarkSeen,
+        DEFAULT_PREFERENCES.autoSpotCoachmarkSeen,
+      ),
+      // Nur ein endlicher, positiver Wert gilt als Override; sonst Varianten-Default.
+      ...(typeof interval === "number" && Number.isFinite(interval) && interval > 0
+        ? { autoSpotIntervalMs: interval }
+        : {}),
     };
   } catch {
     return { ...DEFAULT_PREFERENCES };
   }
+}
+
+/** Liest einen booleschen Wert tolerant (Nicht-Boolean ⇒ Fallback). */
+function bool(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
 }
 
 /**

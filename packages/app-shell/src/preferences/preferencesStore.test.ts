@@ -14,8 +14,9 @@ describe("PreferencesStore", () => {
 
   it("persistiert gespeicherte Einstellungen über das nächste Laden", async () => {
     const store = createInMemoryPreferencesStore();
-    await store.save({ skipTutorial: true });
-    expect(await store.load()).toEqual({ skipTutorial: true });
+    const prefs = { ...DEFAULT_PREFERENCES, skipTutorial: true };
+    await store.save(prefs);
+    expect(await store.load()).toEqual(prefs);
   });
 
   it("schreibt durch die injizierte Persistenz (ein einzelner Blob)", async () => {
@@ -30,9 +31,10 @@ describe("PreferencesStore", () => {
     };
     const store = createPreferencesStore(persistence);
 
-    await store.save({ skipTutorial: true });
+    const prefs = { ...DEFAULT_PREFERENCES, skipTutorial: true };
+    await store.save(prefs);
     expect(blob).not.toBeNull();
     // Ein zweiter, frischer Store über derselben Persistenz liest die Auswahl.
-    expect(await createPreferencesStore(persistence).load()).toEqual({ skipTutorial: true });
+    expect(await createPreferencesStore(persistence).load()).toEqual(prefs);
   });
 });

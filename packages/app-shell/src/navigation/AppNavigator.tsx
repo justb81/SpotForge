@@ -100,6 +100,8 @@ export function AppNavigator({
             spottedBy={spottedBy}
             cascade={cascade}
             onSaveDraft={onSaveDraft}
+            preferences={preferences}
+            onPreferencesChange={onPreferencesChange}
           />
         );
       case "collection":
@@ -122,6 +124,7 @@ export function AppNavigator({
         return (
           <ProfileScreen
             t={t}
+            definition={definition}
             level={progress.level}
             cards={drafts}
             preferences={preferences}

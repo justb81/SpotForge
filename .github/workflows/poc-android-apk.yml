@@ -70,7 +70,7 @@ jobs:
           java-version: "21"
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -94,10 +94,10 @@ jobs:
         working-directory: apps/mobile/android
         env:
           APP_VARIANT: ${{ env.VARIANT }}
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon -Dorg.gradle.daemon.performance.disable-logging=true
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.VARIANT }}-poc-apk
           path: apps/mobile/android/app/build/outputs/apk/release/*.apk

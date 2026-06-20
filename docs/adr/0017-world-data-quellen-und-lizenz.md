@@ -49,6 +49,26 @@ bestattete Fahrzeuge aus Wikidata" trägt **nicht**. Performance-Specs in breite
 Abdeckung liegen überwiegend in proprietären Spezialdatenbanken; frei und
 einheitlich lizenzierte, voll bestattete Korpora sind selten.
 
+### Ergänzende Quellen-Recherche (für die fehlenden Stats)
+
+Eine gezielte Suche nach frei lizenzierten Quellen für die in Wikidata fehlenden
+Felder ergab ein geteiltes Bild:
+
+- **`power` + `weight` sind lösbar (CC-BY):** Das EEA-Dataset *„Monitoring of CO₂
+  emissions from passenger cars"* (EU-Verordnung 2019/631) steht unter **CC-BY**
+  (freie Weitergabe inkl. kommerzieller Nutzung, nur Quellennennung – **nicht**
+  share-alike) und enthält für ~37 Mio. EU-Neuzulassungen (seit 2012) **Motorleistung
+  (kW)** und **Masse (kg)** nebst Hersteller/Make/Modell/Jahr. Zu aggregieren von der
+  Zulassungs-/Typgenehmigungsebene auf Modell/Generation. Kein `acceleration`,
+  `topSpeed`, `price`.
+- **`acceleration` + `topSpeed` + `price` bleiben die echte Lücke:** Keine breite,
+  *permissiv* lizenzierte Quelle gefunden. Vollständige Korpora (z. B.
+  vbalagovic/cars-dataset ~54k Varianten, automobile-catalog) sind **proprietär/
+  kostenpflichtig**; permissive Open-Datasets (UCI Automobile, CC-BY 4.0) sind winzig
+  (~205 Zeilen). **DBpedia/Wikipedia-Infoboxen** liefern diese Felder für populäre
+  Modelle, aber **CC-BY-SA** (viral). Kaggle-Sammlungen geben teils CC0/CC-BY an, sind
+  aber gescraped und in Herkunft/Korrektheit nicht belastbar.
+
 ## Entscheidung
 
 **1. Zwei-Schichten-Korpus statt einer Monoquelle.** Identität und Trumpf-Stats
@@ -69,10 +89,22 @@ Identitäts-Korpus. Die ~50k sind FTS-/Identitätsbreite; Stat-*Vollständigkeit
 zählt nur für spottbare Objekte (Labelsatz #9 ↔ Objekt-ID-Raum #72). Der
 Stat-Layer ist damit klein und hochwertig statt groß und löchrig.
 
-**4. Lizenz-Leitplanke = CC0 bevorzugt; CC-BY-SA bewusst und isoliert.** Bevorzugt
-werden gemeinfreie/CC0-Quellen. Wo CC0 die Trumpf-Stats nicht hergibt, ist eine
-**kuratierte CC0-Ergänzung** der Vorzug. **DBpedia/Wikipedia-Infoboxen
-(CC-BY-SA)** sind zulässig, dann aber **bewusst**: Share-Alike ist viral und würde
+Der Stat-Layer wird nach Feld-Verfügbarkeit gespeist:
+
+- **`power` + `weight` aus EEA (CC-BY):** breite, frei lizenzierte Abdeckung über die
+  EU-Zulassungsdaten (kW→PS, Aggregation auf Modell/Generation).
+- **`acceleration` + `topSpeed` + `price`:** keine permissive Breitenquelle →
+  **kuratiert (CC0)** für den begrenzten Labelsatz (Vorzug) oder **DBpedia/Wikipedia
+  (CC-BY-SA)** maschinell, dann mit Artefakt-Kennzeichnung (siehe Leitplanke 4).
+- **`year` + Identität:** Wikidata (CC0), ergänzt durch EEA.
+
+**4. Lizenz-Leitplanke = CC0 bevorzugt; CC-BY zulässig; CC-BY-SA bewusst und
+isoliert.** Bevorzugt werden gemeinfreie/CC0-Quellen. **CC-BY** (Attribution ohne
+Share-Alike, z. B. EEA) ist unbedenklich bündelbar – es genügt der Quellenvermerk in
+der `LICENSE`/`PROVENANCE`-Datei, ohne das Artefakt insgesamt zu „infizieren". Wo CC0
+die Trumpf-Stats nicht hergibt, ist eine **kuratierte CC0-Ergänzung** der Vorzug.
+**DBpedia/Wikipedia-Infoboxen (CC-BY-SA)** sind zulässig, dann aber **bewusst**:
+Share-Alike ist viral und würde
 das **Daten-Artefakt** (Seeds/`.db`) unter CC-BY-SA + Attribution stellen (es
 infiziert die App-*Daten*, **nicht** den App-*Code*). Diese Entscheidung wird je
 Datenfeld dokumentiert; CC0- und CC-BY-SA-Herkunft werden **nicht vermischt**,
@@ -116,23 +148,28 @@ liegt dem Daten-Artefakt bei.
 
 ## MVP-Scope
 
-CarForge: Identitäts-Layer aus Wikidata (CC0) für den Objekt-ID-Raum; voll
-bestatteter Stat-Layer (CC0-kuratiert bevorzugt) **nur** für den Labelsatz des
-ersten Fein-Modells (#9). Breite Identitätsabdeckung (FTS) + schmale, vollständige
-Trumpf-Stats genügen für Spot (Draft-Vorbefüllung, #10) und Forge (#76).
+CarForge: Identitäts-Layer aus Wikidata (CC0) für den Objekt-ID-Raum; `power`/`weight`
+aus EEA (CC-BY); `acceleration`/`topSpeed`/`price` kuratiert (CC0 bevorzugt) **nur**
+für den Labelsatz des ersten Fein-Modells (#9). Breite Identitätsabdeckung (FTS) +
+schmale, vollständige Trumpf-Stats genügen für Spot (Draft-Vorbefüllung, #10) und
+Forge (#76).
 
 ## Offene Punkte / Folgeentscheidungen
 
-- Endgültige Wahl der Stat-Quelle für den Labelsatz: kuratiert-CC0 vs.
-  DBpedia/Infoboxen (CC-BY-SA, mit Artefakt-Kennzeichnung).
-- Exakte Wikidata-Property-Auswahl für `power` (kW vs. PS) und Behandlung von
-  `acceleration` (in Wikidata faktisch nicht vorhanden → Stat-Layer-Pflichtfeld).
+- Endgültige Wahl der Stat-Quelle für `acceleration`/`topSpeed`/`price`: kuratiert-CC0
+  vs. DBpedia/Infoboxen (CC-BY-SA, mit Artefakt-Kennzeichnung). `power`/`weight` sind
+  über EEA (CC-BY) abgedeckt.
+- EEA-Aggregation: Mapping der Zulassungs-/Typgenehmigungszeilen auf Modell/Generation
+  (Dedup, kW→PS) und Verknüpfung mit dem Objekt-ID-Raum (#72).
 - vPIC ja/nein für MVP (US-Lastigkeit vs. Normalisierungsnutzen).
 
 ## Alternativen
 
 - **Reine Wikidata-CC0-Monoquelle.** Verworfen: Trumpf-Stats < 5 % Coverage – die
   Forge/Seltenheit hätten keine Datenbasis.
+- **Proprietäre Spezial-Korpora** (z. B. vbalagovic/cars-dataset, automobile-catalog)
+  mit vollständigen Stats. Verworfen: kostenpflichtig/nicht weitergebbar – mit der
+  Bündelung in der App (Lizenz-Leitplanke) unvereinbar.
 - **DBpedia/Wikipedia (CC-BY-SA) als Hauptquelle.** Verworfen als *Default*: mehr
   Specs, aber virales Share-Alike auf dem gesamten Daten-Artefakt; nur als bewusste,
   gekennzeichnete Stat-Layer-Option zulässig.

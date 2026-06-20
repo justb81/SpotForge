@@ -1,0 +1,117 @@
+import { PHOTO_UPLOAD_CONSTRAINTS, type PhotoRejectionReason } from "@spotforge/api-contract";
+
+// **Server-seitige Absicherung** der Foto-Sanitisierung (#89, defense-in-depth,
+// Goldene Regel 5). Der Client sanitisiert on-device (`@spotforge/ai-engine`:
+// EXIF/GPS entfernen + re-enkodieren, Blur); der Server **vertraut dem nicht
+// blind**, sondern prüft die Rohbytes vor dem Speichern:
+//
+//  - Es muss ein JPEG sein (SOI-Magie),
+//  - es darf **keine** Restmetadaten enthalten (EXIF/XMP via APP1, sonstige APPn,
+//    Kommentare) – ein sauber re-enkodiertes Bild hat höchstens JFIF (APP0),
+//  - Kantenlänge und Bytes innerhalb der geteilten Constraints.
+//
+// Nicht-konforme Uploads werden abgewiesen (kein stillschweigendes Akzeptieren
+// eines Rohbilds). Reine, I/O-freie Logik → unter vitest direkt testbar.
+
+/** Ergebnis der Prüfung: akzeptiert (mit Maßen) oder abgelehnt (mit Grund). */
+export type PhotoValidationResult =
+  | { ok: true; width: number; height: number; bytes: number }
+  | { ok: false; reason: PhotoRejectionReason };
+
+// JPEG-Marker (jeweils das Byte nach 0xFF).
+const SOI = 0xd8; // Start of Image
+const EOI = 0xd9; // End of Image
+const SOS = 0xda; // Start of Scan (danach folgen entropie-kodierte Bilddaten)
+const APP0 = 0xe0; // JFIF – einziges erlaubtes APP-Segment (kein personenbezogener Inhalt)
+const APP1 = 0xe1; // EXIF/XMP – hier lebt GPS & Co. → immer ablehnen
+const APP15 = 0xef;
+const COM = 0xfe; // Kommentar-Segment → ablehnen
+const TEM = 0x01; // standalone, ohne Länge
+
+/** Liest ein Big-Endian-uint16 ab `idx`; `undefined`, wenn die Bytes fehlen. */
+function u16At(bytes: Uint8Array, idx: number): number | undefined {
+  const hi = bytes[idx];
+  const lo = bytes[idx + 1];
+  if (hi === undefined || lo === undefined) return undefined;
+  return (hi << 8) | lo;
+}
+
+/** Standalone-Marker ohne Längenfeld (Restart-Marker RST0..RST7). */
+function isStandalone(marker: number): boolean {
+  return marker === TEM || (marker >= 0xd0 && marker <= 0xd7);
+}
+
+/**
+ * Start-of-Frame-Marker, die die Bilddimensionen tragen (alle SOFn außer DHT
+ * 0xC4, JPG 0xC8 und DAC 0xCC). Payload: [precision][height:2][width:2][…].
+ */
+function isStartOfFrame(marker: number): boolean {
+  if (marker < 0xc0 || marker > 0xcf) return false;
+  return marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+}
+
+/**
+ * Prüft die Rohbytes eines hochgeladenen Fotos gegen die Sanitisierungs-/Format-
+ * Constraints (#89). Liefert bei Erfolg die ausgelesenen Maße, sonst den
+ * Ablehnungsgrund. Die Grenzen sind die in `@spotforge/api-contract` geteilten
+ * {@link PHOTO_UPLOAD_CONSTRAINTS} (überschreibbar für Tests).
+ */
+export function validateUploadedImage(
+  bytes: Uint8Array,
+  constraints: { maxEdge: number; maxBytes: number } = PHOTO_UPLOAD_CONSTRAINTS,
+): PhotoValidationResult {
+  if (bytes.length > constraints.maxBytes) return { ok: false, reason: "too-large" };
+
+  // SOI: ein JPEG beginnt mit 0xFFD8.
+  if (bytes.length < 2 || bytes[0] !== 0xff || bytes[1] !== SOI) {
+    return { ok: false, reason: "not-jpeg" };
+  }
+
+  let i = 2;
+  let width: number | undefined;
+  let height: number | undefined;
+
+  while (i < bytes.length) {
+    // Jeder Segment-Marker beginnt mit 0xFF; Füll-Bytes (0xFF) werden übersprungen.
+    if (bytes[i] !== 0xff) return { ok: false, reason: "corrupt" };
+    let marker = bytes[i + 1];
+    while (marker === 0xff && i + 1 < bytes.length) {
+      i += 1;
+      marker = bytes[i + 1];
+    }
+    if (marker === undefined) return { ok: false, reason: "corrupt" };
+    i += 2;
+
+    // EOI/SOS beenden den Header-Bereich – danach kommen keine Metadaten mehr.
+    if (marker === EOI || marker === SOS) break;
+    if (isStandalone(marker)) continue;
+
+    // Längenfeld (Big-Endian, schließt die zwei Längen-Bytes selbst ein).
+    const segLen = u16At(bytes, i);
+    if (segLen === undefined || segLen < 2 || i + segLen > bytes.length) {
+      return { ok: false, reason: "corrupt" };
+    }
+
+    // Metadaten-Segmente ablehnen: APP1 (EXIF/XMP), alle weiteren APPn, Kommentare.
+    // Nur APP0 (JFIF) bleibt zulässig – es enthält keine personenbezogenen Daten.
+    if (marker === APP1 || (marker > APP0 && marker <= APP15) || marker === COM) {
+      return { ok: false, reason: "metadata-present" };
+    }
+
+    if (isStartOfFrame(marker)) {
+      // Payload nach den zwei Längen-Bytes: [precision][height:2][width:2][…].
+      height = u16At(bytes, i + 3);
+      width = u16At(bytes, i + 5);
+      if (height === undefined || width === undefined) return { ok: false, reason: "corrupt" };
+    }
+
+    i += segLen;
+  }
+
+  if (width === undefined || height === undefined) return { ok: false, reason: "corrupt" };
+  if (width > constraints.maxEdge || height > constraints.maxEdge) {
+    return { ok: false, reason: "dimensions-exceeded" };
+  }
+
+  return { ok: true, width, height, bytes: bytes.length };
+}

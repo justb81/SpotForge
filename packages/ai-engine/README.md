@@ -82,10 +82,44 @@ gehostet und vor dem Build via `tools/fetch-models` **fest ins APK gebündelt** 
 Variante; kein Nachladen/OTA, siehe
 [ADR 0008](../../docs/adr/0008-modell-export-pipeline-und-lifecycle.md)).
 
+## Foto-Sanitisierung vor Upload (`sanitize.ts`, #89)
+
+Karten-Fotos verlassen das Gerät zwangsläufig (Sync #19, Schmiede #76/#81, PvP
+#20, Tausch #21) und werden anderen Spielern gezeigt. **Bevor** ein Foto hochgeht,
+bereinigt `createPhotoSanitizer(config, deps)` es on-device:
+
+```
+sanitize(photo)
+  → detectors[kind].detect(photo)          // je aktivem Blur-Ziel (face, licensePlate) – normalisierte Boxen
+  → processor.process({ blurRegions, encode })  // ALLE Metadaten strippen + blurren + re-enkodieren
+  → harte Vorbedingung: metadataStripped === true?  // sonst SanitizationError – KEIN Rohbild-Upload
+  ⇒ { imageUri, report }                   // bereinigtes Bild + Nachweis (was wurde geblurrt/gestrippt)
+```
+
+- **EXIF/GPS werden immer entfernt** (kein Schalter – Privacy-first, Goldene
+  Regel 5); der `processor` re-enkodiert das Bild metadatenfrei.
+- **Kategorie-neutral (Goldene Regel 1/3):** *welche* Ziele geblurrt werden, kommt
+  aus `resolveSanitization(AppDefinition)` (`@spotforge/app-config`) — Gesichter
+  per Default, Kfz-Kennzeichen nur bei Varianten mit Fahrzeugbezug (CarForge). Kein
+  hartkodiertes „Kennzeichen" hier.
+- **Harte Vorbedingung:** fehlt ein nötiger Detektor, schlägt die Detektion fehl
+  oder bestätigt der Prozessor das Stripping nicht → `SanitizationError`. Der
+  Upload-Pfad blockt dann, statt das Rohbild zu senden.
+- `RegionDetector` und `ImageProcessor` sind **injizierte Seams** wie `Classifier`:
+  die native Implementierung (ExecuTorch-Detektion, `expo-image-manipulator` + Blur)
+  lebt im RN-Host (Synergie mit dem Detektor aus #75); die Orchestrierung hier ist
+  rein und vitest-getestet (`sanitize.test.ts`).
+
+> **Modelle:** Die Gesichts-/Kennzeichen-Detektionsmodelle werden – wie Gate/Fein –
+> per `tools/export-model` exportiert und per `tools/fetch-models` gebündelt (eigene
+> Manifest-Einträge, kein Git-Asset). Der Export der konkreten Detektor-Modelle ist
+> eine Geräte-/Modell-Aufgabe und folgt separat (vgl. #75).
+
 ## Grenzen
 
-Keine Spielregeln (kommen aus `game-core`), keine fest verdrahtete Kategorie,
-kein Foto-Upload (on-device).
+Keine Spielregeln (kommen aus `game-core`), keine fest verdrahtete Kategorie. Der
+eigentliche Foto-**Upload** (Netz/Storage) liegt im Client/Backend (#81/#19); diese
+Engine liefert nur die verpflichtende On-Device-Sanitisierung davor (#89).
 
 ## Abhängigkeiten
 
@@ -104,7 +138,11 @@ Zwei-Stufen-Kaskade mit summierter-Masse-Gate-Logik (#83) und der Manifest-Parse
 Implementiert: die `spot`-Orchestrierung (#8) – Gate-Guardrail aus der
 `AppDefinition` (`category.gate.allow` + `minConfidence`), trivialer
 Default-`LabelResolver` (`slugLabelResolver`), Reject- und `unrecognized`-Pfad sowie
-`game-core.buildDraft` → Draft. Offen: produktive `FactLookup`-Impl (#10),
+`game-core.buildDraft` → Draft. Dazu die **Foto-Sanitisierung** (#89,
+`sanitize.ts`): generische Orchestrierung (Strip/Blur/Re-Enkodierung als harte
+Vorbedingung) mit injizierten Detektor-/Prozessor-Seams; die nativen
+Implementierungen und der Export der Detektor-Modelle folgen geräteseitig (#75).
+Offen: produktive `FactLookup`-Impl (#10),
 `CardArtGenerator` (#11) und der produktive Resolver (#72). Das **Forgen** (World
 Data + autoritative Seltenheit) ist server-seitig ([ADR 0010]), nicht in dieser
 Engine. Produktionsreifes Fahrzeugmodell + Geräte-Verifikation sind Mensch-/Geräte-

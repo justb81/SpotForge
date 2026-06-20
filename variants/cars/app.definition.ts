@@ -129,5 +129,13 @@ export default defineApp({
     autoSpot: true,
   },
 
+  // Foto-Sanitisierung vor Upload (#89, Goldene Regel 5): EXIF/GPS werden immer
+  // entfernt (unbedingt in der Pipeline), Gesichter immer geblurrt (Default).
+  // CarForge schaltet zusätzlich das Kennzeichen-Blur an – Karten-Fotos zeigen
+  // Fahrzeuge auf der Straße, lesbare Kfz-Kennzeichen wären personenbezogen.
+  sanitization: {
+    blur: { licensePlates: true },
+  },
+
   // Theme & Assets: siehe ./branding.config.ts (ADR 0011).
 });

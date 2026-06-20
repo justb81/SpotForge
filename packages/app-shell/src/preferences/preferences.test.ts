@@ -14,6 +14,7 @@ describe("Preferences", () => {
     expect(DEFAULT_PREFERENCES.autoSpotEnabled).toBe(false);
     expect(DEFAULT_PREFERENCES.autoSpotCoachmarkSeen).toBe(false);
     expect(DEFAULT_PREFERENCES.autoSpotIntervalMs).toBeUndefined();
+    expect(DEFAULT_PREFERENCES.uploadConsentGranted).toBe(false);
     expect(DEFAULT_PREFERENCES.defaultView).toBe("spot");
   });
 
@@ -23,6 +24,7 @@ describe("Preferences", () => {
       autoSpotEnabled: true,
       autoSpotCoachmarkSeen: true,
       autoSpotIntervalMs: 2500,
+      uploadConsentGranted: true,
       defaultView: "battle",
     };
     expect(parsePreferences(serializePreferences(prefs))).toEqual(prefs);

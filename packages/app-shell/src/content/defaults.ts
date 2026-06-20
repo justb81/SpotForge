@@ -247,6 +247,23 @@ export const DEFAULT_CONTENT = {
     de: "Wird ab Level {level} freigeschaltet.",
     en: "Unlocks at level {level}.",
   },
+
+  // --- Foto-Upload-Einwilligung (#89, Hook zu #26 DSGVO) ----------------------
+  // Klare Einwilligung vor dem ersten Upload (Goldene Regel 5). Kategorie-neutral
+  // formuliert; das „Was wird geblurrt" hängt an der Sanitisierungs-Config der
+  // Variante. Das Foto wird on-device bereinigt (EXIF/GPS entfernt, Gesichter –
+  // und je nach App Kennzeichen – geblurrt), bevor es das Gerät verlässt.
+  "privacy.upload.title": { de: "Foto teilen?", en: "Share photo?" },
+  "privacy.upload.body": {
+    de: "Um die Karte zu schmieden und mit anderen zu spielen, lädt SpotForge das Foto auf den Server. Vorher wird es auf deinem Gerät bereinigt: Standort- und Geräte-Metadaten werden entfernt und erkennbare Gesichter unkenntlich gemacht.",
+    en: "To forge the card and play with others, SpotForge uploads the photo to the server. Before that, it is sanitized on your device: location and device metadata are removed and recognizable faces are blurred.",
+  },
+  "privacy.upload.accept": { de: "Zustimmen & hochladen", en: "Agree & upload" },
+  "privacy.upload.decline": { de: "Nur lokal behalten", en: "Keep local only" },
+  "privacy.upload.revoke": {
+    de: "Du kannst die Zustimmung jederzeit in den Einstellungen widerrufen.",
+    en: "You can withdraw consent anytime in settings.",
+  },
 } satisfies ContentOverrides;
 
 /** Alle bekannten Default-Schlüssel (für Typsicherheit beim Auflösen). */

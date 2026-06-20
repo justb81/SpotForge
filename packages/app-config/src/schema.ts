@@ -75,6 +75,36 @@ const featuresSchema = z
   })
   .optional();
 
+/**
+ * Optionale Foto-Sanitisierung (#89). Alles optional; fehlende Werte fallen auf
+ * die privacy-first-Defaults (`resolveSanitization`) zurück. EXIF-Stripping ist
+ * bewusst kein Schalter – es ist in der Pipeline unbedingt.
+ */
+const sanitizationSchema = z
+  .object({
+    encode: z
+      .object({
+        maxEdge: z
+          .number()
+          .int("sanitization.encode.maxEdge muss eine ganze Zahl sein")
+          .positive("sanitization.encode.maxEdge muss > 0 sein")
+          .optional(),
+        quality: z
+          .number()
+          .min(0, "sanitization.encode.quality muss ≥ 0 sein")
+          .max(1, "sanitization.encode.quality muss ≤ 1 sein")
+          .optional(),
+      })
+      .optional(),
+    blur: z
+      .object({
+        faces: z.boolean().optional(),
+        licensePlates: z.boolean().optional(),
+      })
+      .optional(),
+  })
+  .optional();
+
 const themeTokensSchema = z.object({
   colors: z.object({
     primary: hexColor("theme.colors.primary"),
@@ -128,6 +158,7 @@ export const appDefinitionSchema = z
     ai: aiPromptsSchema,
     content: contentOverridesSchema,
     features: featuresSchema,
+    sanitization: sanitizationSchema,
   })
   .refine((def) => def.category.guardrails.allowed.includes(def.category.primary), {
     message: "category.guardrails.allowed muss die primäre Kategorie (category.primary) enthalten",

@@ -36,6 +36,16 @@ export interface AppDefinition {
   /** Optionale Feature-Schalter der App. Fehlt das Feld, gelten alle Defaults. */
   features?: AppFeatures;
 
+  /**
+   * Verpflichtende On-Device-**Foto-Sanitisierung** vor jedem Upload (#89,
+   * Goldene Regel 5). Optional – fehlt das Feld, gelten die privacy-first
+   * {@link DEFAULT_SANITIZATION}-Werte (EXIF-Strip + Gesichts-Blur an,
+   * Kennzeichen-Blur aus). **Was** geblurrt wird, ist bewusst variantenspezifisch
+   * (Goldene Regel 1/3): die Tier-App braucht z.B. kein Kennzeichen-Blur, CarForge
+   * schon. Aufgelöst über {@link resolveSanitization}.
+   */
+  sanitization?: SanitizationConfig;
+
   // Theme & Assets sind bewusst NICHT Teil der AppDefinition (ADR 0011): sie
   // leben als Branding (@spotforge/app-config `branding.ts`) in einer eigenen
   // Config je Variante, mit `variants/_default` als generischer Basis.
@@ -75,6 +85,82 @@ export function resolveFeatures(definition: AppDefinition): Required<AppFeatures
   return {
     imageImport: definition.features?.imageImport ?? false,
     autoSpot: definition.features?.autoSpot ?? false,
+  };
+}
+
+/**
+ * Konfiguration der verpflichtenden On-Device-**Foto-Sanitisierung** vor dem
+ * Upload (#89). Karten-Fotos verlassen das Gerät zwangsläufig (Sync #19, Schmiede
+ * #76/#81, PvP #20, Tausch #21) und werden anderen Spielern gezeigt – sie müssen
+ * vorher bereinigt werden. **EXIF/Metadaten werden immer entfernt** (kein
+ * Schalter – Privacy-first, Goldene Regel 5); konfigurierbar sind nur die
+ * Re-Enkodier-Grenzen und welche sensiblen Regionen geblurrt werden. Aufgelöst
+ * über {@link resolveSanitization}.
+ */
+export interface SanitizationConfig {
+  /** Grenzen der Re-Enkodierung; das Re-Enkodieren entfernt zugleich alle Restmetadaten. */
+  encode?: SanitizationEncodeConfig;
+  /** Welche sensiblen Bildregionen on-device erkannt und geblurrt werden. */
+  blur?: SanitizationBlurConfig;
+}
+
+/** Re-Enkodier-Grenzen (jeder Wert optional; fehlend ⇒ {@link DEFAULT_SANITIZATION}). */
+export interface SanitizationEncodeConfig {
+  /** Maximale Kantenlänge (längere Seite) in px; Größeres wird herunterskaliert. */
+  maxEdge?: number;
+  /** JPEG-Qualität 0..1. */
+  quality?: number;
+}
+
+/** Blur-Ziele der Sanitisierung (jeder Schalter optional; fehlend ⇒ Default). */
+export interface SanitizationBlurConfig {
+  /**
+   * Gesichter von Passanten blurren. Default: **an** – schützt Unbeteiligte
+   * unabhängig von der Kategorie (Goldene Regel 5).
+   */
+  faces?: boolean;
+  /**
+   * Kfz-Kennzeichen blurren. Default: **aus**; nur Varianten mit Fahrzeugbezug
+   * (CarForge) schalten es an. Synergie mit dem Detektor aus #75 (gemeinsame Infra).
+   */
+  licensePlates?: boolean;
+}
+
+/** Vollständig aufgelöste Sanitisierungs-Parameter (alle Felder gesetzt). */
+export interface ResolvedSanitization {
+  encode: { maxEdge: number; quality: number };
+  blur: { faces: boolean; licensePlates: boolean };
+}
+
+/**
+ * Privacy-first-Defaults der Foto-Sanitisierung (#89), genutzt von
+ * {@link resolveSanitization}, wenn eine Variante {@link AppDefinition.sanitization}
+ * nicht (vollständig) setzt: Gesichts-Blur **an**, Kennzeichen-Blur **aus**.
+ * EXIF/Metadaten-Stripping ist kein Default-Wert hier, sondern in der Pipeline
+ * (`@spotforge/ai-engine`) **unbedingt** – es lässt sich nicht abschalten.
+ */
+export const DEFAULT_SANITIZATION: ResolvedSanitization = {
+  encode: { maxEdge: 2048, quality: 0.85 },
+  blur: { faces: true, licensePlates: false },
+};
+
+/**
+ * Löst die optionale {@link AppDefinition.sanitization} auf konkrete Werte auf
+ * (fehlendes Feld/fehlender Wert ⇒ {@link DEFAULT_SANITIZATION}). Einzige Stelle
+ * der Sanitisierungs-Defaults – Konsumenten (Upload-Pfad, ai-engine) fragen nur
+ * das Ergebnis ab.
+ */
+export function resolveSanitization(definition: AppDefinition): ResolvedSanitization {
+  const s = definition.sanitization;
+  return {
+    encode: {
+      maxEdge: s?.encode?.maxEdge ?? DEFAULT_SANITIZATION.encode.maxEdge,
+      quality: s?.encode?.quality ?? DEFAULT_SANITIZATION.encode.quality,
+    },
+    blur: {
+      faces: s?.blur?.faces ?? DEFAULT_SANITIZATION.blur.faces,
+      licensePlates: s?.blur?.licensePlates ?? DEFAULT_SANITIZATION.blur.licensePlates,
+    },
   };
 }
 

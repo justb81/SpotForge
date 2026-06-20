@@ -23,6 +23,13 @@ Battles/Tausch bleiben dadurch **später zuschaltbar**, ohne Re-Design (siehe
 - **Marktplatz & Tausch:** pro Mandant, Suche via MeiliSearch.
 - **Leaderboards & Seasons:** Redis, pro Mandant.
 - **Media:** S3-kompatibler Storage für (opt-in) geteilte Kartenbilder.
+- **Foto-Upload-Absicherung (#89):** Karten-Fotos werden on-device sanitisiert
+  (EXIF/GPS entfernt, Gesichter/Kennzeichen geblurrt). Der Server vertraut dem
+  **nicht blind**: `validateUploadedImage` (`src/photos/validate.ts`) prüft jedes
+  Upload-Byte gegen die geteilten `PHOTO_UPLOAD_CONSTRAINTS` (JPEG, keine
+  EXIF/APPn-Metadaten, Größe/Maße) und **weist nicht-konforme Uploads ab**
+  (defense-in-depth, Goldene Regel 5). Der eigentliche Upload-Endpunkt + Storage
+  folgen mit #81/#19.
 
 ## Grenzen
 

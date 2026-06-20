@@ -17,6 +17,7 @@ Eine `AppDefinition` bündelt genau die per-App variablen Dinge:
 | `ai`          | **KI-Prompts** für Klassifikation, Card-Art, Fakten-Extraktion         |
 | `content`     | **Mehrsprachige Text-Overrides** (i18n), fällt auf gemeinsame Defaults zurück |
 | `features`    | **Optionale Feature-Schalter** (Default: aus), siehe unten             |
+| `sanitization`| **Foto-Sanitisierung vor Upload** (#89): Blur-Ziele + Re-Enkodier-Grenzen, siehe unten |
 
 Theme & Assets sind **nicht** Teil der `AppDefinition`, sondern leben als
 **Branding** in einer eigenen Config je Variante (`branding.config.ts`, ADR 0011).
@@ -54,6 +55,31 @@ category: {
     allow: ["sports car", "convertible" /* … */],
     auto: { intervalMs: 2000, autoFireMinConfidence: 0.6 },
   },
+},
+```
+
+## Foto-Sanitisierung (`sanitization`, #89)
+
+Karten-Fotos verlassen das Gerät zwangsläufig und werden anderen Spielern gezeigt;
+**vor jedem Upload** werden sie on-device bereinigt (`@spotforge/ai-engine`).
+`sanitization` ist optional – `resolveSanitization(definition)` löst gegen die
+privacy-first-Defaults (`DEFAULT_SANITIZATION`) auf:
+
+| Feld                  | Default | Wirkung                                                          |
+|-----------------------|---------|------------------------------------------------------------------|
+| `blur.faces`          | `true`  | Gesichter von Passanten blurren – schützt Unbeteiligte (Goldene Regel 5). |
+| `blur.licensePlates`  | `false` | Kfz-Kennzeichen blurren – nur Varianten mit Fahrzeugbezug (CarForge). |
+| `encode.maxEdge`      | `2048`  | Max. Kantenlänge (px) der Re-Enkodierung.                        |
+| `encode.quality`      | `0.85`  | JPEG-Qualität der Re-Enkodierung.                                |
+
+**EXIF/GPS-Stripping ist kein Schalter** – das Re-Enkodieren entfernt **immer**
+alle Metadaten (Privacy-first). Was geblurrt wird, ist bewusst variantenspezifisch
+(Goldene Regel 1/3): kein hartkodiertes „Kennzeichen" im gemeinsamen Code.
+
+```ts
+// CarForge: Gesichter (Default) + zusätzlich Kennzeichen blurren.
+sanitization: {
+  blur: { licensePlates: true },
 },
 ```
 

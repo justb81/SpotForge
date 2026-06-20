@@ -202,6 +202,15 @@ ergänzen.
   (WordNet-verankert): Unterkategorien erben Attribute/Gate/Guardrails/Texte/Branding
   per Deep-Merge entlang der Ahnenkette; Battles pro attribut-tragendem Knoten,
   graceful degradation auf Vorfahren-Karten. Noch nicht akzeptiert.
+- **[ADR 0017](./docs/adr/0017-world-data-quellen-und-lizenz.md):** *(Entwurf,
+  vorgeschlagen)* **World-Data-Quellen & Lizenz (Fahrzeug-Korpus)** (#95) – Vorstufe zu
+  #10/#76. **Zwei-Schichten-Korpus:** Identitäts-Layer aus **Wikidata (CC0)** (+ optional
+  **NHTSA vPIC**, gemeinfrei) für den Objekt-ID-Raum (#72); **Stat-Layer nur für den
+  erkennbaren Labelsatz (#9)**, weil Wikidatas trumpfbare Performance-Stats (`power`/
+  `acceleration`/`topSpeed`) ≪ 5 % Coverage haben. Lizenz-Leitplanke: **CC0 bevorzugt**,
+  CC-BY-SA (DBpedia) nur bewusst/gekennzeichnet (viral aufs Daten-Artefakt). Beschaffung
+  reproduzierbar/gepinnt unter `tools/fetch-world-data` (ADR 0006) inkl. Provenienz/Lizenz.
+  Noch nicht akzeptiert.
 
 Neue, wesentliche Architektur-Entscheidungen als weiteres ADR in `docs/adr/`
 festhalten (durchnummeriert).

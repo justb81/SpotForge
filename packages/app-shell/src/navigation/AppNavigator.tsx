@@ -69,7 +69,13 @@ export function AppNavigator({
   onPreferencesChange,
 }: AppNavigatorProps) {
   const theme = useTheme();
-  const [active, setActive] = useState<TabKey>("spot");
+  // Start-Ansicht aus den Einstellungen (Default „spot"), gegen den Fortschritt
+  // geklemmt. Bewusst nur als initialer Seed (lazy): ein späteres Umschalten in den
+  // Einstellungen greift erst beim nächsten Start und reißt den Nutzer nicht aus
+  // der laufenden Sitzung.
+  const [active, setActive] = useState<TabKey>(() =>
+    resolveActiveTab(preferences.defaultView, progress),
+  );
 
   // Aktiven Tab gegen den aktuellen Fortschritt absichern (z.B. wenn ein Tab
   // durch geänderte Freischaltung verschwindet).

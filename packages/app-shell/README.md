@@ -82,8 +82,9 @@ erhält Änderungen über `onProgressChange` (Persistenz bleibt Sache des Hosts)
 
 ## Nutzer-Einstellungen (`preferences/`)
 
-Persistierbare Nutzer-Wahl getrennt vom Spielfortschritt – aktuell `skipTutorial`
-(„skip_tutorial"). Wie der Fortschritt **I/O-frei**: der Host lädt die Einstellungen
+Persistierbare Nutzer-Wahl getrennt vom Spielfortschritt – u.a. `skipTutorial`
+(„skip_tutorial") und `defaultView` (die beim Start zuerst geöffnete Tab-Ansicht,
+Default `"spot"`). Wie der Fortschritt **I/O-frei**: der Host lädt die Einstellungen
 **vor** dem Mounten (damit die Start-Entscheidung FTUE vs. Spot ohne Aufblitzen
 feststeht) und persistiert Änderungen über `onPreferencesChange`.
 
@@ -99,7 +100,12 @@ feststeht) und persistiert Änderungen über `onPreferencesChange`.
   **`appId`-skopiert** (`…/spotforge/<appId>/preferences.json`).
 
 Nachträglich änderbar im **Profil ▸ Einstellungen** (`SettingsScreen`): ein Schalter
-„Tutorial beim Start anzeigen" (Negation von `skipTutorial`).
+„Tutorial beim Start anzeigen" (Negation von `skipTutorial`) sowie ein Drop-down
+„Start-Ansicht" über alle Tab-Leisten-Ansichten (`defaultView`). Die Optionen leiten
+sich aus der Tab-Definition (`navigation/tabs.ts`) ab und passen sich automatisch an,
+wenn sich die Navigation ändert. Wie das Tutorial wirkt die Wahl erst beim **nächsten**
+Start (der `AppNavigator` nimmt sie nur als initialen, gegen den Fortschritt geklemmten
+Seed – kein Mid-Session-Sprung).
 
 ## Spot-/Draft-Flow (offline, ADR 0010)
 

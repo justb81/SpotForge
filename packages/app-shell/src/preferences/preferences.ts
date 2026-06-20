@@ -5,6 +5,7 @@
 // eine Nutzer-Wahl (z.B. das Tutorial dauerhaft überspringen).
 
 import { type PlayerProgress } from "../progression/disclosure";
+import { TAB_KEYS, type TabKey } from "../navigation/tabs";
 
 /** Vom Nutzer gewählte, geräte-lokal gespeicherte Einstellungen. */
 export interface Preferences {
@@ -33,13 +34,25 @@ export interface Preferences {
    * (#85); nach dem ersten Mal bleibt er aus.
    */
   autoSpotCoachmarkSeen: boolean;
+  /**
+   * Die beim App-Start zuerst geöffnete Ansicht – einer der Tab-Leisten-Bereiche
+   * ({@link TabKey}). Default: `"spot"` (der Kern-Loop). Ist die gewählte Ansicht
+   * beim Start noch nicht freigeschaltet, fällt die Navigation auf die erste
+   * sichtbare zurück ({@link resolveActiveTab}). Wirkt – wie das Tutorial – erst
+   * beim **nächsten** Start, nicht mitten in der Sitzung.
+   */
+  defaultView: TabKey;
 }
 
-/** Ausgangszustand: Tutorial sichtbar, Auto-Spot aus, Coachmark noch ungesehen. */
+/**
+ * Ausgangszustand: Tutorial sichtbar, Auto-Spot aus, Coachmark noch ungesehen,
+ * Start in der Spot-Ansicht.
+ */
 export const DEFAULT_PREFERENCES: Preferences = {
   skipTutorial: false,
   autoSpotEnabled: false,
   autoSpotCoachmarkSeen: false,
+  defaultView: "spot",
 };
 
 /**
@@ -51,6 +64,7 @@ export function serializePreferences(preferences: Preferences): string {
     skipTutorial: preferences.skipTutorial,
     autoSpotEnabled: preferences.autoSpotEnabled,
     autoSpotCoachmarkSeen: preferences.autoSpotCoachmarkSeen,
+    defaultView: preferences.defaultView,
     ...(preferences.autoSpotIntervalMs !== undefined
       ? { autoSpotIntervalMs: preferences.autoSpotIntervalMs }
       : {}),
@@ -75,6 +89,7 @@ export function parsePreferences(raw: string | null): Preferences {
         parsed?.autoSpotCoachmarkSeen,
         DEFAULT_PREFERENCES.autoSpotCoachmarkSeen,
       ),
+      defaultView: tabKey(parsed?.defaultView, DEFAULT_PREFERENCES.defaultView),
       // Nur ein endlicher, positiver Wert gilt als Override; sonst Varianten-Default.
       ...(typeof interval === "number" && Number.isFinite(interval) && interval > 0
         ? { autoSpotIntervalMs: interval }
@@ -88,6 +103,17 @@ export function parsePreferences(raw: string | null): Preferences {
 /** Liest einen booleschen Wert tolerant (Nicht-Boolean ⇒ Fallback). */
 function bool(value: unknown, fallback: boolean): boolean {
   return typeof value === "boolean" ? value : fallback;
+}
+
+/**
+ * Liest eine Tab-Auswahl tolerant: nur ein bekannter {@link TabKey} gilt, ein
+ * unbekannter/entfernter Wert (z.B. nach einer Navigations-Änderung) fällt auf
+ * den Default zurück – die gewählte Start-Ansicht darf den App-Start nie blockieren.
+ */
+function tabKey(value: unknown, fallback: TabKey): TabKey {
+  return typeof value === "string" && (TAB_KEYS as readonly string[]).includes(value)
+    ? (value as TabKey)
+    : fallback;
 }
 
 /**

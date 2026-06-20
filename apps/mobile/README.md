@@ -62,6 +62,31 @@ beliebigem `ref` starten) **und automatisch per `pull_request`** für jeden PR, 
 einen den Build betreffenden Pfad ändert (Mobile-Host, gebündelte Pakete,
 `variants/`, Modell-Beschaffung); `concurrency` bricht überholte Läufe je PR ab.
 
+## Foto-Sanitisierung vor Upload (#89)
+
+`upload/` enthält die nativen Bausteine, die ein Karten-Foto **vor jedem Upload**
+on-device bereinigen (Goldene Regel 5):
+
+- `skiaImageProcessor.ts` – **Skia**-Bildprozessor: lädt das Foto, skaliert auf
+  `encode.maxEdge`, **redigiert** jede erkannte Region (`"blur"` weichzeichnen
+  bzw. `"cover"` mit dem **App-Namen in Theme-Farben** überdecken) und enkodiert
+  als JPEG neu – die Re-Enkodierung aus rohen Pixeln entfernt **alle EXIF/GPS**.
+- `imageSize.ts` – liest Bildmaße via Skia (für die Box-Normalisierung der Detektoren).
+- `createMobilePhotoSanitizer.ts` – setzt Detektoren (`createRegionDetector` aus
+  `@spotforge/ai-engine`) + Prozessor über die generische
+  `createUploadSanitizer`-Verdrahtung der app-shell zusammen. Die Blur-/Cover-Ziele
+  kommen aus `definition.sanitization`; den `"cover"`-Text/-Farben liefert
+  Identität + Branding der Variante.
+
+Skias `postinstall` ist in `pnpm-workspace.yaml` (`allowBuilds`) auf `false` –
+der native Code kommt aus den `react-native-skia-*`-Paketen und wird beim
+`expo prebuild`/Gradle-Build autolinked.
+
+> **Noch offen:** die zwei Detektor-`.pte` (YOLOv8n face / license-plate) sind
+> noch nicht exportiert/gebündelt – Details + empfohlene Modelle in der
+> `@spotforge/ai-engine`-README. Der eigentliche Upload-Endpunkt + Storage folgen
+> mit #81/#19; bis dahin baut kein Screen den Sanitizer aktiv (die Bausteine sind bereit).
+
 ## Status
 
 Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`

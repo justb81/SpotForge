@@ -131,10 +131,12 @@ export default defineApp({
 
   // Foto-Sanitisierung vor Upload (#89, Goldene Regel 5): EXIF/GPS werden immer
   // entfernt (unbedingt in der Pipeline), Gesichter immer geblurrt (Default).
-  // CarForge schaltet zusätzlich das Kennzeichen-Blur an – Karten-Fotos zeigen
-  // Fahrzeuge auf der Straße, lesbare Kfz-Kennzeichen wären personenbezogen.
+  // CarForge macht zusätzlich Kfz-Kennzeichen unkenntlich – Karten-Fotos zeigen
+  // Fahrzeuge auf der Straße, lesbare Kennzeichen wären personenbezogen. Stil
+  // `"cover"`: das Kennzeichen wird mit dem App-Namen in Theme-Farben überdeckt
+  // (on-brand statt anonymer Blur-Fleck; Rendering im Host aus Identität + Branding).
   sanitization: {
-    blur: { licensePlates: true },
+    redact: { licensePlates: { enabled: true, style: "cover" } },
   },
 
   // Theme & Assets: siehe ./branding.config.ts (ADR 0011).

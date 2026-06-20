@@ -80,6 +80,13 @@ const featuresSchema = z
  * die privacy-first-Defaults (`resolveSanitization`) zurück. EXIF-Stripping ist
  * bewusst kein Schalter – es ist in der Pipeline unbedingt.
  */
+const redactionTargetSchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    style: z.enum(["blur", "cover"]).optional(),
+  })
+  .optional();
+
 const sanitizationSchema = z
   .object({
     encode: z
@@ -96,10 +103,10 @@ const sanitizationSchema = z
           .optional(),
       })
       .optional(),
-    blur: z
+    redact: z
       .object({
-        faces: z.boolean().optional(),
-        licensePlates: z.boolean().optional(),
+        faces: redactionTargetSchema,
+        licensePlates: redactionTargetSchema,
       })
       .optional(),
   })

@@ -48,8 +48,10 @@ export type {
 // Foto-Sanitisierung (On-Device): Rohfoto → upload-bereites, bereinigtes Bild (#89).
 export { createPhotoSanitizer, SanitizationError } from "./sanitize";
 export type {
-  BlurTargetKind,
-  BlurRegion,
+  RedactionStyle,
+  RedactionTargetKind,
+  DetectedRegion,
+  RedactionRegion,
   DetectorInput,
   RegionDetector,
   ProcessImageRequest,
@@ -60,3 +62,10 @@ export type {
   SanitizationReport,
   SanitizeResult,
 } from "./sanitize";
+
+// On-Device-Regionen-Detektor (face/license_plate) über ExecuTorch – nur RN-Build.
+export { createRegionDetector } from "./executorch/createRegionDetector";
+export type {
+  RegionDetectorModel,
+  CreateRegionDetectorOptions,
+} from "./executorch/createRegionDetector";

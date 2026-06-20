@@ -65,21 +65,33 @@ Karten-Fotos verlassen das Gerät zwangsläufig und werden anderen Spielern geze
 `sanitization` ist optional – `resolveSanitization(definition)` löst gegen die
 privacy-first-Defaults (`DEFAULT_SANITIZATION`) auf:
 
-| Feld                  | Default | Wirkung                                                          |
-|-----------------------|---------|------------------------------------------------------------------|
-| `blur.faces`          | `true`  | Gesichter von Passanten blurren – schützt Unbeteiligte (Goldene Regel 5). |
-| `blur.licensePlates`  | `false` | Kfz-Kennzeichen blurren – nur Varianten mit Fahrzeugbezug (CarForge). |
-| `encode.maxEdge`      | `2048`  | Max. Kantenlänge (px) der Re-Enkodierung.                        |
-| `encode.quality`      | `0.85`  | JPEG-Qualität der Re-Enkodierung.                                |
+| Feld                          | Default            | Wirkung                                                          |
+|-------------------------------|--------------------|------------------------------------------------------------------|
+| `redact.faces.enabled`        | `true`             | Gesichter Unbeteiligter unkenntlich machen (Goldene Regel 5).    |
+| `redact.faces.style`          | `"blur"`           | Stil: weichzeichnen (`blur`) oder überdecken (`cover`).          |
+| `redact.licensePlates.enabled`| `false`            | Kfz-Kennzeichen – nur Varianten mit Fahrzeugbezug (CarForge).    |
+| `redact.licensePlates.style`  | `"blur"`           | CarForge nutzt `"cover"`.                                        |
+| `encode.maxEdge`              | `2048`             | Max. Kantenlänge (px) der Re-Enkodierung.                        |
+| `encode.quality`              | `0.85`             | JPEG-Qualität der Re-Enkodierung.                                |
 
 **EXIF/GPS-Stripping ist kein Schalter** – das Re-Enkodieren entfernt **immer**
-alle Metadaten (Privacy-first). Was geblurrt wird, ist bewusst variantenspezifisch
-(Goldene Regel 1/3): kein hartkodiertes „Kennzeichen" im gemeinsamen Code.
+alle Metadaten (Privacy-first). Was unkenntlich gemacht wird und **wie**, ist
+bewusst variantenspezifisch (Goldene Regel 1/3): kein hartkodiertes „Kennzeichen"
+im gemeinsamen Code.
+
+**Redaktions-Stile** (`RedactionStyle`):
+
+- `"blur"` – weichzeichnen (neutral; Default, z.B. für Gesichter).
+- `"cover"` – mit dem **App-Namen in Theme-Farben** überdecken (vollständig opak,
+  garantiert unlesbar und on-brand – z.B. „CarForge" übers Kennzeichen). Die
+  `AppDefinition` legt nur die **Stil-Policy** fest; den Text (App-Name) + die
+  Farben rendert der Host aus Identität + Branding (Assets sind kein Teil der
+  Definition, ADR 0011).
 
 ```ts
-// CarForge: Gesichter (Default) + zusätzlich Kennzeichen blurren.
+// CarForge: Gesichter (Default: blur) + Kennzeichen mit dem App-Namen überdecken.
 sanitization: {
-  blur: { licensePlates: true },
+  redact: { licensePlates: { enabled: true, style: "cover" } },
 },
 ```
 

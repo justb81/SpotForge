@@ -90,30 +90,45 @@ bereinigt `createPhotoSanitizer(config, deps)` es on-device:
 
 ```
 sanitize(photo)
-  → detectors[kind].detect(photo)          // je aktivem Blur-Ziel (face, licensePlate) – normalisierte Boxen
-  → processor.process({ blurRegions, encode })  // ALLE Metadaten strippen + blurren + re-enkodieren
+  → detectors[kind].detect(photo)          // je aktivem Ziel (face, licensePlate) – normalisierte Boxen
+  → processor.process({ regions, encode }) // ALLE Metadaten strippen + Regionen redigieren + re-enkodieren
   → harte Vorbedingung: metadataStripped === true?  // sonst SanitizationError – KEIN Rohbild-Upload
-  ⇒ { imageUri, report }                   // bereinigtes Bild + Nachweis (was wurde geblurrt/gestrippt)
+  ⇒ { imageUri, report }                   // bereinigtes Bild + Nachweis (was wurde redigiert/gestrippt)
 ```
 
 - **EXIF/GPS werden immer entfernt** (kein Schalter – Privacy-first, Goldene
   Regel 5); der `processor` re-enkodiert das Bild metadatenfrei.
-- **Kategorie-neutral (Goldene Regel 1/3):** *welche* Ziele geblurrt werden, kommt
-  aus `resolveSanitization(AppDefinition)` (`@spotforge/app-config`) — Gesichter
-  per Default, Kfz-Kennzeichen nur bei Varianten mit Fahrzeugbezug (CarForge). Kein
-  hartkodiertes „Kennzeichen" hier.
+- **Kategorie-neutral (Goldene Regel 1/3):** *welche* Ziele und *wie* (Stil) kommt
+  aus `resolveSanitization(AppDefinition)` (`@spotforge/app-config`) — Gesichter per
+  Default (`blur`), Kfz-Kennzeichen nur bei Varianten mit Fahrzeugbezug (CarForge:
+  `cover`). Kein hartkodiertes „Kennzeichen" hier.
+- **Redaktions-Stile:** `"blur"` (weichzeichnen) oder `"cover"` (mit dem App-Namen
+  in Theme-Farben überdecken). Den Stil hängt die Pipeline je Region aus der Config
+  an; das Rendern macht der `ImageProcessor`.
 - **Harte Vorbedingung:** fehlt ein nötiger Detektor, schlägt die Detektion fehl
   oder bestätigt der Prozessor das Stripping nicht → `SanitizationError`. Der
   Upload-Pfad blockt dann, statt das Rohbild zu senden.
 - `RegionDetector` und `ImageProcessor` sind **injizierte Seams** wie `Classifier`:
-  die native Implementierung (ExecuTorch-Detektion, `expo-image-manipulator` + Blur)
-  lebt im RN-Host (Synergie mit dem Detektor aus #75); die Orchestrierung hier ist
-  rein und vitest-getestet (`sanitize.test.ts`).
+  - **Detektor:** `createRegionDetector` (`executorch/createRegionDetector.ts`)
+    wrappt `ObjectDetectionModule.fromCustomModel` (react-native-executorch) – ein
+    einklassiges Modell je Ziel (face / license_plate); Boxen werden über die
+    injizierte `imageSize` normalisiert. Synergie mit dem Objekt-Detektor aus #75.
+  - **Prozessor:** Skia (`apps/mobile/upload/skiaImageProcessor.ts`) – Strip + Blur
+    bzw. Cover (App-Name in Theme-Farben) + JPEG-Re-Enkodierung.
+  - Beide laufen nativ und werden im RN-Build verifiziert; die Orchestrierung hier
+    ist rein und vitest-getestet (`sanitize.test.ts`).
 
-> **Modelle:** Die Gesichts-/Kennzeichen-Detektionsmodelle werden – wie Gate/Fein –
-> per `tools/export-model` exportiert und per `tools/fetch-models` gebündelt (eigene
-> Manifest-Einträge, kein Git-Asset). Der Export der konkreten Detektor-Modelle ist
-> eine Geräte-/Modell-Aufgabe und folgt separat (vgl. #75).
+> **Detektor-Modelle (face / license_plate):** Empfohlen sind **einklassige,
+> nano-große YOLO-Modelle** (passen auf den `ObjectDetectionModule`-`fromCustomModel`-
+> Kontrakt: Input `float32[1,3,H,W]`, Output Boxen/Scores/Klassen):
+> - **Gesicht:** YOLOv8n-face (z.B. `lindevs/yolov8-face`, `akanametov/yolo-face`).
+> - **Kennzeichen:** YOLOv8/-v11n license-plate (z.B. `morsetechlab/yolov11-license-plate-detection`).
+>
+> Wie Gate/Fein werden sie per `tools/export-model` nach `.pte` exportiert (XNNPACK,
+> fp32; ADR 0008/0014), als Release-Asset gehostet und per `tools/fetch-models`
+> **fest gebündelt** (eigene Manifest-Einträge, kein Git-Asset). Der konkrete Export +
+> die Geräte-Verifikation sind eine Modell-/Geräte-Aufgabe; sind die `.pte` gebündelt,
+> reicht der RN-Host sie als `RegionDetectorModel[]` an `createMobilePhotoSanitizer`.
 
 ## Grenzen
 
@@ -139,10 +154,11 @@ Implementiert: die `spot`-Orchestrierung (#8) – Gate-Guardrail aus der
 `AppDefinition` (`category.gate.allow` + `minConfidence`), trivialer
 Default-`LabelResolver` (`slugLabelResolver`), Reject- und `unrecognized`-Pfad sowie
 `game-core.buildDraft` → Draft. Dazu die **Foto-Sanitisierung** (#89,
-`sanitize.ts`): generische Orchestrierung (Strip/Blur/Re-Enkodierung als harte
-Vorbedingung) mit injizierten Detektor-/Prozessor-Seams; die nativen
-Implementierungen und der Export der Detektor-Modelle folgen geräteseitig (#75).
-Offen: produktive `FactLookup`-Impl (#10),
+`sanitize.ts`): generische Orchestrierung (Strip/Redaktion/Re-Enkodierung als harte
+Vorbedingung) mit injizierten Seams, der ExecuTorch-Detektor-Wrapper
+(`createRegionDetector`) und der Skia-Bildprozessor (`apps/mobile`, Blur + Cover).
+Offen bleibt nur der **Export + Bundling der zwei Detektor-`.pte`** (face/plate,
+YOLOv8n) und die Geräte-Verifikation. Offen: produktive `FactLookup`-Impl (#10),
 `CardArtGenerator` (#11) und der produktive Resolver (#72). Das **Forgen** (World
 Data + autoritative Seltenheit) ist server-seitig ([ADR 0010]), nicht in dieser
 Engine. Produktionsreifes Fahrzeugmodell + Geräte-Verifikation sind Mensch-/Geräte-

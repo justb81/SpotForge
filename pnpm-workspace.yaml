@@ -41,6 +41,10 @@ minimumReleaseAgeExclude:
 # Build-/Install-Skripte von Abhängigkeiten sind in pnpm 11 standardmäßig
 # blockiert (häufigster Einfallsvektor für Schad-Pakete). esbuild ist bewusst
 # auf `false`: es läuft über die vorinstallierten Plattform-Binaries (@esbuild/*)
-# ohne eigenes Install-Skript.
+# ohne eigenes Install-Skript. react-native-skia (#89) ebenso auf `false`: sein
+# postinstall (`scripts/install-libs.js`) wird nicht gebraucht – der native Code
+# kommt aus den `react-native-skia-android`/`-apple-*`-Paketen und wird beim
+# expo-prebuild/Gradle-Build autolinked, nicht über das npm-Install-Skript.
 allowBuilds:
+  "@shopify/react-native-skia": false
   esbuild: false

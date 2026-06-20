@@ -5,31 +5,43 @@
  * #20, Tausch #21) und werden anderen Spielern gezeigt. **Bevor** ein Foto
  * hochgeht, wird es hier bereinigt: **alle Metadaten (EXIF/GPS) entfernt** und das
  * Bild neu enkodiert, **Gesichter** und – variantenspezifisch – **Kfz-Kennzeichen**
- * geblurrt. Schlägt ein nötiger Schritt fehl, **bricht die Sanitisierung ab**
- * (harte Vorbedingung): es wird **nie** ein Rohbild durchgereicht.
+ * unkenntlich gemacht (geblurrt oder mit dem App-Namen überdeckt, je
+ * {@link RedactionStyle}). Schlägt ein nötiger Schritt fehl, **bricht die
+ * Sanitisierung ab** (harte Vorbedingung): es wird **nie** ein Rohbild durchgereicht.
  *
- * Kategorie-neutral (Goldene Regel 1/3): **was** geblurrt wird, kommt aus der
- * aufgelösten {@link ResolvedSanitization} der `AppDefinition` – kein hartkodiertes
- * „Kennzeichen" hier. Die schweren Schritte (Detektion, Strip/Blur/Re-Enkodierung)
- * sind injizierte Seams (native ExecuTorch-/Plattform-Implementierung im RN-Host,
- * #75-Synergie); die Orchestrierung bleibt rein und ohne RN-Import → vitest-testbar.
+ * Kategorie-neutral (Goldene Regel 1/3): **was** unkenntlich gemacht wird und
+ * **wie**, kommt aus der aufgelösten {@link ResolvedSanitization} der
+ * `AppDefinition` – kein hartkodiertes „Kennzeichen" hier. Die schweren Schritte
+ * (Detektion, Strip/Redaktion/Re-Enkodierung) sind injizierte Seams (native
+ * ExecuTorch-/Skia-Implementierung im RN-Host, #75-Synergie); die Orchestrierung
+ * bleibt rein und ohne RN-Import → vitest-testbar.
  */
 
-import type { ResolvedSanitization } from "@spotforge/app-config";
+import type { RedactionStyle, ResolvedSanitization } from "@spotforge/app-config";
 
-/** Art einer sensiblen Region, die ein Detektor findet (= Blur-Ziel). */
-export type BlurTargetKind = "face" | "licensePlate";
+export type { RedactionStyle };
+
+/** Art einer sensiblen Region, die ein Detektor findet (= Redaktions-Ziel). */
+export type RedactionTargetKind = "face" | "licensePlate";
 
 /**
- * Normalisierte Bounding-Box (alle Werte 0..1, relativ zur Bildkante) – damit ist
- * sie auflösungsunabhängig und überlebt das Herunterskalieren beim Re-Enkodieren.
+ * Normalisierte Bounding-Box (alle Werte 0..1, relativ zur Bildkante) eines
+ * erkannten Ziels – damit auflösungsunabhängig und das Herunterskalieren beim
+ * Re-Enkodieren überlebend. Ausgabe eines {@link RegionDetector}; den
+ * {@link RedactionStyle} legt erst die Pipeline anhand der Config fest.
  */
-export interface BlurRegion {
-  kind: BlurTargetKind;
+export interface DetectedRegion {
+  kind: RedactionTargetKind;
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+/** Eine zu redigierende Region samt aufgelöstem Stil – Eingabe des Prozessors. */
+export interface RedactionRegion extends DetectedRegion {
+  /** `"blur"` (weichzeichnen) oder `"cover"` (mit App-Namen in Theme-Farben überdecken). */
+  style: RedactionStyle;
 }
 
 export interface DetectorInput {
@@ -44,14 +56,14 @@ export interface DetectorInput {
  * „nichts gefunden" (kein Fehler).
  */
 export interface RegionDetector {
-  detect(input: DetectorInput): Promise<BlurRegion[]>;
+  detect(input: DetectorInput): Promise<DetectedRegion[]>;
 }
 
-/** Auftrag an den nativen Bildprozessor: strippen, blurren, re-enkodieren. */
+/** Auftrag an den nativen Bildprozessor: strippen, redigieren, re-enkodieren. */
 export interface ProcessImageRequest {
   imageUri: string;
-  /** Zu blurrende Regionen (normalisiert). Leer ⇒ nur strippen + re-enkodieren. */
-  blurRegions: BlurRegion[];
+  /** Zu redigierende Regionen samt Stil. Leer ⇒ nur strippen + re-enkodieren. */
+  regions: RedactionRegion[];
   /** Re-Enkodier-Grenzen aus der Variante ({@link ResolvedSanitization.encode}). */
   encode: ResolvedSanitization["encode"];
 }
@@ -74,10 +86,10 @@ export interface ProcessedImage {
 }
 
 /**
- * Nativer Bildprozessor (Seam): entfernt **alle** Metadaten, blurrt die
- * übergebenen Regionen und re-enkodiert auf die Grenzen. Implementierung im
- * RN-Host (z.B. `expo-image-manipulator` + nativer Blur); hier nur der Vertrag,
- * damit die Orchestrierung RN-frei und testbar bleibt.
+ * Nativer Bildprozessor (Seam): entfernt **alle** Metadaten, redigiert die
+ * übergebenen Regionen (Blur oder Cover) und re-enkodiert auf die Grenzen.
+ * Implementierung im RN-Host (Skia); hier nur der Vertrag, damit die
+ * Orchestrierung RN-frei und testbar bleibt.
  */
 export interface ImageProcessor {
   process(request: ProcessImageRequest): Promise<ProcessedImage>;
@@ -86,13 +98,13 @@ export interface ImageProcessor {
 /** Injizierte Abhängigkeiten der Sanitisierung (alle mockbar). */
 export interface SanitizeDeps {
   /**
-   * Detektoren je Blur-Ziel. Es werden **nur** die laut Config aktiven Ziele
+   * Detektoren je Redaktions-Ziel. Es werden **nur** die laut Config aktiven Ziele
    * abgefragt; fehlt ein für die Config nötiger Detektor, bricht die
    * Sanitisierung ab (harte Vorbedingung – lieber kein Upload als ein
-   * un-geblurrtes Bild).
+   * un-redigiertes Bild).
    */
-  detectors: Partial<Record<BlurTargetKind, RegionDetector>>;
-  /** Nativer Strip-/Blur-/Re-Enkodier-Prozessor. */
+  detectors: Partial<Record<RedactionTargetKind, RegionDetector>>;
+  /** Nativer Strip-/Redaktions-/Re-Enkodier-Prozessor. */
   processor: ImageProcessor;
 }
 
@@ -109,8 +121,8 @@ export interface SanitizeInput {
  */
 export interface SanitizationReport {
   metadataStripped: true;
-  /** Anzahl geblurrter Regionen je Ziel (nur aktive Ziele > 0). */
-  blurred: Record<BlurTargetKind, number>;
+  /** Anzahl redigierter Regionen je Ziel (nur aktive Ziele > 0). */
+  redacted: Record<RedactionTargetKind, number>;
   output: { imageUri: string; format: "jpeg"; width: number; height: number; bytes: number };
 }
 
@@ -133,19 +145,25 @@ export class SanitizationError extends Error {
   }
 }
 
-/** Leitet aus der Config die Reihenfolge der aktiven Blur-Ziele ab. */
-function activeTargets(config: ResolvedSanitization): BlurTargetKind[] {
-  const targets: BlurTargetKind[] = [];
-  if (config.blur.faces) targets.push("face");
-  if (config.blur.licensePlates) targets.push("licensePlate");
-  return targets;
+/** Aktive Redaktions-Ziele (enabled) in fester Reihenfolge, mit aufgelöstem Stil. */
+function activeTargets(
+  config: ResolvedSanitization,
+): { kind: RedactionTargetKind; style: RedactionStyle }[] {
+  // Detektions-Art (Singular) ↔ Config-Schlüssel (Plural).
+  const targets: [RedactionTargetKind, ResolvedSanitization["redact"]["faces"]][] = [
+    ["face", config.redact.faces],
+    ["licensePlate", config.redact.licensePlates],
+  ];
+  return targets
+    .filter(([, redaction]) => redaction.enabled)
+    .map(([kind, redaction]) => ({ kind, style: redaction.style }));
 }
 
 /**
  * Baut die Sanitisierungs-Funktion: Rohfoto → {@link SanitizeResult}. Verkettet
- * Detektion (je aktivem Ziel) → nativer Strip/Blur/Re-Enkodier-Schritt → Prüfung
- * der harten Vorbedingung (Metadaten wirklich entfernt). Jeder Fehler wird zu
- * einer {@link SanitizationError} – es gibt **keinen** Fallback auf das Rohbild.
+ * Detektion (je aktivem Ziel) → nativer Strip/Redaktions/Re-Enkodier-Schritt →
+ * Prüfung der harten Vorbedingung (Metadaten wirklich entfernt). Jeder Fehler wird
+ * zu einer {@link SanitizationError} – es gibt **keinen** Fallback auf das Rohbild.
  */
 export function createPhotoSanitizer(
   config: ResolvedSanitization,
@@ -155,42 +173,43 @@ export function createPhotoSanitizer(
 
   return async function sanitize(input: SanitizeInput): Promise<SanitizeResult> {
     // 1) Aktive Detektoren laufen lassen. Jedes aktive Ziel braucht einen Detektor;
-    //    fehlt er, ist das eine Fehlkonfiguration → Abbruch (kein un-geblurrtes Bild).
-    const regions: BlurRegion[] = [];
-    const blurred: Record<BlurTargetKind, number> = { face: 0, licensePlate: 0 };
-    for (const kind of targets) {
+    //    fehlt er, ist das eine Fehlkonfiguration → Abbruch (kein un-redigiertes Bild).
+    const regions: RedactionRegion[] = [];
+    const redacted: Record<RedactionTargetKind, number> = { face: 0, licensePlate: 0 };
+    for (const { kind, style } of targets) {
       const detector = deps.detectors[kind];
       if (detector === undefined) {
         throw new SanitizationError(
-          `Kein Detektor für aktives Blur-Ziel "${kind}" – Upload blockiert (harte Vorbedingung, #89).`,
+          `Kein Detektor für aktives Redaktions-Ziel "${kind}" – Upload blockiert (harte Vorbedingung, #89).`,
         );
       }
-      let found: BlurRegion[];
+      let found: DetectedRegion[];
       try {
         found = await detector.detect({ imageUri: input.imageUri });
       } catch (cause) {
         throw new SanitizationError(`Detektion für "${kind}" fehlgeschlagen.`, { cause });
       }
       for (const region of found) {
-        // Auf das angefragte Ziel normieren – der Detektor kennt nur seine eigene Art.
-        regions.push({ ...region, kind });
-        blurred[kind] += 1;
+        // Auf das angefragte Ziel normieren und den Config-Stil anheften.
+        regions.push({ ...region, kind, style });
+        redacted[kind] += 1;
       }
     }
 
-    // 2) Nativer Strip-/Blur-/Re-Enkodier-Schritt. Entfernt IMMER alle Metadaten –
-    //    auch wenn keine Region zu blurren ist (reines EXIF-Stripping + Re-Enkodierung).
+    // 2) Nativer Strip-/Redaktions-/Re-Enkodier-Schritt. Entfernt IMMER alle Metadaten –
+    //    auch wenn keine Region zu redigieren ist (reines EXIF-Stripping + Re-Enkodierung).
     let processed: ProcessedImage;
     try {
       processed = await deps.processor.process({
         imageUri: input.imageUri,
-        blurRegions: regions,
+        regions,
         encode: config.encode,
       });
     } catch (cause) {
-      throw new SanitizationError("Bildverarbeitung (Strip/Blur/Re-Enkodierung) fehlgeschlagen.", {
-        cause,
-      });
+      throw new SanitizationError(
+        "Bildverarbeitung (Strip/Redaktion/Re-Enkodierung) fehlgeschlagen.",
+        { cause },
+      );
     }
 
     // 3) Harte Vorbedingung: ohne bestätigtes Metadaten-Stripping kein Upload.
@@ -204,7 +223,7 @@ export function createPhotoSanitizer(
       imageUri: processed.imageUri,
       report: {
         metadataStripped: true,
-        blurred,
+        redacted,
         output: {
           imageUri: processed.imageUri,
           format: processed.format,

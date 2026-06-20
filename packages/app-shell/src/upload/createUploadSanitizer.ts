@@ -5,14 +5,14 @@
 // hochlädt, schickt es zuerst hier durch – schlägt das fehl, wirft die Funktion
 // (`SanitizationError`) und es geht **kein** Rohbild raus (Goldene Regel 5).
 //
-// Reine Wiring-Schicht: alles Variantenspezifische (welche Ziele geblurrt werden,
+// Reine Wiring-Schicht: alles Variantenspezifische (welche Ziele, Redaktions-Stil,
 // Re-Enkodier-Grenzen) stammt aus der `AppDefinition` (`resolveSanitization`) –
 // kein hartkodiertes „Kennzeichen". Die nativen Bausteine laufen zur Laufzeit
-// über ExecuTorch/RN und werden – wie das Spot-Wiring – im RN-Build verifiziert.
+// über ExecuTorch/Skia und werden – wie das Spot-Wiring – im RN-Build verifiziert.
 
 import {
   createPhotoSanitizer,
-  type BlurTargetKind,
+  type RedactionTargetKind,
   type ImageProcessor,
   type RegionDetector,
   type SanitizeInput,
@@ -26,12 +26,12 @@ export type PhotoSanitizer = (input: SanitizeInput) => Promise<SanitizeResult>;
 /** Vom Host bereitzustellende native Bausteine der Sanitisierung. */
 export interface UploadSanitizerDeps {
   /**
-   * Detektoren je Blur-Ziel (`face`, `licensePlate`). Es müssen mindestens die von
-   * der Variante aktivierten Ziele abgedeckt sein – sonst blockt die Pipeline den
+   * Detektoren je Redaktions-Ziel (`face`, `licensePlate`). Es müssen mindestens die
+   * von der Variante aktivierten Ziele abgedeckt sein – sonst blockt die Pipeline den
    * Upload. Synergie mit dem Objekt-Detektor aus #75 (gemeinsame native Infra).
    */
-  detectors: Partial<Record<BlurTargetKind, RegionDetector>>;
-  /** Nativer Strip-/Blur-/Re-Enkodier-Prozessor (z.B. expo-image-manipulator + Blur). */
+  detectors: Partial<Record<RedactionTargetKind, RegionDetector>>;
+  /** Nativer Strip-/Redaktions-/Re-Enkodier-Prozessor (Skia: Blur bzw. Cover). */
   processor: ImageProcessor;
 }
 

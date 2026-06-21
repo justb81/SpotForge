@@ -33,6 +33,18 @@ import gateLabels from "../../data/models/gate_imagenet_efficientnet_b0.labels.j
 // (volles Modell, kein Quant-Verlust; int8 verworfen, ADR 0014).
 import fineModelAsset from "../../data/models/cars_jordo23_vmmr_fp32.pte";
 import fineLabels from "../../data/models/cars_jordo23_vmmr.labels.json";
+// Gebündelte Detektor-Modelle der Foto-Sanitisierung (#89): Gesicht + Kennzeichen
+// (einklassiges YOLO, fp32). ⚠️ TEST-ONLY – beide Modelle sind AGPL-3.0
+// (Ultralytics); vor dem Ausliefern durch permissiv lizenzierte/selbst trainierte
+// ersetzen (Lizenz-Entscheidung als eigenes Issue verfolgt). Wie Gate/Fein nicht im
+// Git; `pnpm fetch-models` legt sie ab, Metro bündelt sie.
+import faceDetectorAsset from "../../data/models/face_detector_yolov8n_fp32.pte";
+import faceDetectorLabels from "../../data/models/face_detector_yolov8n.labels.json";
+import plateDetectorAsset from "../../data/models/license_plate_detector_yolov11n_fp32.pte";
+import plateDetectorLabels from "../../data/models/license_plate_detector_yolov11n.labels.json";
+import { createMobilePhotoSanitizer } from "./upload/createMobilePhotoSanitizer";
+import type { PhotoSanitizer } from "@spotforge/app-shell";
+import type { RegionDetectorModel } from "@spotforge/ai-engine";
 
 // ImageNet-Normalisierung – gilt für Gate (B0) UND Feinmodell (B4); beide Exporte
 // nutzen denselben normMean/normStd (muss zum Export passen, ADR 0008).
@@ -51,6 +63,27 @@ const APP_VERSION = Constants.expoConfig?.version ?? "?";
 const CATEGORY_ATTRIBUTES: Record<string, (typeof vehiclesCategory)["attributes"]> = {
   vehicles: vehiclesCategory.attributes,
 };
+
+// Detektor-Modelle der Foto-Sanitisierung (#89). Der Sanitizer fragt nur die laut
+// `definition.sanitization` aktiven Ziele ab (Gesichter: Default an; Kennzeichen:
+// bei CarForge an, Stil „cover"). Bewusst recall-lastige Schwelle – ein verpasstes
+// Gesicht/Kennzeichen wäre ein Privacy-Leak (ein Fehlalarm redigiert nur etwas mehr).
+const DETECTOR_MODELS: RegionDetectorModel[] = [
+  {
+    modelSource: faceDetectorAsset,
+    label: faceDetectorLabels[0] ?? "face",
+    targetKind: "face",
+    inputSize: 640,
+    detectionThreshold: 0.35,
+  },
+  {
+    modelSource: plateDetectorAsset,
+    label: plateDetectorLabels[0] ?? "license_plate",
+    targetKind: "licensePlate",
+    inputSize: 640,
+    detectionThreshold: 0.35,
+  },
+];
 
 /**
  * Fängt Render-/Startfehler ab und zeigt sie **auf dem Bildschirm** an, statt die
@@ -93,6 +126,10 @@ function Root() {
   // Bis sie bereit ist, zeigt der Spot-Screen einen Lade-Hinweis; Ladefehler werden
   // sichtbar gemacht statt verschluckt.
   const [cascade, setCascade] = useState<CascadeClassifier>();
+  // Foto-Sanitisierung (#89): aus den gebündelten Detektoren + Skia-Prozessor
+  // gebaut. Solange `undefined`, persistiert der Spot-Flow das Originalfoto
+  // (Übergang); ist sie gesetzt, hält jeder Draft nur das bereinigte Foto.
+  const [photoSanitizer, setPhotoSanitizer] = useState<PhotoSanitizer>();
   const [modelError, setModelError] = useState<string>();
 
   // Persistenter, **appId-skopierter** Draft-Store (#102, ADR 0002/0012): on-device
@@ -125,11 +162,19 @@ function Root() {
     };
   }, [preferencesStore]);
   useEffect(() => {
-    if (!definition) return;
+    if (!definition || !branding) return;
     let active = true;
     (async () => {
       try {
         initExecutorch({ resourceFetcher: ExpoResourceFetcher });
+        // Foto-Sanitisierung (#89): Detektoren (Gesicht/Kennzeichen) + Skia-Prozessor
+        // → der Sanitizer, den der Spot-Flow vor dem Persistieren/Upload anwendet.
+        const sanitizer = await createMobilePhotoSanitizer({
+          definition,
+          branding,
+          detectorModels: DETECTOR_MODELS,
+        });
+        if (active) setPhotoSanitizer(() => sanitizer);
         const { createClassifier } = await import("@spotforge/ai-engine");
         // Breites fp32-Gate (#83): EfficientNet-B0/ImageNet mit mitgeliefertem
         // Label-Satz + Normalisierung. Erhöhtes topK ({@link GATE_TOP_K}), damit
@@ -171,7 +216,7 @@ function Root() {
     return () => {
       active = false;
     };
-  }, [definition]);
+  }, [definition, branding]);
 
   if (!definition || !branding) {
     return (
@@ -211,6 +256,7 @@ function Root() {
       theme={branding.theme}
       attributes={CATEGORY_ATTRIBUTES[definition.category.primary] ?? []}
       cascade={cascade}
+      photoSanitizer={photoSanitizer}
       draftStore={draftStore}
       initialPreferences={preferences}
       onPreferencesChange={(next) => {

@@ -58,6 +58,20 @@ export async function createRegionDetector(
   model: RegionDetectorModel,
   options: CreateRegionDetectorOptions,
 ): Promise<RegionDetector> {
+  // Diagnose (#89): das Detektions-JSI-Binding muss vom nativen ExecuTorch-Modul
+  // installiert sein. Fehlt es, wirft `fromCustomModel` sonst nur ein kryptisches
+  // „undefined is not a function" – hier stattdessen eine klare Meldung, die das
+  // fehlende Symbol benennt (Klassifikation nutzt `loadClassification`, Detektion
+  // `loadObjectDetection`; sind sie nicht installiert, fehlt das OD-Binding im Build).
+  const g = globalThis as { loadObjectDetection?: unknown };
+  if (typeof g.loadObjectDetection !== "function") {
+    throw new Error(
+      "react-native-executorch: global.loadObjectDetection ist nicht installiert – " +
+        "das Object-Detection-Binding fehlt in diesem nativen Build (Klassifikation läuft, " +
+        "Detektion nicht). Ohne dieses Binding kann kein Regionen-Detektor geladen werden.",
+    );
+  }
+
   const module = await ObjectDetectionModule.fromCustomModel(
     model.modelSource,
     {

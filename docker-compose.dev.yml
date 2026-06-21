@@ -61,7 +61,9 @@ services:
   # S3-kompatibel (ADR 0013). RPC/Admin-Ports lokal exponiert; Bootstrap (Layout,
   # Key, Bucket) einmalig via tools/garage/bootstrap.sh.
   garage:
-    image: dxflrs/garage:v1.0.1
+    build:
+      context: ./infra/garage
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "3900:3900" # S3 API
@@ -69,7 +71,6 @@ services:
     volumes:
       - garagemeta:/var/lib/garage/meta
       - garagedata:/var/lib/garage/data
-      - ./infra/garage/garage.toml:/etc/garage.toml:ro
     healthcheck:
       test: ["CMD", "/garage", "status"]
       interval: 30s

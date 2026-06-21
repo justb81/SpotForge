@@ -1,13 +1,16 @@
-# Garage-Konfiguration (Single-Node), gemountet nach /etc/garage.toml.
+# Garage-Konfiguration (Single-Node). Wird per infra/garage/Dockerfile fest ins
+# Image nach /etc/garage.toml kopiert (kein Bind-Mount – siehe Dockerfile).
 # S3-kompatibler Objektspeicher für (opt-in) geteilte Kartenbilder – ADR 0013.
 #
 # Single-Node-Setup: replication_factor = 1 (keine Redundanz; Coolify sichert
 # die Volumes). Mehr-Node-Replikation ist bewusst nicht Teil des MVP.
 #
 # WICHTIG: `rpc_secret` und `admin_token` sind **Dev-Defaults**. Für Produktion
-# auf Coolify durch eigene Werte ersetzen (`openssl rand -hex 32` bzw.
-# `openssl rand -base64 32`) – z.B. über eine eigene, nicht eingecheckte
-# garage.toml im Coolify-Storage.
+# nicht hier ändern (landet im Image), sondern zur Laufzeit über Environment-
+# Variablen überschreiben – Garage ersetzt damit die Config-Werte:
+#   GARAGE_RPC_SECRET   (= rpc_secret,   `openssl rand -hex 32`)
+#   GARAGE_ADMIN_TOKEN  (= admin_token,  `openssl rand -base64 32`)
+# In Coolify als Service-Env für `garage` setzen.
 
 metadata_dir = "/var/lib/garage/meta"
 data_dir = "/var/lib/garage/data"

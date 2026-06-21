@@ -38,7 +38,18 @@ export const MIGRATIONS_FOLDER = process.env.MIGRATIONS_DIR ?? resolve(process.c
  *                  provisionierenden Nicht-Superuser-Rolle.
  */
 export async function runMigrations(adminUrl: string, appUrl: string): Promise<void> {
-  const sql = postgres(adminUrl, { max: 1 });
+  const sql = postgres(adminUrl, {
+    max: 1,
+    // Der Drizzle-Migrator legt sein Bookkeeping per `CREATE SCHEMA/TABLE IF NOT
+    // EXISTS` an; bei jedem Redeploy quittiert Postgres das mit harmlosen NOTICEs
+    // ("already exists, skipping", 42P06 = duplicate_schema, 42P07 =
+    // duplicate_table). Die filtern wir raus, sonst alle NOTICEs durchreichen –
+    // damit unerwartete im Deploy-Log sichtbar bleiben.
+    onnotice: (notice) => {
+      if (notice.code === "42P06" || notice.code === "42P07") return;
+      console.log(notice);
+    },
+  });
   try {
     await sql`select pg_advisory_lock(${MIGRATION_LOCK_KEY})`;
     try {

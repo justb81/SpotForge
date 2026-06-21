@@ -42,7 +42,13 @@ import faceDetectorAsset from "../../data/models/face_detector_yolov8n_fp32.pte"
 import faceDetectorLabels from "../../data/models/face_detector_yolov8n.labels.json";
 import plateDetectorAsset from "../../data/models/license_plate_detector_yolov11n_fp32.pte";
 import plateDetectorLabels from "../../data/models/license_plate_detector_yolov11n.labels.json";
-import { createMobilePhotoSanitizer } from "./upload/createMobilePhotoSanitizer";
+// createMobilePhotoSanitizer (und damit Skia + die Detektor-Module) wird BEWUSST
+// erst im Effekt dynamisch importiert – nicht hier statisch. Sonst liefe Skias
+// `NativeSetup` (`SkiaModule.install()`) schon beim Modul-Laden, also VOR dem
+// ersten Render: ein Fehler dort würde die App still schließen (die
+// StartupErrorBoundary greift erst, sobald React rendert). Dynamisch + im
+// try/catch wird ein Skia-/Detektor-Fehler stattdessen als „Modell-Ladefehler"
+// sichtbar (gleiche Deferral-Logik wie beim Klassifikator unten).
 import type { PhotoSanitizer } from "@spotforge/app-shell";
 import type { RegionDetectorModel } from "@spotforge/ai-engine";
 
@@ -169,6 +175,9 @@ function Root() {
         initExecutorch({ resourceFetcher: ExpoResourceFetcher });
         // Foto-Sanitisierung (#89): Detektoren (Gesicht/Kennzeichen) + Skia-Prozessor
         // → der Sanitizer, den der Spot-Flow vor dem Persistieren/Upload anwendet.
+        // Dynamischer Import: lädt Skia/Detektoren erst hier (nach dem ersten Render),
+        // damit ein nativer Init-Fehler sichtbar wird statt die App still zu schließen.
+        const { createMobilePhotoSanitizer } = await import("./upload/createMobilePhotoSanitizer");
         const sanitizer = await createMobilePhotoSanitizer({
           definition,
           branding,

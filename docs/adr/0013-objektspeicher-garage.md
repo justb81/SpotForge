@@ -49,8 +49,12 @@ parallel gehalten (CLAUDE.md: vor 1.0 keine Altlasten).
 ## Konsequenzen
 
 - **Image gepinnt** auf `dxflrs/garage:v1.0.1` (analog „pin & deliberate",
-  ADR 0005/0006). Konfiguration als gemountete `infra/garage/garage.toml`
-  (`replication_factor = 1`, LMDB-Metadaten).
+  ADR 0005/0006). Die Konfiguration (`replication_factor = 1`, LMDB-Metadaten)
+  wird über ein dünnes `infra/garage/Dockerfile` (`FROM dxflrs/garage:v1.0.1` +
+  `COPY garage.toml`) **fest ins Image gebacken** statt als Einzeldatei gemountet:
+  Coolify legt fehlende Bind-Mount-Quellen als Verzeichnis an, wodurch ein
+  `…/garage.toml:/etc/garage.toml`-Mount zum Verzeichnis wird und Garage mit
+  „IO error: Is a directory" abbricht.
 - **Bootstrap** (Layout → Key → Bucket → Rechte) ist **nicht** rein deklarativ in
   Compose abbildbar (Garage braucht die Node-ID zur Laufzeit) → einmaliges Skript
   `tools/garage/bootstrap.sh`; die erzeugten Schlüssel landen als
@@ -62,5 +66,7 @@ parallel gehalten (CLAUDE.md: vor 1.0 keine Altlasten).
 - **`.env.example`** trägt `S3_ENDPOINT`/`S3_REGION`/`S3_*`-Keys (Region `garage`);
   der Backend-S3-Client folgt mit dem Bild-Feature (nicht Teil von #18).
 - **`rpc_secret`/`admin_token`** in der eingecheckten `garage.toml` sind
-  Dev-Defaults; in Produktion durch eigene Werte ersetzen.
+  Dev-Defaults (landen im Image); in Produktion **nicht** in der Datei ändern,
+  sondern zur Laufzeit per Env `GARAGE_RPC_SECRET` / `GARAGE_ADMIN_TOKEN`
+  überschreiben (Coolify-Service-Env).
 - CLAUDE.md-ADR-Liste um ADR 0013 ergänzt.

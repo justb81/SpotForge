@@ -33,24 +33,15 @@ import gateLabels from "../../data/models/gate_imagenet_efficientnet_b0.labels.j
 // (volles Modell, kein Quant-Verlust; int8 verworfen, ADR 0014).
 import fineModelAsset from "../../data/models/cars_jordo23_vmmr_fp32.pte";
 import fineLabels from "../../data/models/cars_jordo23_vmmr.labels.json";
-// Gebündelte Detektor-Modelle der Foto-Sanitisierung (#89): Gesicht + Kennzeichen
-// (einklassiges YOLO, fp32). ⚠️ TEST-ONLY – beide Modelle sind AGPL-3.0
-// (Ultralytics); vor dem Ausliefern durch permissiv lizenzierte/selbst trainierte
-// ersetzen (Lizenz-Entscheidung als eigenes Issue verfolgt). Wie Gate/Fein nicht im
-// Git; `pnpm fetch-models` legt sie ab, Metro bündelt sie.
-import faceDetectorAsset from "../../data/models/face_detector_yolov8n_fp32.pte";
-import faceDetectorLabels from "../../data/models/face_detector_yolov8n.labels.json";
-import plateDetectorAsset from "../../data/models/license_plate_detector_yolov11n_fp32.pte";
-import plateDetectorLabels from "../../data/models/license_plate_detector_yolov11n.labels.json";
-// createMobilePhotoSanitizer (und damit Skia + die Detektor-Module) wird BEWUSST
-// erst im Effekt dynamisch importiert – nicht hier statisch. Sonst liefe Skias
-// `NativeSetup` (`SkiaModule.install()`) schon beim Modul-Laden, also VOR dem
-// ersten Render: ein Fehler dort würde die App still schließen (die
-// StartupErrorBoundary greift erst, sobald React rendert). Dynamisch + im
-// try/catch wird ein Skia-/Detektor-Fehler stattdessen als „Modell-Ladefehler"
-// sichtbar (gleiche Deferral-Logik wie beim Klassifikator unten).
+// Foto-Sanitisierung (#89): die Detektoren laufen über **MLKit** (permissiv,
+// on-device, KEIN gebündeltes Modell) – daher keine .pte-Detektor-Assets hier.
+// createMobilePhotoSanitizer (samt Skia + MLKit) wird BEWUSST erst im Effekt
+// dynamisch importiert – nicht statisch. Sonst liefe Skias `NativeSetup`
+// (`SkiaModule.install()`) schon beim Modul-Laden, also VOR dem ersten Render:
+// ein Fehler dort schlösse die App still (die StartupErrorBoundary greift erst,
+// sobald React rendert). Dynamisch + im try/catch wird ein Init-Fehler stattdessen
+// als „Modell-Ladefehler" sichtbar (gleiche Deferral-Logik wie beim Klassifikator).
 import type { PhotoSanitizer } from "@spotforge/app-shell";
-import type { RegionDetectorModel } from "@spotforge/ai-engine";
 
 // ImageNet-Normalisierung – gilt für Gate (B0) UND Feinmodell (B4); beide Exporte
 // nutzen denselben normMean/normStd (muss zum Export passen, ADR 0008).
@@ -69,27 +60,6 @@ const APP_VERSION = Constants.expoConfig?.version ?? "?";
 const CATEGORY_ATTRIBUTES: Record<string, (typeof vehiclesCategory)["attributes"]> = {
   vehicles: vehiclesCategory.attributes,
 };
-
-// Detektor-Modelle der Foto-Sanitisierung (#89). Der Sanitizer fragt nur die laut
-// `definition.sanitization` aktiven Ziele ab (Gesichter: Default an; Kennzeichen:
-// bei CarForge an, Stil „cover"). Bewusst recall-lastige Schwelle – ein verpasstes
-// Gesicht/Kennzeichen wäre ein Privacy-Leak (ein Fehlalarm redigiert nur etwas mehr).
-const DETECTOR_MODELS: RegionDetectorModel[] = [
-  {
-    modelSource: faceDetectorAsset,
-    label: faceDetectorLabels[0] ?? "face",
-    targetKind: "face",
-    inputSize: 640,
-    detectionThreshold: 0.35,
-  },
-  {
-    modelSource: plateDetectorAsset,
-    label: plateDetectorLabels[0] ?? "license_plate",
-    targetKind: "licensePlate",
-    inputSize: 640,
-    detectionThreshold: 0.35,
-  },
-];
 
 /**
  * Fängt Render-/Startfehler ab und zeigt sie **auf dem Bildschirm** an, statt die
@@ -178,11 +148,7 @@ function Root() {
         // Dynamischer Import: lädt Skia/Detektoren erst hier (nach dem ersten Render),
         // damit ein nativer Init-Fehler sichtbar wird statt die App still zu schließen.
         const { createMobilePhotoSanitizer } = await import("./upload/createMobilePhotoSanitizer");
-        const sanitizer = await createMobilePhotoSanitizer({
-          definition,
-          branding,
-          detectorModels: DETECTOR_MODELS,
-        });
+        const sanitizer = await createMobilePhotoSanitizer({ definition, branding });
         if (active) setPhotoSanitizer(() => sanitizer);
         const { createClassifier } = await import("@spotforge/ai-engine");
         // Breites fp32-Gate (#83): EfficientNet-B0/ImageNet mit mitgeliefertem

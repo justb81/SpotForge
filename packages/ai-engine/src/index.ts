@@ -62,10 +62,3 @@ export type {
   SanitizationReport,
   SanitizeResult,
 } from "./sanitize";
-
-// On-Device-Regionen-Detektor (face/license_plate) über ExecuTorch – nur RN-Build.
-export { createRegionDetector } from "./executorch/createRegionDetector";
-export type {
-  RegionDetectorModel,
-  CreateRegionDetectorOptions,
-} from "./executorch/createRegionDetector";

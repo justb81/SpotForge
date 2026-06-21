@@ -49,50 +49,6 @@
           "bytes": 222293
         }
       }
-    },
-    {
-      "$comment": "Gesichts-Detektor der Foto-Sanitisierung (#89). ⚠️ TEST-ONLY: das Modell ist AGPL-3.0 (Ultralytics) – vor dem Ausliefern durch ein permissiv lizenziertes bzw. selbst trainiertes Modell ersetzen (Lizenz-Entscheidung als eigenes Issue verfolgt). Erzeugt via tools/export-model (format: yolo) aus arnabdhar/YOLOv8-Face-Detection.",
-      "id": "face-detector-yolov8n",
-      "name": "YOLOv8n-Face (1 Klasse, fp32/XNNPACK) – Gesichts-Detektor (Sanitisierung)",
-      "version": "1.0.0",
-      "category": "sanitization",
-      "preprocessor": null,
-      "artifacts": {
-        "model": {
-          "url": "https://github.com/justb81/SpotForge/releases/download/model-face-detector-yolov8n-v1.0.0/face_detector_yolov8n_fp32.pte",
-          "dest": "data/models/face_detector_yolov8n_fp32.pte",
-          "sha256": "8ae3522df2a1ace53f6d74864b1676360abab5c8a3b792bed042871b2374a4b0",
-          "bytes": 12126980
-        },
-        "labels": {
-          "url": "https://github.com/justb81/SpotForge/releases/download/model-face-detector-yolov8n-v1.0.0/face_detector_yolov8n.labels.json",
-          "dest": "data/models/face_detector_yolov8n.labels.json",
-          "sha256": "bec9668e014a7365a54945120b8943caed8867fb715beb3c75970aabbd0d6469",
-          "bytes": 12
-        }
-      }
-    },
-    {
-      "$comment": "Kfz-Kennzeichen-Detektor der Foto-Sanitisierung (#89). ⚠️ TEST-ONLY: das Modell ist AGPL-3.0 (Ultralytics) – vor dem Ausliefern durch ein permissiv lizenziertes bzw. selbst trainiertes Modell ersetzen (Lizenz-Entscheidung als eigenes Issue verfolgt). Erzeugt via tools/export-model (format: yolo) aus morsetechlab/yolov11-license-plate-detection (YOLOv11n).",
-      "id": "license-plate-detector-yolov11n",
-      "name": "YOLOv11n License-Plate (1 Klasse, fp32/XNNPACK) – Kennzeichen-Detektor (Sanitisierung)",
-      "version": "1.0.0",
-      "category": "sanitization",
-      "preprocessor": null,
-      "artifacts": {
-        "model": {
-          "url": "https://github.com/justb81/SpotForge/releases/download/model-license-plate-detector-yolov11n-v1.0.0/license_plate_detector_yolov11n_fp32.pte",
-          "dest": "data/models/license_plate_detector_yolov11n_fp32.pte",
-          "sha256": "6a5729930f2231afa39a945be9d031e90b95dc9eeb6483d24d30261d0f181af9",
-          "bytes": 10464004
-        },
-        "labels": {
-          "url": "https://github.com/justb81/SpotForge/releases/download/model-license-plate-detector-yolov11n-v1.0.0/license_plate_detector_yolov11n.labels.json",
-          "dest": "data/models/license_plate_detector_yolov11n.labels.json",
-          "sha256": "8a61553666e9134940ac4287216426acbea494ff918c7e4667adcc6106d94728",
-          "bytes": 21
-        }
-      }
     }
   ]
 }

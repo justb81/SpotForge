@@ -97,6 +97,12 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@infinitered/react-native-mlkit-core':
+        specifier: ^5.0.0
+        version: 5.0.0(expo-image@56.0.11(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+      '@infinitered/react-native-mlkit-face-detection':
+        specifier: ^5.0.0
+        version: 5.0.0(expo-image@56.0.11(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       '@shopify/react-native-skia':
         specifier: 2.6.4
         version: 2.6.4(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
@@ -127,6 +133,9 @@ importers:
       expo-file-system:
         specifier: 56.0.8
         version: 56.0.8(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))
+      expo-image:
+        specifier: ~56.0.11
+        version: 56.0.11(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
       expo-image-picker:
         specifier: ^56.0.17
         version: 56.0.18(expo@56.0.11)
@@ -1480,6 +1489,21 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
+  '@infinitered/react-native-mlkit-core@5.0.0':
+    resolution: {integrity: sha512-nss4q75/u8zMF4nhgsaO/MgBSO6WHfMAEE11yx7r7/LGTP12pRu6lOKgT8cGgVrmpsVlKjv7f4USeT2/wTMGVw==}
+    peerDependencies:
+      expo: '*'
+      expo-image: '*'
+      react: '*'
+      react-native: '*'
+
+  '@infinitered/react-native-mlkit-face-detection@5.0.0':
+    resolution: {integrity: sha512-fTthAOIUSP7pTetENS2nKKISiprd5BP7NsGHhMpP62YYKYuo1ORdKkSIE81fpWPzjX4ipJ7ZM0kA/V30yW6DdA==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
+
   '@ioredis/commands@1.10.0':
     resolution: {integrity: sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==}
 
@@ -2736,6 +2760,17 @@ packages:
     peerDependencies:
       expo: '*'
 
+  expo-image@56.0.11:
+    resolution: {integrity: sha512-k2xwxGk14xi6zxmEGAU4rUTb1lK5qf0y0Qb8+Jaggnul0KaJJxcq9qvyDp9iyJBW35cp9isONAUnNtIiooZ/Pw==}
+    peerDependencies:
+      expo: '*'
+      react: '*'
+      react-native: '*'
+      react-native-web: '*'
+    peerDependenciesMeta:
+      react-native-web:
+        optional: true
+
   expo-json-utils@56.0.0:
     resolution: {integrity: sha512-lUqyv9aIGDbYTQ5Nux2FnH2/Dz0w5uJ8Pr080eS0StXi2jr5OmuMNErpzUnpfnYOU55xKotd4AHv68PfV/ludg==}
 
@@ -3874,6 +3909,10 @@ packages:
 
   setprototypeof@1.2.0:
     resolution: {integrity: sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==}
+
+  sf-symbols-typescript@2.2.0:
+    resolution: {integrity: sha512-TPbeg0b7ylrswdGCji8FRGFAKuqbpQlLbL8SOle3j1iHSs5Ob5mhvMAxWN2UItOjgALAB5Zp3fmMfj8mbWvXKw==}
+    engines: {node: '>=10'}
 
   shebang-command@2.0.0:
     resolution: {integrity: sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==}
@@ -5597,6 +5636,22 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
+  '@infinitered/react-native-mlkit-core@5.0.0(expo-image@56.0.11(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      expo: 56.0.11(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      expo-image: 56.0.11(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3)
+
+  '@infinitered/react-native-mlkit-face-detection@5.0.0(expo-image@56.0.11(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      '@infinitered/react-native-mlkit-core': 5.0.0(expo-image@56.0.11(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3))(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
+      expo: 56.0.11(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3)
+    transitivePeerDependencies:
+      - expo-image
+
   '@ioredis/commands@1.10.0': {}
 
   '@isaacs/ttlcache@1.4.1': {}
@@ -6832,6 +6887,13 @@ snapshots:
     dependencies:
       expo: 56.0.11(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
       expo-image-loader: 56.0.3(expo@56.0.11)
+
+  expo-image@56.0.11(expo@56.0.11)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3):
+    dependencies:
+      expo: 56.0.11(@babel/core@7.29.7)(@expo/dom-webview@56.0.5)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      react: 19.2.3
+      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.17)(react@19.2.3)
+      sf-symbols-typescript: 2.2.0
 
   expo-json-utils@56.0.0: {}
 
@@ -8084,6 +8146,8 @@ snapshots:
   set-cookie-parser@2.7.2: {}
 
   setprototypeof@1.2.0: {}
+
+  sf-symbols-typescript@2.2.0: {}
 
   shebang-command@2.0.0:
     dependencies:

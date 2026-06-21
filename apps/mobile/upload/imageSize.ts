@@ -1,6 +1,6 @@
-// Liest die Pixel-Maße eines Bildes über Skia – injiziert in
-// `createRegionDetector` (#89), damit die Detektor-Boxen (in Quellbild-Pixeln)
-// auf normalisierte Regionen (0..1) umgerechnet werden können.
+// Liest die Pixel-Maße eines Bildes über Skia – injiziert in die MLKit-Detektoren
+// (#89, z.B. `createMlkitFaceDetector`), damit die Detektor-Boxen (in Quellbild-
+// Pixeln) auf normalisierte Regionen (0..1) umgerechnet werden können.
 
 import { Skia } from "@shopify/react-native-skia";
 

@@ -130,13 +130,13 @@ export default defineApp({
   },
 
   // Foto-Sanitisierung vor Upload (#89, Goldene Regel 5): EXIF/GPS werden immer
-  // entfernt (unbedingt in der Pipeline), Gesichter immer geblurrt (Default).
-  // CarForge macht zusätzlich Kfz-Kennzeichen unkenntlich – Karten-Fotos zeigen
-  // Fahrzeuge auf der Straße, lesbare Kennzeichen wären personenbezogen. Stil
-  // `"cover"`: das Kennzeichen wird mit dem App-Namen in Theme-Farben überdeckt
-  // (on-brand statt anonymer Blur-Fleck; Rendering im Host aus Identität + Branding).
+  // entfernt (unbedingt in der Pipeline), Gesichter immer geblurrt (Default, via
+  // MLKit – permissiv, on-device). Die Kennzeichen-/Text-Redaktion läuft permissiv
+  // über MLKit Text Recognition (alle lesbaren Text-Regionen blurren) und folgt als
+  // nächster Schritt; bis der Text-Detektor verdrahtet ist, bleibt das Ziel **aus**,
+  // damit der Draft nicht an einem fehlenden Detektor blockiert (harte Vorbedingung).
   sanitization: {
-    redact: { licensePlates: { enabled: true, style: "cover" } },
+    redact: { licensePlates: { enabled: false } },
   },
 
   // Theme & Assets: siehe ./branding.config.ts (ADR 0011).

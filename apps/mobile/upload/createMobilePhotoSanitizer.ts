@@ -1,51 +1,51 @@
 // Setzt die On-Device-**Foto-Sanitisierung** (#89) im RN-Host zusammen: die
-// gebündelten Detektor-Modelle (Gesicht/Kennzeichen) + der Skia-Bildprozessor +
-// die generische Verdrahtung aus der app-shell. Das Ergebnis ist der
-// `PhotoSanitizer`, den der Upload-Pfad (#81/#19) **vor** jedem Foto-Upload
-// aufruft – schlägt er fehl, geht kein Rohbild raus (harte Vorbedingung).
+// MLKit-Detektoren (permissiv, on-device, **kein gebündeltes Modell**) + der
+// Skia-Bildprozessor + die generische Verdrahtung aus der app-shell. Das Ergebnis
+// ist der `PhotoSanitizer`, den der Spot-Flow vor dem Persistieren/Upload anwendet
+// – schlägt er fehl, geht kein Rohbild raus (harte Vorbedingung).
+//
+// Detektoren-Strategie (permissiv statt AGPL-YOLO):
+//  - Gesichter: MLKit Face Detection (`@infinitered/react-native-mlkit-*`).
+//  - Kennzeichen/Text: MLKit Text Recognition (folgt als nächster Schritt; bis
+//    dahin ist das Ziel in der Variante aus, damit kein fehlender Detektor den
+//    Draft blockiert).
 //
 // Kategorie-neutral: welche Ziele aktiv sind und wie sie redigiert werden, kommt
-// aus `definition.sanitization` (app-shell `createUploadSanitizer`); der
-// `"cover"`-Text/-Farben kommen aus Identität + Branding der aktiven Variante.
+// aus `definition.sanitization` (app-shell `createUploadSanitizer`).
 
-import {
-  createRegionDetector,
-  type RegionDetector,
-  type RegionDetectorModel,
-  type RedactionTargetKind,
-} from "@spotforge/ai-engine";
+import type { RegionDetector, RedactionTargetKind } from "@spotforge/ai-engine";
 import { createUploadSanitizer, type PhotoSanitizer } from "@spotforge/app-shell";
-import type { AppDefinition, Branding } from "@spotforge/app-config";
+import { resolveSanitization, type AppDefinition, type Branding } from "@spotforge/app-config";
 import { createSkiaImageProcessor } from "./skiaImageProcessor";
+import { createMlkitFaceDetector } from "./mlkitFaceDetector";
 import { skiaImageSize } from "./imageSize";
 
 export interface MobilePhotoSanitizerOptions {
   definition: AppDefinition;
   branding: Branding;
-  /**
-   * Gebündelte Detektor-Modelle (face / license_plate) als Metro-Assets
-   * (`tools/fetch-models` → `.pte`, ADR 0008). Es müssen mindestens die laut
-   * `definition.sanitization` aktiven Ziele abgedeckt sein – sonst blockt die
-   * Pipeline den Upload.
-   */
-  detectorModels: RegionDetectorModel[];
 }
 
 /**
- * Baut den {@link PhotoSanitizer} der aktiven Variante. Lädt je Detektor-Modell
- * einen ExecuTorch-Regionen-Detektor (Bildmaße via Skia) und gibt sie zusammen mit
- * dem Skia-Prozessor an die generische {@link createUploadSanitizer}-Verdrahtung.
- * Der `"cover"`-Stil schreibt den App-Namen in den Theme-Farben (surface ⊕ primary).
+ * Baut den {@link PhotoSanitizer} der aktiven Variante: MLKit-Detektoren für die
+ * laut `definition.sanitization` aktiven Ziele + Skia-Prozessor, verdrahtet über
+ * {@link createUploadSanitizer}. Es werden nur Detektoren für **aktive** Ziele
+ * gebaut (kein unnötiges Modell-Laden); der `"cover"`-Stil schreibt den App-Namen
+ * in den Theme-Farben (surface ⊕ primary).
  */
 export async function createMobilePhotoSanitizer(
   options: MobilePhotoSanitizerOptions,
 ): Promise<PhotoSanitizer> {
-  const { definition, branding, detectorModels } = options;
+  const { definition, branding } = options;
+  const resolved = resolveSanitization(definition);
 
   const detectors: Partial<Record<RedactionTargetKind, RegionDetector>> = {};
-  for (const model of detectorModels) {
-    detectors[model.targetKind] = await createRegionDetector(model, { imageSize: skiaImageSize });
+  if (resolved.redact.faces.enabled) {
+    detectors.face = await createMlkitFaceDetector({ imageSize: skiaImageSize });
   }
+  // Hinweis: `licensePlate` (MLKit-Text-Recognition) folgt als nächster Schritt;
+  // ist es in der Variante aktiv, ohne dass hier ein Detektor gebaut wird, blockt
+  // die Pipeline den Upload bewusst (harte Vorbedingung) – die Variante hält es
+  // daher bis dahin aus.
 
   const processor = createSkiaImageProcessor({
     cover: {

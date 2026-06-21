@@ -8,7 +8,7 @@ Erzeugt aus einem Export-Config (``models/<id>.json``) reproduzierbar:
 * ``<id>.metadata.json``  – Quelle, Revision, Version, SHA-256, Normalisierung,
 * ``<id>.manifest.json``  – fertiger Eintrag fürs Modell-Manifest (gebündelt).
 
-Drei Export-Backends (Config-Feld ``format``):
+Zwei Export-Backends (Config-Feld ``format``):
 
 * ``optimum`` – HuggingFace-*transformers*-Modelle via ``optimum-executorch``
   (``optimum-cli export executorch``). Labels/Normalisierung aus ``config.json``
@@ -20,20 +20,15 @@ Drei Export-Backends (Config-Feld ``format``):
   EfficientNet-B4, 8.949 Klassen). Labels aus einer committeten JSON-Liste
   (``timm.labelsJson``, repo-relativ) oder einer CSV (``timm.labelsFile``),
   Normalisierung aus der Config.
-* ``yolo``    – ein (einklassiges) Ultralytics-YOLO-**Detektionsmodell** (`.pt`
-  aus dem HF-Hub) für die Foto-Sanitisierung (#89, Gesicht/Kennzeichen). Wird auf
-  den rne-Detektions-Kontrakt gewrappt (3 Output-Tensoren, s.u.) und nach
-  ExecuTorch gelowert. Labels aus der Config (``yolo.labels``).
 
 Der Export ist immer **fp32** (ADR 0014 – keine Quantisierung; int8 ist verworfen).
 
-Modell-Kontrakt (von react-native-executorch gefordert):
-* Klassifikation (``optimum``/``timm``): Input ``float32[1,3,H,W]`` (RGB, nach
-  ``(pixel - mean) / std``), Output ``float32[1,C]`` rohe Logits in Label-
-  Reihenfolge; Softmax übernimmt das native Runtime.
-* Detektion (``yolo``): Input ``float32[1,3,H,W]`` (RGB, [0,1]), Output **drei**
-  Tensoren – Boxen ``[4·N]`` (x1,y1,x2,y2), Scores ``[N]``, Klassen ``[N]``;
-  Threshold/NMS/Rückskalierung macht das native Runtime.
+Modell-Kontrakt (von react-native-executorch gefordert): Input
+``float32[1,3,H,W]`` (RGB, nach ``(pixel - mean) / std``), Output ``float32[1,C]``
+rohe Logits in Label-Reihenfolge; Softmax übernimmt das native Runtime.
+
+Die Foto-Sanitisierungs-Detektoren (#89) laufen NICHT über dieses Tool: sie
+nutzen permissive On-Device-MLKit-Module (kein gebündeltes Modell).
 
 Läuft in CI (``.github/workflows/model-export.yml``) oder lokal:
 
@@ -211,90 +206,6 @@ def export_timm(cfg: dict, model_out: Path) -> tuple[list[str], dict | None]:
     return labels, cfg.get("preprocessor")
 
 
-# --- Backend: yolo (Ultralytics Detektion → ExecuTorch) ---------------------
-
-
-class _YoloDetectWrapper:
-    """Wrappt das rohe Ultralytics-Detect-Modell auf den **react-native-executorch**-
-    ``ObjectDetectionModule.fromCustomModel``-Kontrakt: Input ``float32[1,3,H,W]``
-    (RGB, [0,1]), Output **drei** Tensoren – Boxen ``[4·N]`` (x1,y1,x2,y2 im
-    Modell-Input-Pixelraum), Scores ``[N]``, Klassen-Indizes ``[N]`` (float32).
-    Threshold + NMS + Rückskalierung macht das native Runtime; das Modell liefert
-    nur die rohen Kandidaten.
-
-    Ultralytics liefert im Eval-Modus ``[1, 4+nc, A]`` mit bereits dekodierten
-    xywh-Boxen (Pixel) und (sigmoid) Klassen-Scores. Wir transponieren, splitten
-    in Box/Score, nehmen das Maximum über die Klassen und wandeln xywh → xyxy.
-    Als ``torch.nn.Module`` gebaut, damit ``torch.export`` den Decode mit in den
-    Graphen zieht (kein Python-Postprocess zur Laufzeit)."""
-
-    def build(self, raw_model, num_classes: int):  # pragma: no cover - benötigt torch
-        import torch
-
-        nc = num_classes
-
-        class Wrapper(torch.nn.Module):
-            def __init__(self, model):
-                super().__init__()
-                self.model = model
-
-            def forward(self, x):
-                out = self.model(x)
-                preds = out[0] if isinstance(out, (tuple, list)) else out
-                preds = preds[0].transpose(0, 1)  # [A, 4+nc]
-                xywh = preds[:, :4]
-                scores, classes = preds[:, 4 : 4 + nc].max(dim=1)
-                cx, cy, w, h = xywh[:, 0], xywh[:, 1], xywh[:, 2], xywh[:, 3]
-                boxes = torch.stack(
-                    [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2], dim=1
-                ).reshape(-1)
-                return boxes, scores, classes.to(torch.float32)
-
-        return Wrapper(raw_model).eval()
-
-
-def export_yolo(cfg: dict, model_out: Path) -> tuple[list[str], dict | None]:
-    """Lädt ein (einklassiges) Ultralytics-YOLO-Detektionsmodell und lowert es –
-    auf den rne-Detektions-Kontrakt gewrappt – nach ExecuTorch ``.pte`` (#89).
-
-    Für die Foto-Sanitisierung: Gesichts-/Kennzeichen-Detektor. Quelle ist ein
-    ``.pt``-Checkpoint aus dem HF-Hub (``yolo.checkpointFile``); die Labels kommen
-    aus der Config (``yolo.labels``, i.d.R. genau eine Klasse). YOLO erwartet
-    Pixel in ``[0,1]`` ohne Mittelwert-/Std-Normalisierung → ``preprocessor`` bleibt
-    leer.
-
-    Hinweis: Der Decode (xywh→xyxy, max-Klasse) ist auf den dokumentierten
-    rne-Kontrakt ausgelegt; die exakte Übereinstimmung mit dem nativen
-    Postprocess (NMS/Threshold) ist **auf dem Gerät zu verifizieren** (#63)."""
-    import torch
-    from torch.export import export
-    from executorch.exir import to_edge_transform_and_lower
-    from executorch.backends.xnnpack.partition.xnnpack_partitioner import XnnpackPartitioner
-    from huggingface_hub import hf_hub_download
-    from ultralytics import YOLO
-
-    y = cfg["yolo"]
-    labels = y["labels"]
-    if not isinstance(labels, list) or not all(isinstance(s, str) for s in labels) or not labels:
-        raise SystemExit("yolo.labels muss eine nicht-leere Liste von Strings sein.")
-
-    ckpt_path = hf_hub_download(
-        repo_id=cfg["sourceModel"], filename=y["checkpointFile"], revision=cfg["revision"]
-    )
-    raw_model = YOLO(ckpt_path).model.eval()
-    wrapped = _YoloDetectWrapper().build(raw_model, len(labels))
-
-    h, w = y["inputSize"]
-    sample = (torch.randn(1, 3, h, w),)
-    exported = export(wrapped, sample)  # immer fp32 (ADR 0014)
-    edge = to_edge_transform_and_lower(exported, partitioner=[XnnpackPartitioner()])
-    program = edge.to_executorch()
-    with open(model_out, "wb") as handle:
-        handle.write(program.buffer)
-
-    return labels, cfg.get("preprocessor")
-
-
 # --- Gemeinsam: Metadaten + Manifest-Eintrag --------------------------------
 
 
@@ -322,10 +233,8 @@ def main() -> int:
         labels, preprocessor = export_timm(cfg, model_out)
     elif fmt == "optimum":
         labels, preprocessor = export_optimum(cfg, model_out)
-    elif fmt == "yolo":
-        labels, preprocessor = export_yolo(cfg, model_out)
     else:
-        raise SystemExit(f"Unbekanntes format '{fmt}' (erwartet 'optimum', 'timm' oder 'yolo').")
+        raise SystemExit(f"Unbekanntes format '{fmt}' (erwartet 'optimum' oder 'timm').")
 
     labels_out.write_text(json.dumps(labels, ensure_ascii=False, indent=2), encoding="utf-8")
 

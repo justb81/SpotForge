@@ -109,26 +109,21 @@ sanitize(photo)
   oder bestätigt der Prozessor das Stripping nicht → `SanitizationError`. Der
   Upload-Pfad blockt dann, statt das Rohbild zu senden.
 - `RegionDetector` und `ImageProcessor` sind **injizierte Seams** wie `Classifier`:
-  - **Detektor:** `createRegionDetector` (`executorch/createRegionDetector.ts`)
-    wrappt `ObjectDetectionModule.fromCustomModel` (react-native-executorch) – ein
-    einklassiges Modell je Ziel (face / license_plate); Boxen werden über die
-    injizierte `imageSize` normalisiert. Synergie mit dem Objekt-Detektor aus #75.
+  - **Detektoren:** permissive On-Device-**MLKit**-Module im RN-Host
+    (`apps/mobile/upload/`) – Gesichter via `@infinitered/react-native-mlkit-face-detection`,
+    Text/Kennzeichen via MLKit Text Recognition. **Kein gebündeltes Modell, keine
+    AGPL-Gewichte.** Die MLKit-Boxen (Pixel) werden über die injizierte `imageSize`
+    auf 0..1 normalisiert.
   - **Prozessor:** Skia (`apps/mobile/upload/skiaImageProcessor.ts`) – Strip + Blur
     bzw. Cover (App-Name in Theme-Farben) + JPEG-Re-Enkodierung.
   - Beide laufen nativ und werden im RN-Build verifiziert; die Orchestrierung hier
     ist rein und vitest-getestet (`sanitize.test.ts`).
 
-> **Detektor-Modelle (face / license_plate):** Empfohlen sind **einklassige,
-> nano-große YOLO-Modelle** (passen auf den `ObjectDetectionModule`-`fromCustomModel`-
-> Kontrakt: Input `float32[1,3,H,W]`, Output Boxen/Scores/Klassen):
-> - **Gesicht:** YOLOv8n-face (z.B. `lindevs/yolov8-face`, `akanametov/yolo-face`).
-> - **Kennzeichen:** YOLOv8/-v11n license-plate (z.B. `morsetechlab/yolov11-license-plate-detection`).
->
-> Wie Gate/Fein werden sie per `tools/export-model` nach `.pte` exportiert (XNNPACK,
-> fp32; ADR 0008/0014), als Release-Asset gehostet und per `tools/fetch-models`
-> **fest gebündelt** (eigene Manifest-Einträge, kein Git-Asset). Der konkrete Export +
-> die Geräte-Verifikation sind eine Modell-/Geräte-Aufgabe; sind die `.pte` gebündelt,
-> reicht der RN-Host sie als `RegionDetectorModel[]` an `createMobilePhotoSanitizer`.
+> **Lizenz-Hinweis:** Ein früher Ansatz nutzte gebündelte YOLO-`.pte` (via
+> `react-native-executorch` Object-Detection) – verworfen, weil die verfügbaren
+> YOLO-Gewichte **AGPL-3.0** sind (nicht auslieferbar) und das OD-JSI-Binding im
+> Build nicht verfügbar war. Stattdessen permissive MLKit-Module (s.o.). Details:
+> Issue #123 (Lizenz) und die Detektor-Wiring in `apps/mobile`.
 
 ## Grenzen
 
@@ -155,10 +150,9 @@ Implementiert: die `spot`-Orchestrierung (#8) – Gate-Guardrail aus der
 Default-`LabelResolver` (`slugLabelResolver`), Reject- und `unrecognized`-Pfad sowie
 `game-core.buildDraft` → Draft. Dazu die **Foto-Sanitisierung** (#89,
 `sanitize.ts`): generische Orchestrierung (Strip/Redaktion/Re-Enkodierung als harte
-Vorbedingung) mit injizierten Seams, der ExecuTorch-Detektor-Wrapper
-(`createRegionDetector`) und der Skia-Bildprozessor (`apps/mobile`, Blur + Cover).
-Offen bleibt nur der **Export + Bundling der zwei Detektor-`.pte`** (face/plate,
-YOLOv8n) und die Geräte-Verifikation. Offen: produktive `FactLookup`-Impl (#10),
+Vorbedingung) mit injizierten Seams; die Detektoren laufen permissiv über MLKit
+(Gesicht aktiv; Text/Kennzeichen folgt), der Skia-Bildprozessor (`apps/mobile`)
+macht Blur/Cover. Geräte-Verifikation offen. Offen: produktive `FactLookup`-Impl (#10),
 `CardArtGenerator` (#11) und der produktive Resolver (#72). Das **Forgen** (World
 Data + autoritative Seltenheit) ist server-seitig ([ADR 0010]), nicht in dieser
 Engine. Produktionsreifes Fahrzeugmodell + Geräte-Verifikation sind Mensch-/Geräte-

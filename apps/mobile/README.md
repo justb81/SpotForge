@@ -71,21 +71,24 @@ on-device bereinigen (Goldene Regel 5):
   `encode.maxEdge`, **redigiert** jede erkannte Region (`"blur"` weichzeichnen
   bzw. `"cover"` mit dem **App-Namen in Theme-Farben** überdecken) und enkodiert
   als JPEG neu – die Re-Enkodierung aus rohen Pixeln entfernt **alle EXIF/GPS**.
+- `mlkitFaceDetector.ts` – **MLKit**-Gesichtsdetektor (`@infinitered/react-native-mlkit-face-detection`,
+  ein **Expo-Modul** → New-Arch-tauglich): Foto-URI → normalisierte Gesichts-Regionen.
+  Permissiv, on-device, **kein gebündeltes Modell**.
 - `imageSize.ts` – liest Bildmaße via Skia (für die Box-Normalisierung der Detektoren).
-- `createMobilePhotoSanitizer.ts` – setzt Detektoren (`createRegionDetector` aus
-  `@spotforge/ai-engine`) + Prozessor über die generische
-  `createUploadSanitizer`-Verdrahtung der app-shell zusammen. Die Blur-/Cover-Ziele
-  kommen aus `definition.sanitization`; den `"cover"`-Text/-Farben liefert
-  Identität + Branding der Variante.
+- `createMobilePhotoSanitizer.ts` – baut für die laut `definition.sanitization`
+  aktiven Ziele die MLKit-Detektoren + den Skia-Prozessor und verdrahtet sie über
+  `createUploadSanitizer` (app-shell). `"cover"`-Text/-Farben aus Identität + Branding.
 
-Skias `postinstall` ist in `pnpm-workspace.yaml` (`allowBuilds`) auf `false` –
-der native Code kommt aus den `react-native-skia-*`-Paketen und wird beim
-`expo prebuild`/Gradle-Build autolinked.
+Skias `postinstall` ist in `pnpm-workspace.yaml` (`allowBuilds`) auf `true` (kopiert
+die vorgebauten nativen Skia-Libs nach `libs/`); die MLKit-Module sind Expo-Module
+und werden beim `expo prebuild`/Gradle-Build autolinked (kein Config-Plugin nötig;
+`expo-image` ist als Plugin registriert).
 
-> **Noch offen:** die zwei Detektor-`.pte` (YOLOv8n face / license-plate) sind
-> noch nicht exportiert/gebündelt – Details + empfohlene Modelle in der
-> `@spotforge/ai-engine`-README. Der eigentliche Upload-Endpunkt + Storage folgen
-> mit #81/#19; bis dahin baut kein Screen den Sanitizer aktiv (die Bausteine sind bereit).
+> **Detektoren (permissiv, kein AGPL):** Gesichter laufen über MLKit (oben).
+> **Text/Kennzeichen** (MLKit Text Recognition → alle lesbaren Text-Regionen blurren)
+> folgt als nächster Schritt; bis dahin ist das Ziel in der Variante aus. Hintergrund
+> zur Lizenz-/Detektor-Entscheidung: Issue #123. Der Upload-Endpunkt + Storage folgen
+> mit #81/#19; bis dahin redigiert der Sanitizer das Draft-Foto on-device, ohne Upload.
 
 ## Status
 

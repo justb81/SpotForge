@@ -1,0 +1,20 @@
+{
+  "$comment": "Kfz-Kennzeichen-Detektor der Foto-Sanitisierung (#89, ADR 0008/0014: fp32/XNNPACK, kein OTA). Einklassiges YOLOv11n (nano) auf den react-native-executorch ObjectDetectionModule.fromCustomModel-Kontrakt gewrappt (3 Output-Tensoren). Quelle: morsetechlab/yolov11-license-plate-detection (HF). Bei CarForge werden gefundene Kennzeichen mit dem App-Namen in Theme-Farben überdeckt (RedactionStyle 'cover'). ⚠️ LIZENZ: das Modell ist AGPL-3.0 (Ultralytics-Default) – für eine proprietäre/kommerzielle App NICHT ohne Weiteres bündelbar (Ultralytics Enterprise License oder permissiv lizenzierten Detektor nutzen). Nur zum Testen/Validieren geeignet. Export via .github/workflows/model-export.yml; danach Manifest-Eintrag übernehmen und in apps/mobile bündeln. Decode/Schwellen am Gerät verifizieren (#63).",
+  "id": "license-plate-detector-yolov11n",
+  "name": "YOLOv11n License-Plate (1 Klasse, fp32/XNNPACK) – Kennzeichen-Detektor (Sanitisierung)",
+  "version": "1.0.0",
+  "category": "sanitization",
+  "format": "yolo",
+  "sourceModel": "morsetechlab/yolov11-license-plate-detection",
+  "revision": "main",
+  "yolo": {
+    "checkpointFile": "license-plate-finetune-v1n.pt",
+    "inputSize": [640, 640],
+    "labels": ["license_plate"]
+  },
+  "preprocessor": null,
+  "output": {
+    "model": "license_plate_detector_yolov11n_fp32.pte",
+    "labels": "license_plate_detector_yolov11n.labels.json"
+  }
+}

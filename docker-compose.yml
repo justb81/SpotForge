@@ -90,12 +90,13 @@ services:
   # S3-kompatibler Objektspeicher (ADR 0013). Bleibt vorerst intern; Bild-Upload
   # (Presigned URLs) exponiert Garage später über eine eigene Subdomain.
   garage:
-    image: dxflrs/garage:v1.0.1
+    build:
+      context: ./infra/garage
+      dockerfile: Dockerfile
     restart: unless-stopped
     volumes:
       - garagemeta:/var/lib/garage/meta
       - garagedata:/var/lib/garage/data
-      - ./infra/garage/garage.toml:/etc/garage.toml:ro
     healthcheck:
       test: ["CMD", "/garage", "status"]
       interval: 30s

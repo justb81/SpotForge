@@ -13,6 +13,6 @@
   "dependencies": {
     "@spotforge/app-config": "workspace:*",
     "@spotforge/game-core": "workspace:*",
-    "react-native-executorch": "0.9.0"
+    "react-native-executorch": "0.9.1"
   }
 }

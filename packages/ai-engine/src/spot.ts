@@ -12,7 +12,7 @@ import { buildDraft, type AttributeValues, type Card } from "@spotforge/game-cor
 import { resolveText, type AppDefinition, type LocaleCode } from "@spotforge/app-config";
 import type { CascadeClassifier, CascadeTimings, GateConfig } from "./cascade";
 import type { ClassificationResult } from "./classifier";
-import type { SanitizeInput, SanitizeResult } from "./sanitize";
+import type { SanitizationReport, SanitizeInput, SanitizeResult } from "./sanitize";
 
 /** Eingabe eines Spot-Vorgangs. */
 export interface SpotInput {
@@ -53,6 +53,14 @@ export type SpotResult = {
    * die Original-URI (Übergangszustand, bis die Detektor-Modelle gebündelt sind).
    */
   photoUri?: string;
+  /**
+   * Nachweis der **Foto-Sanitisierung** (#89) – wie viele Gesichter/Kennzeichen
+   * redigiert wurden, Ausgabemaße/-größe, Metadaten entfernt. Für die On-Screen-
+   * Diagnose ({@link formatSanitizationReport}, vgl. {@link timings}). Nur gesetzt,
+   * wenn ein {@link SpotDeps.sanitizePhoto} lief (also bei akzeptiertem Gate); bei
+   * `rejected` und ohne injizierten Sanitizer `undefined`.
+   */
+  sanitization?: SanitizationReport;
 } & (
   | {
       kind: "draft";
@@ -188,9 +196,13 @@ export function createSpot(
     //    bereinigte Version** (#89). Schlägt die Sanitisierung fehl, propagiert der
     //    Fehler → kein Draft mit Rohbild. Ohne injizierten Sanitizer bleibt die
     //    Original-URI (Übergangszustand, bis die Detektor-Modelle gebündelt sind).
-    const photoUri = sanitizePhoto
-      ? (await sanitizePhoto({ imageUri: input.imageUri })).imageUri
-      : input.imageUri;
+    let photoUri = input.imageUri;
+    let sanitization: SanitizationReport | undefined;
+    if (sanitizePhoto) {
+      const sanitized = await sanitizePhoto({ imageUri: input.imageUri });
+      photoUri = sanitized.imageUri;
+      sanitization = sanitized.report;
+    }
 
     // 3) Feinmodell ohne verwertbares Ergebnis → unrecognized (mit bereinigtem Foto).
     const topFine = fine?.candidates[0];
@@ -201,13 +213,21 @@ export function createSpot(
         photoUri,
         timings,
         gateMass,
+        ...(sanitization !== undefined ? { sanitization } : {}),
       };
     }
 
     // 4) Label → Domänen-Objekt (Default-Resolver; #72 produktiv).
     const resolution = resolver.resolve(topFine.label);
     if (resolution === undefined) {
-      return { kind: "unrecognized", label: topFine.label, photoUri, timings, gateMass };
+      return {
+        kind: "unrecognized",
+        label: topFine.label,
+        photoUri,
+        timings,
+        gateMass,
+        ...(sanitization !== undefined ? { sanitization } : {}),
+      };
     }
 
     // 5) Optionale provisorische Offline-Vorschläge (#10) – nicht autoritativ.
@@ -231,6 +251,7 @@ export function createSpot(
       photoUri,
       timings,
       gateMass,
+      ...(sanitization !== undefined ? { sanitization } : {}),
       ...(fine !== undefined ? { recognition: fine } : {}),
     };
   };

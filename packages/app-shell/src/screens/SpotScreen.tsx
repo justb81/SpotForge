@@ -4,6 +4,7 @@ import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { DEFAULT_LOCALE, resolveAutoSpot, resolveFeatures } from "@spotforge/app-config";
 import {
   formatCascadeTimings,
+  formatSanitizationReport,
   type CascadeClassifier,
   type SpotResult,
 } from "@spotforge/ai-engine";
@@ -314,6 +315,7 @@ export function SpotScreen({
             ) : (
               <>
                 {renderResult()}
+                {renderSanitization()}
                 {renderLatency()}
               </>
             )}
@@ -443,6 +445,21 @@ export function SpotScreen({
           {text("spot.resultPlaceholder")}
         </Text>
       </View>
+    );
+  }
+
+  // Diagnosezeile der **Foto-Sanitisierung** (#89): zeigt direkt am Gerät, ob/wie
+  // viele Gesichter und Kennzeichen/Text-Regionen redigiert wurden, die Ausgabemaße
+  // und dass EXIF/GPS entfernt sind – sonst (kein Metro-/Profiler-Overlay im
+  // Standalone-Release) bliebe die Bereinigung unsichtbar. Nur sichtbar, wenn ein
+  // Sanitizer lief (akzeptiertes Gate); bei reinem Reject gibt es keinen Report.
+  function renderSanitization() {
+    const report = result?.sanitization;
+    if (!report) return null;
+    return (
+      <Text style={[styles.latency, { color: theme.colors.accent }]} accessibilityRole="text">
+        {formatSanitizationReport(report)}
+      </Text>
     );
   }
 

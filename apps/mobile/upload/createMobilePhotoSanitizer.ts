@@ -6,9 +6,8 @@
 //
 // Detektoren-Strategie (permissiv statt AGPL-YOLO):
 //  - Gesichter: MLKit Face Detection (`@infinitered/react-native-mlkit-*`).
-//  - Kennzeichen/Text: MLKit Text Recognition (folgt als nächster Schritt; bis
-//    dahin ist das Ziel in der Variante aus, damit kein fehlender Detektor den
-//    Draft blockiert).
+//  - Kennzeichen/Text: MLKit Text Recognition (OCR → jede lesbare Textzeile wird
+//    redigiert; deckt Kennzeichen kategorie-neutral mit ab).
 //
 // Kategorie-neutral: welche Ziele aktiv sind und wie sie redigiert werden, kommt
 // aus `definition.sanitization` (app-shell `createUploadSanitizer`).
@@ -18,6 +17,7 @@ import { createUploadSanitizer, type PhotoSanitizer } from "@spotforge/app-shell
 import { resolveSanitization, type AppDefinition, type Branding } from "@spotforge/app-config";
 import { createSkiaImageProcessor } from "./skiaImageProcessor";
 import { createMlkitFaceDetector } from "./mlkitFaceDetector";
+import { createMlkitTextDetector } from "./mlkitTextDetector";
 import { skiaImageSize } from "./imageSize";
 
 export interface MobilePhotoSanitizerOptions {
@@ -42,10 +42,12 @@ export async function createMobilePhotoSanitizer(
   if (resolved.redact.faces.enabled) {
     detectors.face = await createMlkitFaceDetector({ imageSize: skiaImageSize });
   }
-  // Hinweis: `licensePlate` (MLKit-Text-Recognition) folgt als nächster Schritt;
-  // ist es in der Variante aktiv, ohne dass hier ein Detektor gebaut wird, blockt
-  // die Pipeline den Upload bewusst (harte Vorbedingung) – die Variante hält es
-  // daher bis dahin aus.
+  if (resolved.redact.licensePlates.enabled) {
+    // MLKit Text Recognition (OCR): redigiert jede lesbare Textzeile und deckt damit
+    // Kennzeichen kategorie-neutral mit ab. Kein `initialize()` nötig (`recognizeText`
+    // ist zustandslos), daher synchron gebaut.
+    detectors.licensePlate = createMlkitTextDetector({ imageSize: skiaImageSize });
+  }
 
   const processor = createSkiaImageProcessor({
     cover: {

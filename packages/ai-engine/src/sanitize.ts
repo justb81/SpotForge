@@ -145,6 +145,20 @@ export class SanitizationError extends Error {
   }
 }
 
+/**
+ * Kompakte, menschenlesbare Zusammenfassung eines {@link SanitizationReport} für die
+ * **On-Screen-Diagnose** (#89/#63): zeigt direkt am Gerät, ob/wie viele Gesichter und
+ * Kennzeichen/Text-Regionen redigiert wurden, die Ausgabemaße + -größe und dass die
+ * Metadaten entfernt sind. Wie {@link formatCascadeTimings} bewusst i18n-frei (Debug).
+ */
+export function formatSanitizationReport(report: SanitizationReport): string {
+  const kb = Math.round(report.output.bytes / 1024);
+  return (
+    `bereinigt · Gesichter ${report.redacted.face} · Kennzeichen/Text ${report.redacted.licensePlate}` +
+    ` · ${report.output.width}×${report.output.height} · ${kb} KB · EXIF entfernt`
+  );
+}
+
 /** Aktive Redaktions-Ziele (enabled) in fester Reihenfolge, mit aufgelöstem Stil. */
 function activeTargets(
   config: ResolvedSanitization,

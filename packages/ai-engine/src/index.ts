@@ -46,7 +46,7 @@ export type {
 } from "./spot";
 
 // Foto-Sanitisierung (On-Device): Rohfoto → upload-bereites, bereinigtes Bild (#89).
-export { createPhotoSanitizer, SanitizationError } from "./sanitize";
+export { createPhotoSanitizer, SanitizationError, formatSanitizationReport } from "./sanitize";
 export type {
   RedactionStyle,
   RedactionTargetKind,

@@ -14,6 +14,7 @@
   "dependencies": {
     "@infinitered/react-native-mlkit-core": "^5.0.0",
     "@infinitered/react-native-mlkit-face-detection": "^5.0.0",
+    "@infinitered/react-native-mlkit-text-recognition": "5.0.1",
     "@shopify/react-native-skia": "2.6.4",
     "@spotforge/ai-engine": "workspace:*",
     "@spotforge/app-config": "workspace:*",

@@ -189,6 +189,9 @@ describe("createSpot – Foto-Sanitisierung (#89)", () => {
     expect(out.photoUri).toBe("file:///golf.jpg#sanitized");
     if (out.kind === "draft") expect(out.card.photoUri).toBe("file:///golf.jpg#sanitized");
     expect(sanitizePhoto).toHaveBeenCalledWith({ imageUri: "file:///golf.jpg" });
+    // Der Sanitisierungs-Report wird fürs On-Screen-Diagnose-Panel mitgereicht.
+    expect(out.sanitization?.metadataStripped).toBe(true);
+    expect(out.sanitization?.output.bytes).toBe(1234);
   });
 
   it("reicht das sanitisierte Foto auch im unrecognized-Pfad mit (für den manuellen Draft)", async () => {

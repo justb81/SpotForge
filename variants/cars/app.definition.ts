@@ -131,12 +131,12 @@ export default defineApp({
 
   // Foto-Sanitisierung vor Upload (#89, Goldene Regel 5): EXIF/GPS werden immer
   // entfernt (unbedingt in der Pipeline), Gesichter immer geblurrt (Default, via
-  // MLKit – permissiv, on-device). Die Kennzeichen-/Text-Redaktion läuft permissiv
-  // über MLKit Text Recognition (alle lesbaren Text-Regionen blurren) und folgt als
-  // nächster Schritt; bis der Text-Detektor verdrahtet ist, bleibt das Ziel **aus**,
-  // damit der Draft nicht an einem fehlenden Detektor blockiert (harte Vorbedingung).
+  // MLKit Face Detection – permissiv, on-device). Die Kennzeichen-/Text-Redaktion
+  // läuft permissiv über MLKit Text Recognition (OCR → jede lesbare Textzeile) und
+  // **überdeckt** sie mit dem App-Namen in Theme-Farben (`style: "cover"`) statt sie
+  // nur zu blurren – die Marke statt einer grauen Fläche.
   sanitization: {
-    redact: { licensePlates: { enabled: false } },
+    redact: { licensePlates: { enabled: true, style: "cover" } },
   },
 
   // Theme & Assets: siehe ./branding.config.ts (ADR 0011).

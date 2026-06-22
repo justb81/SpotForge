@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ResolvedSanitization } from "@spotforge/app-config";
 import {
   createPhotoSanitizer,
+  formatSanitizationReport,
   SanitizationError,
   type DetectedRegion,
   type ImageProcessor,
@@ -169,5 +170,27 @@ describe("createPhotoSanitizer", () => {
     await expect(sanitize({ imageUri: "file://raw.jpg" })).rejects.toBeInstanceOf(
       SanitizationError,
     );
+  });
+});
+
+describe("formatSanitizationReport", () => {
+  it("fasst Trefferzahlen, Maße/Größe und Metadaten-Status für die On-Screen-Diagnose zusammen", () => {
+    const line = formatSanitizationReport({
+      metadataStripped: true,
+      redacted: { face: 2, licensePlate: 1 },
+      output: {
+        imageUri: "file://clean.jpg",
+        format: "jpeg",
+        width: 2048,
+        height: 1536,
+        bytes: 320_000,
+      },
+    });
+
+    expect(line).toContain("Gesichter 2");
+    expect(line).toContain("Kennzeichen/Text 1");
+    expect(line).toContain("2048×1536");
+    expect(line).toContain("313 KB"); // 320000 / 1024 gerundet
+    expect(line).toContain("EXIF entfernt");
   });
 });

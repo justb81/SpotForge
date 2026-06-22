@@ -25,22 +25,33 @@ export interface MlkitFaceDetectorOptions {
 export async function createMlkitFaceDetector(
   options: MlkitFaceDetectorOptions,
 ): Promise<RegionDetector> {
-  const detector = new RNMLKitFaceDetector({
-    performanceMode: "accurate",
-    minFaceSize: 0.05,
-  });
+  // `deferInitialization: true` → der Konstruktor initialisiert NICHT von selbst
+  // (sonst liefe eine zweite, nicht-awaitbare Initialisierung als Race); wir
+  // initialisieren stattdessen kontrolliert und awaitbar.
+  const detector = new RNMLKitFaceDetector(
+    {
+      performanceMode: "accurate",
+      minFaceSize: 0.05,
+    },
+    true,
+  );
   await detector.initialize();
 
   return {
     async detect({ imageUri }): Promise<DetectedRegion[]> {
       const result = await detector.detectFaces(imageUri);
-      if (result === undefined || !result.success) {
-        if (result?.error) throw new Error(`MLKit-Gesichtsdetektion: ${result.error}`);
-        return [];
+      // WICHTIG: Die native Bindung liefert nur `{ faces, imagePath }` – es gibt
+      // **kein** `success`/`error`-Feld (die TS-Typen des Pakets sind hier
+      // irreführend). Ein Fehler äußert sich als `undefined` (die Detektor-Klasse
+      // fängt ihn intern ab) → harte Vorbedingung: werfen statt stillschweigend
+      // ohne Gesichts-Blur durchzulassen.
+      if (result === undefined) {
+        throw new Error("MLKit-Gesichtsdetektion lieferte kein Ergebnis.");
       }
-      if (result.faces.length === 0) return [];
+      const faces = result.faces ?? [];
+      if (faces.length === 0) return [];
       const { width, height } = await options.imageSize(imageUri);
-      return result.faces.map((face) => normalize(face.frame, width, height));
+      return faces.map((face) => normalize(face.frame, width, height));
     },
   };
 }

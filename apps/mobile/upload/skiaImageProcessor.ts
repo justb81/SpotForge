@@ -13,6 +13,8 @@ import {
   TileMode,
   ClipOp,
   FontStyle,
+  BlendMode,
+  BlurStyle,
   type SkCanvas,
   type SkImage,
   type SkTypeface,
@@ -141,14 +143,45 @@ function toPixelRect(region: RedactionRegion, srcW: number, srcH: number): Pixel
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
 }
 
-/** Region weichzeichnen: eine geblurrte Kopie des Bildes, auf die Region geklemmt. */
+/**
+ * Region weichzeichnen mit **weicher elliptischer Kante** (statt harter Rechteck-
+ * Kontur): In einer eigenen Ebene wird die geblurrte Bildkopie abgelegt und mit
+ * einer Ellipse maskiert, deren Rand über einen Blur-MaskFilter ausgefedert ist
+ * (DstIn). Beim Zusammenführen läuft der Blur dadurch sanft ins scharfe Bild aus.
+ */
 function drawBlur(canvas: SkCanvas, image: SkImage, rect: PixelRect): void {
-  const sigma = Math.max(8, Math.min(rect.width, rect.height) * 0.5);
-  const paint = Skia.Paint();
-  paint.setImageFilter(Skia.ImageFilter.MakeBlur(sigma, sigma, TileMode.Clamp, null));
+  const minEdge = Math.min(rect.width, rect.height);
+  const sigma = Math.max(8, minEdge * 0.5);
+  // Federbreite der Kante; etwas Rand, damit die Feder innerhalb der Ebene Platz hat.
+  const feather = Math.max(6, minEdge * 0.18);
+  const pad = feather * 1.5;
+  const layerBounds = Skia.XYWHRect(
+    rect.x - pad,
+    rect.y - pad,
+    rect.width + pad * 2,
+    rect.height + pad * 2,
+  );
+
+  // Auf die (begrenzte) Ebene zeichnen, danach maskieren und zurückführen.
+  canvas.saveLayer(undefined, layerBounds);
+
+  // 1) Geblurrte Bildkopie in der Ebene (auf die Ebene begrenzt).
+  const blurPaint = Skia.Paint();
+  blurPaint.setImageFilter(Skia.ImageFilter.MakeBlur(sigma, sigma, TileMode.Clamp, null));
   canvas.save();
-  canvas.clipRect(Skia.XYWHRect(rect.x, rect.y, rect.width, rect.height), ClipOp.Intersect, true);
-  canvas.drawImage(image, 0, 0, paint);
+  canvas.clipRect(layerBounds, ClipOp.Intersect, true);
+  canvas.drawImage(image, 0, 0, blurPaint);
+  canvas.restore();
+
+  // 2) Weich auslaufende Ellipse als DstIn-Maske: behält die Blur-Farbe, federt
+  //    aber das Alpha zur Kante hin aus (Normal-Blur fuzzt innen wie außen).
+  const maskPaint = Skia.Paint();
+  maskPaint.setAntiAlias(true);
+  maskPaint.setColor(Skia.Color("black")); // opak – für DstIn zählt nur das Alpha
+  maskPaint.setBlendMode(BlendMode.DstIn);
+  maskPaint.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, feather, false));
+  canvas.drawOval(Skia.XYWHRect(rect.x, rect.y, rect.width, rect.height), maskPaint);
+
   canvas.restore();
 }
 

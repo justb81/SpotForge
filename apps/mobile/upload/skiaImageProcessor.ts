@@ -12,8 +12,10 @@ import {
   ImageFormat,
   TileMode,
   ClipOp,
+  FontStyle,
   type SkCanvas,
   type SkImage,
+  type SkTypeface,
 } from "@shopify/react-native-skia";
 import { Directory, File, Paths } from "expo-file-system";
 import type {
@@ -58,6 +60,24 @@ const REGION_PADDING = 0.08;
  * Stil und enkodiert als JPEG in den Cache.
  */
 export function createSkiaImageProcessor(options: SkiaImageProcessorOptions = {}): ImageProcessor {
+  // System-Typeface einmal auflösen (memoisiert). WICHTIG: NIE `Skia.Font(undefined, …)`
+  // aufrufen – die native RN-Skia-Bindung wirft dann „Value is undefined, expected
+  // Object". Daher eine echte Typeface über den System-FontMgr holen; klappt das nicht,
+  // bleibt es `null` und `drawCover` deckt die Region dann ohne Schrift nur mit der
+  // Füllfläche ab (Privacy hängt nie am Text-Rendering).
+  let cachedTypeface: SkTypeface | null | undefined;
+  const resolveTypeface = (): SkTypeface | null => {
+    if (cachedTypeface !== undefined) return cachedTypeface;
+    try {
+      const fontMgr = Skia.FontMgr.System();
+      const family = fontMgr.countFamilies() > 0 ? fontMgr.getFamilyName(0) : "";
+      cachedTypeface = fontMgr.matchFamilyStyle(family, FontStyle.Bold) ?? null;
+    } catch {
+      cachedTypeface = null;
+    }
+    return cachedTypeface;
+  };
+
   return {
     async process({ imageUri, regions, encode }: ProcessImageRequest): Promise<ProcessedImage> {
       const data = await Skia.Data.fromURI(imageUri);
@@ -82,7 +102,7 @@ export function createSkiaImageProcessor(options: SkiaImageProcessorOptions = {}
         const rect = toPixelRect(region, srcW, srcH);
         if (rect.width <= 0 || rect.height <= 0) continue;
         if (region.style === "cover" && options.cover) {
-          drawCover(canvas, rect, options.cover);
+          drawCover(canvas, rect, options.cover, resolveTypeface());
         } else {
           drawBlur(canvas, image, rect);
         }
@@ -132,12 +152,25 @@ function drawBlur(canvas: SkCanvas, image: SkImage, rect: PixelRect): void {
   canvas.restore();
 }
 
-/** Region mit dem App-Namen in Theme-Farben überdecken (opak, garantiert unlesbar). */
-function drawCover(canvas: SkCanvas, rect: PixelRect, cover: CoverStyle): void {
+/**
+ * Region mit dem App-Namen in Theme-Farben überdecken (opak, garantiert unlesbar).
+ * Die opake Füllung wird **immer** gezeichnet – sie allein deckt die Region ab
+ * (Privacy). Der App-Name kommt nur obendrauf, wenn eine Typeface auflösbar war;
+ * ohne sie bleibt es bei der Füllung (kein `Skia.Font(undefined, …)` → kein Crash).
+ */
+function drawCover(
+  canvas: SkCanvas,
+  rect: PixelRect,
+  cover: CoverStyle,
+  typeface: SkTypeface | null,
+): void {
   const fill = Skia.Paint();
   fill.setColor(Skia.Color(cover.fillColor));
   fill.setAntiAlias(true);
   canvas.drawRect(Skia.XYWHRect(rect.x, rect.y, rect.width, rect.height), fill);
+
+  // Ohne Typeface keine Schrift – die Füllung oben hat die Region bereits abgedeckt.
+  if (!typeface) return;
 
   const textPaint = Skia.Paint();
   textPaint.setColor(Skia.Color(cover.textColor));
@@ -145,7 +178,7 @@ function drawCover(canvas: SkCanvas, rect: PixelRect, cover: CoverStyle): void {
 
   // Schriftgröße aus der Region ableiten und auf ~86% der Breite einpassen.
   let size = Math.max(1, rect.height * 0.6);
-  const font = Skia.Font(undefined, size);
+  const font = Skia.Font(typeface, size);
   const measured = font.measureText(cover.label);
   const maxWidth = rect.width * 0.86;
   if (measured.width > maxWidth && measured.width > 0) {

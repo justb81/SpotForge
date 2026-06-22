@@ -191,8 +191,11 @@ export function SpotScreen({
         // Kein Auto-Draft mehr: bei akzeptiertem Gate zeigt der RecognitionPicker
         // erst die Top-k-Kandidaten zur Auswahl (Draft entsteht bei der Auswahl).
         setResult(await spotter({ imageUri: uri, spottedBy }));
-      } catch {
-        setError(text("spot.error"));
+      } catch (e) {
+        // Technische Ursache (inkl. cause-Kette, z.B. der konkrete Skia-/MLKit-
+        // Fehler hinter einer SanitizationError) sichtbar machen – im Standalone-
+        // Release gibt es kein Metro-Overlay, sonst bliebe der Fehler unauffindbar.
+        setError(`${text("spot.error")}\n\n${describeError(e)}`);
       }
       setMode("result");
     },
@@ -476,6 +479,26 @@ export function SpotScreen({
       </Text>
     );
   }
+}
+
+/**
+ * Flacht eine Fehlerkette (`Error.cause`) zu einer lesbaren, mehrzeiligen Zeichenkette
+ * ab – für die On-Screen-Diagnose (#89): eine `SanitizationError` trägt den
+ * eigentlichen Skia-/MLKit-Fehler als `cause`, der sonst unsichtbar bliebe.
+ */
+function describeError(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let guard = 0; current && guard < 5; guard += 1) {
+    if (current instanceof Error) {
+      parts.push(`${current.name}: ${current.message}`);
+      current = (current as { cause?: unknown }).cause;
+    } else {
+      parts.push(String(current));
+      break;
+    }
+  }
+  return parts.join("\n↳ ");
 }
 
 const styles = StyleSheet.create({

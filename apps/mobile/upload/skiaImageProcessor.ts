@@ -155,23 +155,26 @@ function drawBlur(canvas: SkCanvas, image: SkImage, rect: PixelRect): void {
   // Federbreite der Kante; etwas Rand, damit die Feder innerhalb der Ebene Platz hat.
   const feather = Math.max(6, minEdge * 0.18);
   const pad = feather * 1.5;
-  const layerBounds = Skia.XYWHRect(
+  const bounds = Skia.XYWHRect(
     rect.x - pad,
     rect.y - pad,
     rect.width + pad * 2,
     rect.height + pad * 2,
   );
 
-  // Auf die (begrenzte) Ebene zeichnen, danach maskieren und zurückführen.
-  canvas.saveLayer(undefined, layerBounds);
+  // WICHTIG: `saveLayer()` ohne Argumente aufrufen – ein explizites `undefined`
+  // (z.B. `saveLayer(undefined, bounds)`) bringt die native RN-Skia-Bindung dazu,
+  // die Ebene NICHT korrekt zu isolieren (gleiche Undefined-Falle wie bei
+  // `Skia.Font`); die DstIn-Maske unten griffe dann nicht und es bliebe die harte
+  // Rechteck-Kante. Stattdessen vorher per Clip begrenzen, dann die Ebene öffnen.
+  canvas.save();
+  canvas.clipRect(bounds, ClipOp.Intersect, true);
+  canvas.saveLayer();
 
-  // 1) Geblurrte Bildkopie in der Ebene (auf die Ebene begrenzt).
+  // 1) Geblurrte Bildkopie in der (auf `bounds` begrenzten) Ebene.
   const blurPaint = Skia.Paint();
   blurPaint.setImageFilter(Skia.ImageFilter.MakeBlur(sigma, sigma, TileMode.Clamp, null));
-  canvas.save();
-  canvas.clipRect(layerBounds, ClipOp.Intersect, true);
   canvas.drawImage(image, 0, 0, blurPaint);
-  canvas.restore();
 
   // 2) Weich auslaufende Ellipse als DstIn-Maske: behält die Blur-Farbe, federt
   //    aber das Alpha zur Kante hin aus (Normal-Blur fuzzt innen wie außen).
@@ -182,7 +185,8 @@ function drawBlur(canvas: SkCanvas, image: SkImage, rect: PixelRect): void {
   maskPaint.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, feather, false));
   canvas.drawOval(Skia.XYWHRect(rect.x, rect.y, rect.width, rect.height), maskPaint);
 
-  canvas.restore();
+  canvas.restore(); // Ebene zurückführen (komponiert die weiche Ellipse aufs Bild)
+  canvas.restore(); // Clip
 }
 
 /**

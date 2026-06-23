@@ -94,13 +94,13 @@ export function SpotScreen({
   // (#85) schaltet den intervallgesteuerten Auto-Modus frei.
   const { imageImport: canImportImage, autoSpot: autoSpotAvailable } = resolveFeatures(definition);
 
+  // Fail-closed (#89, Goldene Regel 5/6): der Spotter entsteht **nur**, wenn
+  // sowohl die Kaskade ALS AUCH der Sanitizer bereit sind. Ohne Sanitizer wird
+  // nichts gespottet/persistiert – kein Roh-Foto-Fallback.
   const spotter = useMemo(
     () =>
-      cascade
-        ? createSpotter(definition, cascade, {
-            locale,
-            ...(photoSanitizer !== undefined ? { sanitizer: photoSanitizer } : {}),
-          })
+      cascade && photoSanitizer
+        ? createSpotter(definition, cascade, { locale, sanitizer: photoSanitizer })
         : undefined,
     [definition, cascade, locale, photoSanitizer],
   );
@@ -147,6 +147,18 @@ export function SpotScreen({
     [reset],
   );
 
+  // Fehler im Auto-Spot (z.B. fehlgeschlagene Sanitisierung, #89) nicht
+  // verschlucken: wie im manuellen Pfad sichtbar machen und in den Result-Modus
+  // wechseln – das pausiert zugleich den Auto-Loop (active hängt am capturing-Modus).
+  const handleAutoError = useCallback(
+    (e: unknown) => {
+      reset();
+      setError(__DEV__ ? `${text("spot.error")}\n\n${describeError(e)}` : text("spot.error"));
+      setMode("result");
+    },
+    [reset, text],
+  );
+
   // Stille Aufnahme über die Kamera-Ref (kein Auslöse-Ton/keine Animation).
   const autoCapture = useCallback(
     () => cameraRef.current?.captureSilently() ?? Promise.resolve(null),
@@ -165,6 +177,7 @@ export function SpotScreen({
     capture: autoCapture,
     classify: autoClassify,
     onFire: handleAutoFire,
+    onError: handleAutoError,
   });
 
   // Einmaliger Coachmark für die versteckte Geste (nur bei aktivem Feature, solange
@@ -220,10 +233,13 @@ export function SpotScreen({
     }
   }, [handleCapture]);
 
-  // Persist-/Draft-Foto: die vom Spotter gelieferte **sanitisierte** URI (#89) –
-  // das Original (Kamera-State `photoUri`) diente nur der Erkennung. Fallback auf
-  // das Original nur, solange kein Sanitizer verdrahtet ist (Übergangszustand).
-  const persistUri = result?.photoUri ?? photoUri;
+  // Persist-/Draft-Foto: ausschließlich die vom Spotter gelieferte **sanitisierte**
+  // URI (#89, fail-closed) – **nie** das Rohbild. Ist sie nicht da (kein Ergebnis /
+  // Reject), wird nichts persistiert.
+  const persistUri = result?.photoUri;
+  // Hintergrund-Anzeige: zeigt das aufgenommene Foto (nur Darstellung, wird NICHT
+  // persistiert) – während der Verarbeitung das Original, danach das bereinigte.
+  const backgroundUri = result?.photoUri ?? photoUri;
 
   // Auswahl eines Kandidaten → Draft. Für den Top-1 wird der bereits in der
   // Pipeline gebaute Draft (inkl. evtl. Vorschläge, bereinigtes Foto) genutzt,
@@ -304,14 +320,14 @@ export function SpotScreen({
                 Ergebnis/Picker); ein dezenter Scrim hält Texte lesbar. */}
             {/* Sobald das Ergebnis da ist, zeigt der Hintergrund das **sanitisierte**
                 Foto (#89); während der Verarbeitung kurz das Original. */}
-            {persistUri ? (
+            {backgroundUri ? (
               <Image
-                source={{ uri: persistUri }}
+                source={{ uri: backgroundUri }}
                 style={StyleSheet.absoluteFill}
                 resizeMode="cover"
               />
             ) : null}
-            {persistUri ? <View style={[StyleSheet.absoluteFill, styles.scrim]} /> : null}
+            {backgroundUri ? <View style={[StyleSheet.absoluteFill, styles.scrim]} /> : null}
             {mode === "processing" ? (
               <View style={styles.center}>
                 <ActivityIndicator color={theme.colors.primary} />

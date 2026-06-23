@@ -35,13 +35,13 @@ export interface SpottingOptions {
   /** Zeitquelle; Default: {@link nowIso}. */
   now?: () => string;
   /**
-   * On-Device-**Foto-Sanitisierung** (#89), z.B. aus {@link createUploadSanitizer}
-   * (bzw. dem nativen `createMobilePhotoSanitizer`). Ist sie gesetzt, hält **jeder
-   * erzeugte Draft nur das bereinigte Foto** (das Original diente allein der
-   * Erkennung). Ohne sie bleibt – bis die Detektor-Modelle gebündelt sind – die
-   * Original-URI im Draft (Übergangszustand).
+   * On-Device-**Foto-Sanitisierung** (#89, **verpflichtend**), z.B. aus
+   * {@link createUploadSanitizer} (bzw. dem nativen `createMobilePhotoSanitizer`).
+   * Jeder erzeugte Draft hält **nur das bereinigte Foto** (das Original diente allein
+   * der Erkennung). Fail-closed (Goldene Regel 5/6): ohne Sanitizer wird **kein**
+   * Spotter gebaut – es gibt keinen Roh-Foto-Fallback.
    */
-  sanitizer?: PhotoSanitizer;
+  sanitizer: PhotoSanitizer;
 }
 
 /**
@@ -52,7 +52,7 @@ export interface SpottingOptions {
 export function createSpotter(
   definition: AppDefinition,
   cascade: CascadeClassifier,
-  options: SpottingOptions = {},
+  options: SpottingOptions,
 ): Spotter {
   return createSpot(definition, {
     cascade,
@@ -61,6 +61,6 @@ export function createSpotter(
     newId: options.newId ?? localDraftId,
     now: options.now ?? nowIso,
     ...(options.locale !== undefined ? { locale: options.locale } : {}),
-    ...(options.sanitizer !== undefined ? { sanitizePhoto: options.sanitizer } : {}),
+    sanitizePhoto: options.sanitizer,
   });
 }

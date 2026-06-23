@@ -49,8 +49,8 @@ export type SpotResult = {
    * Auswahl oder manuell), wird es einmal on-device bereinigt (EXIF/GPS entfernt,
    * Gesichter/Kennzeichen redigiert) und **ab hier verlässt nur noch diese Version
    * die Pipeline** – das Original diente allein der Erkennung. Bei `rejected` (kein
-   * Draft) **nicht gesetzt**; ohne injizierten {@link SpotDeps.sanitizePhoto} ist es
-   * die Original-URI (Übergangszustand, bis die Detektor-Modelle gebündelt sind).
+   * Draft) **nicht gesetzt**. Da die Sanitisierung verpflichtend ist (fail-closed),
+   * ist dies bei Draft/unrecognized **immer** die bereinigte URI, nie das Rohbild.
    */
   photoUri?: string;
   /**
@@ -119,14 +119,14 @@ export interface SpotDeps {
   /** Bevorzugte Sprache der Reject-Meldung (Default: app-config-Standard). */
   locale?: LocaleCode;
   /**
-   * On-Device-**Foto-Sanitisierung** (#89). Wird aufgerufen, **sobald das Gate
-   * akzeptiert** (das Foto also persistiert wird) – die Erkennung lief bereits auf
-   * dem Original, ab hier hält der Draft nur die bereinigte Version. Wirft die
-   * Funktion, **bricht der Spot ab** (kein Draft mit Rohbild – harte Vorbedingung).
-   * Fehlt sie (Tests / noch keine Detektor-Modelle gebündelt), bleibt die
-   * Original-URI – das Original wird dann lokal persistiert (Übergangszustand).
+   * On-Device-**Foto-Sanitisierung** (#89) – **verpflichtend** (Goldene Regel 5/6,
+   * fail-closed): kein Draft/Upload ohne Bereinigung, kein „erst X, dann Y"-Rohbild-
+   * Fallback. Wird aufgerufen, **sobald das Gate akzeptiert** (das Foto also
+   * persistiert wird) – die Erkennung lief bereits auf dem Original, ab hier hält der
+   * Draft nur die bereinigte Version. Wirft die Funktion, **bricht der Spot ab** (kein
+   * Draft mit Rohbild). Im Reject-Pfad (kein Draft) wird sie nicht aufgerufen.
    */
-  sanitizePhoto?: (input: SanitizeInput) => Promise<SanitizeResult>;
+  sanitizePhoto: (input: SanitizeInput) => Promise<SanitizeResult>;
 }
 
 /**
@@ -193,16 +193,12 @@ export function createSpot(
 
     // 2) Gate akzeptiert ⇒ dieses Foto wird zu einem Draft (auto, per Auswahl oder
     //    manuell). Die Erkennung lief auf dem Original; **ab hier nur noch die
-    //    bereinigte Version** (#89). Schlägt die Sanitisierung fehl, propagiert der
-    //    Fehler → kein Draft mit Rohbild. Ohne injizierten Sanitizer bleibt die
-    //    Original-URI (Übergangszustand, bis die Detektor-Modelle gebündelt sind).
-    let photoUri = input.imageUri;
-    let sanitization: SanitizationReport | undefined;
-    if (sanitizePhoto) {
-      const sanitized = await sanitizePhoto({ imageUri: input.imageUri });
-      photoUri = sanitized.imageUri;
-      sanitization = sanitized.report;
-    }
+    //    bereinigte Version** (#89). Die Sanitisierung ist verpflichtend (fail-closed,
+    //    Goldene Regel 5/6): schlägt sie fehl, propagiert der Fehler → kein Draft mit
+    //    Rohbild, kein Roh-Fallback.
+    const sanitized = await sanitizePhoto({ imageUri: input.imageUri });
+    const photoUri = sanitized.imageUri;
+    const sanitization: SanitizationReport = sanitized.report;
 
     // 3) Feinmodell ohne verwertbares Ergebnis → unrecognized (mit bereinigtem Foto).
     const topFine = fine?.candidates[0];
@@ -213,7 +209,7 @@ export function createSpot(
         photoUri,
         timings,
         gateMass,
-        ...(sanitization !== undefined ? { sanitization } : {}),
+        sanitization,
       };
     }
 
@@ -226,7 +222,7 @@ export function createSpot(
         photoUri,
         timings,
         gateMass,
-        ...(sanitization !== undefined ? { sanitization } : {}),
+        sanitization,
       };
     }
 
@@ -251,7 +247,7 @@ export function createSpot(
       photoUri,
       timings,
       gateMass,
-      ...(sanitization !== undefined ? { sanitization } : {}),
+      sanitization,
       ...(fine !== undefined ? { recognition: fine } : {}),
     };
   };

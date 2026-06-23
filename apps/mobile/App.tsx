@@ -107,6 +107,10 @@ function Root() {
   // (Übergang); ist sie gesetzt, hält jeder Draft nur das bereinigte Foto.
   const [photoSanitizer, setPhotoSanitizer] = useState<PhotoSanitizer>();
   const [modelError, setModelError] = useState<string>();
+  // Eigener Fehlerzustand der Sanitisierung: ein Init-Fehler hier darf die
+  // **Erkennung nicht** mit-abwürgen (eigener try unten), führt aber fail-closed
+  // (#89) dazu, dass nicht gespottet werden kann – mit eigener, ehrlicher Meldung.
+  const [sanitizerError, setSanitizerError] = useState<string>();
 
   // Persistenter, **appId-skopierter** Draft-Store (#102, ADR 0002/0012): on-device
   // über expo-file-system, je Variante (Mandant) getrennt. Einmal je Definition
@@ -141,15 +145,11 @@ function Root() {
     if (!definition || !branding) return;
     let active = true;
     (async () => {
+      initExecutorch({ resourceFetcher: ExpoResourceFetcher });
+
+      // 1) **Erkennung** (Zwei-Stufen-Kaskade) – in einem EIGENEN try, damit ein
+      //    Sanitizer-/Skia-Init-Fehler die Erkennung nicht mit abwürgt (#89-Review).
       try {
-        initExecutorch({ resourceFetcher: ExpoResourceFetcher });
-        // Foto-Sanitisierung (#89): Detektoren (Gesicht/Kennzeichen) + Skia-Prozessor
-        // → der Sanitizer, den der Spot-Flow vor dem Persistieren/Upload anwendet.
-        // Dynamischer Import: lädt Skia/Detektoren erst hier (nach dem ersten Render),
-        // damit ein nativer Init-Fehler sichtbar wird statt die App still zu schließen.
-        const { createMobilePhotoSanitizer } = await import("./upload/createMobilePhotoSanitizer");
-        const sanitizer = await createMobilePhotoSanitizer({ definition, branding });
-        if (active) setPhotoSanitizer(() => sanitizer);
         const { createClassifier } = await import("@spotforge/ai-engine");
         // Breites fp32-Gate (#83): EfficientNet-B0/ImageNet mit mitgeliefertem
         // Label-Satz + Normalisierung. Erhöhtes topK ({@link GATE_TOP_K}), damit
@@ -183,9 +183,20 @@ function Root() {
           );
         }
       } catch (e) {
-        if (active) {
-          setModelError(e instanceof Error ? (e.stack ?? e.message) : String(e));
-        }
+        if (active) setModelError(e instanceof Error ? (e.stack ?? e.message) : String(e));
+      }
+
+      // 2) **Foto-Sanitisierung** (#89) – eigener try. Scheitert sie, ist nur das
+      //    Spotten deaktiviert (fail-closed: kein Draft ohne Bereinigung), nicht die
+      //    Erkennung. Dynamischer Import: Skias `NativeSetup` (`SkiaModule.install()`)
+      //    läuft erst HIER (nach dem ersten Render) – sonst schlösse ein Init-Fehler
+      //    die App still, bevor die StartupErrorBoundary greift.
+      try {
+        const { createMobilePhotoSanitizer } = await import("./upload/createMobilePhotoSanitizer");
+        const sanitizer = await createMobilePhotoSanitizer({ definition, branding });
+        if (active) setPhotoSanitizer(() => sanitizer);
+      } catch (e) {
+        if (active) setSanitizerError(e instanceof Error ? (e.stack ?? e.message) : String(e));
       }
     })();
     return () => {
@@ -214,6 +225,21 @@ function Root() {
           <Text style={styles.errorTitle}>Modell-Ladefehler</Text>
           <Text style={styles.errorVersion}>v{APP_VERSION}</Text>
           <Text style={styles.errorText}>{modelError}</Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // Fail-closed (#89): ohne Sanitisierung darf nicht gespottet/persistiert werden.
+  // Eigene, ehrliche Meldung (nicht als „Modell-Ladefehler" tarnen) – die Erkennung
+  // selbst hat unabhängig davon geladen.
+  if (sanitizerError) {
+    return (
+      <SafeAreaView style={styles.errorRoot}>
+        <ScrollView contentContainerStyle={styles.errorContent}>
+          <Text style={styles.errorTitle}>Sanitisierung nicht verfügbar</Text>
+          <Text style={styles.errorVersion}>v{APP_VERSION}</Text>
+          <Text style={styles.errorText}>{sanitizerError}</Text>
         </ScrollView>
       </SafeAreaView>
     );

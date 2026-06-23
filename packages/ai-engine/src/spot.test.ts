@@ -66,6 +66,22 @@ const clock = {
   now: (): string => "2026-06-15T08:00:00.000Z",
 };
 
+/**
+ * Passthrough-Sanitizer für Tests, die nicht die Sanitisierung selbst prüfen, aber
+ * den jetzt **verpflichtenden** Dep brauchen (fail-closed, #89): gibt dieselbe URI
+ * zurück.
+ */
+const passthroughSanitize = async (input: {
+  imageUri: string;
+}): Promise<import("./sanitize").SanitizeResult> => ({
+  imageUri: input.imageUri,
+  report: {
+    metadataStripped: true,
+    redacted: { face: 0, licensePlate: 0 },
+    output: { imageUri: input.imageUri, format: "jpeg", width: 0, height: 0, bytes: 0 },
+  },
+});
+
 // --- Tests -------------------------------------------------------------------
 
 describe("gateConfigFromAppDefinition", () => {
@@ -99,6 +115,7 @@ describe("createSpot", () => {
       ),
       resolver: slugLabelResolver,
       factLookup,
+      sanitizePhoto: passthroughSanitize,
       ...clock,
     });
 
@@ -124,6 +141,7 @@ describe("createSpot", () => {
     const spot = createSpot(makeAppDef(), {
       cascade: fixedCascade(rejected(classification([["tabby cat", 0.97]]))),
       resolver: slugLabelResolver,
+      sanitizePhoto: passthroughSanitize,
       ...clock,
     });
 
@@ -144,6 +162,7 @@ describe("createSpot", () => {
         accepted(classification([["sports car", 0.9]]), classification([["???", 0.5]])),
       ),
       resolver,
+      sanitizePhoto: passthroughSanitize,
       ...clock,
     });
 
@@ -237,19 +256,5 @@ describe("createSpot – Foto-Sanitisierung (#89)", () => {
     await expect(spot({ imageUri: "file:///golf.jpg", spottedBy: "user-42" })).rejects.toThrow(
       "sanitize failed",
     );
-  });
-
-  it("hält ohne Sanitizer die Original-URI (Übergangszustand)", async () => {
-    const spot = createSpot(makeAppDef(), {
-      cascade: fixedCascade(
-        accepted(classification([["sports car", 0.9]]), classification([["VW Golf VII", 0.8]])),
-      ),
-      resolver: slugLabelResolver,
-      ...clock,
-    });
-
-    const out = await spot({ imageUri: "file:///golf.jpg", spottedBy: "user-42" });
-    expect(out.photoUri).toBe("file:///golf.jpg");
-    if (out.kind === "draft") expect(out.card.photoUri).toBe("file:///golf.jpg");
   });
 });

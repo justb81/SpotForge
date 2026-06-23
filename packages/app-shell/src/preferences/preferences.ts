@@ -40,6 +40,11 @@ export interface Preferences {
    * verlassen das Gerät nur per Opt-in"); davor werden sie on-device sanitisiert.
    * Default: **nicht erteilt** – der Upload-Pfad fragt vor dem ersten Mal. Über
    * die Einstellungen widerrufbar (Löschrecht/Transparenz).
+   *
+   * TODO(#81/#19): Diese Einwilligung wird bislang nur **persistiert**, aber noch
+   * nirgends abgefragt (es gibt noch keinen Upload-Endpunkt). Wer den Upload baut,
+   * MUSS hier das Gate setzen (kein Foto verlässt das Gerät bei `false`) und die
+   * `privacy.upload.*`-Texte rendern.
    */
   uploadConsentGranted: boolean;
   /**

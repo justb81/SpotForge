@@ -45,10 +45,18 @@ describe("validateUploadedImage", () => {
     expect(result).toEqual({ ok: false, reason: "metadata-present" });
   });
 
-  it("lehnt sonstige APPn-Metadaten ab (z.B. APP2/ICC)", () => {
-    const app2 = segment(0xe2, [0x49, 0x43, 0x43]);
+  it("lehnt APP2 ohne gültiges ICC-Profil ab", () => {
+    const app2 = segment(0xe2, [0x00, 0x01, 0x02]); // kein "ICC_PROFILE\0"-Kennzeichen
     const result = validateUploadedImage(jpeg(app2, sof0(800, 600)));
     expect(result).toEqual({ ok: false, reason: "metadata-present" });
+  });
+
+  it("akzeptiert APP2 mit ICC-Farbprofil (sRGB, kein personenbezogener Inhalt)", () => {
+    // "ICC_PROFILE\0" + Sequenz/Total + (Pseudo-)Profilbytes. Skias JPEG-Encoder
+    // hängt dieses Farbprofil an – es darf den Server-Check passieren.
+    const icc = [0x49, 0x43, 0x43, 0x5f, 0x50, 0x52, 0x4f, 0x46, 0x49, 0x4c, 0x45, 0x00];
+    const app2Icc = segment(0xe2, [...icc, 0x01, 0x01, 0x00, 0x00]);
+    expect(validateUploadedImage(jpeg(app2Icc, sof0(800, 600))).ok).toBe(true);
   });
 
   it("lehnt Kommentar-Segmente ab (COM)", () => {

@@ -23,9 +23,23 @@ const SOI = 0xd8; // Start of Image
 const EOI = 0xd9; // End of Image
 const SOS = 0xda; // Start of Scan (danach folgen entropie-kodierte Bilddaten)
 const APP0 = 0xe0; // JFIF – einziges erlaubtes APP-Segment (kein personenbezogener Inhalt)
-const APP15 = 0xef; // APP1..APP15 (EXIF/XMP/ICC/…) tragen Metadaten → alle ablehnen
+const APP2 = 0xe2; // ICC-Farbprofil (sRGB) – erlaubt, wenn es ein echtes ICC-Profil ist
+const APP15 = 0xef; // APP1..APP15 (EXIF/XMP/…) tragen Metadaten → ablehnen (außer APP2-ICC)
 const COM = 0xfe; // Kommentar-Segment → ablehnen
 const TEM = 0x01; // standalone, ohne Länge
+
+// „ICC_PROFILE\0" – Kennzeichen am Anfang eines APP2-ICC-Segments.
+const ICC_PROFILE_MARKER = [
+  0x49, 0x43, 0x43, 0x5f, 0x50, 0x52, 0x4f, 0x46, 0x49, 0x4c, 0x45, 0x00,
+] as const;
+
+/** Beginnt die APP2-Nutzlast ab `payloadStart` mit dem „ICC_PROFILE\0"-Kennzeichen? */
+function isIccProfile(bytes: Uint8Array, payloadStart: number): boolean {
+  for (let k = 0; k < ICC_PROFILE_MARKER.length; k += 1) {
+    if (bytes[payloadStart + k] !== ICC_PROFILE_MARKER[k]) return false;
+  }
+  return true;
+}
 
 /** Liest ein Big-Endian-uint16 ab `idx`; `undefined`, wenn die Bytes fehlen. */
 function u16At(bytes: Uint8Array, idx: number): number | undefined {
@@ -121,9 +135,15 @@ export function validateUploadedImage(
       continue;
     }
 
-    // Metadaten-Segmente ablehnen: alle APPn außer APP0/JFIF (EXIF/XMP/ICC/…) und
-    // Kommentare. APP0 (JFIF) bleibt zulässig – kein personenbezogener Inhalt.
+    // Metadaten-Segmente ablehnen: alle APPn außer APP0/JFIF und Kommentare.
+    // Ausnahme: APP2 mit **ICC-Farbprofil** (sRGB) – das schreibt Skias JPEG-Encoder
+    // mit, es trägt keine personenbezogenen Daten (erkennbar am „ICC_PROFILE\0"-
+    // Kennzeichen am Payload-Anfang, i+2 nach den zwei Längen-Bytes).
     if ((marker > APP0 && marker <= APP15) || marker === COM) {
+      if (marker === APP2 && isIccProfile(bytes, i + 2)) {
+        i += segLen;
+        continue;
+      }
       return { ok: false, reason: "metadata-present" };
     }
 

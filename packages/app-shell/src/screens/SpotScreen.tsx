@@ -192,10 +192,11 @@ export function SpotScreen({
         // erst die Top-k-Kandidaten zur Auswahl (Draft entsteht bei der Auswahl).
         setResult(await spotter({ imageUri: uri, spottedBy }));
       } catch (e) {
-        // Technische Ursache (inkl. cause-Kette, z.B. der konkrete Skia-/MLKit-
-        // Fehler hinter einer SanitizationError) sichtbar machen – im Standalone-
-        // Release gibt es kein Metro-Overlay, sonst bliebe der Fehler unauffindbar.
-        setError(`${text("spot.error")}\n\n${describeError(e)}`);
+        // Nur im **Dev-Build** die technische Ursache (cause-Kette, z.B. der konkrete
+        // Skia-/MLKit-Fehler) anhängen – sie enthält absolute Geräte-Pfade und native
+        // Interna, die im Release nichts auf dem Bildschirm zu suchen haben. Produktiv
+        // bleibt es bei der generischen Meldung.
+        setError(__DEV__ ? `${text("spot.error")}\n\n${describeError(e)}` : text("spot.error"));
       }
       setMode("result");
     },

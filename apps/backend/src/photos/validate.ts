@@ -23,8 +23,7 @@ const SOI = 0xd8; // Start of Image
 const EOI = 0xd9; // End of Image
 const SOS = 0xda; // Start of Scan (danach folgen entropie-kodierte Bilddaten)
 const APP0 = 0xe0; // JFIF – einziges erlaubtes APP-Segment (kein personenbezogener Inhalt)
-const APP1 = 0xe1; // EXIF/XMP – hier lebt GPS & Co. → immer ablehnen
-const APP15 = 0xef;
+const APP15 = 0xef; // APP1..APP15 (EXIF/XMP/ICC/…) tragen Metadaten → alle ablehnen
 const COM = 0xfe; // Kommentar-Segment → ablehnen
 const TEM = 0x01; // standalone, ohne Länge
 
@@ -39,6 +38,27 @@ function u16At(bytes: Uint8Array, idx: number): number | undefined {
 /** Standalone-Marker ohne Längenfeld (Restart-Marker RST0..RST7). */
 function isStandalone(marker: number): boolean {
   return marker === TEM || (marker >= 0xd0 && marker <= 0xd7);
+}
+
+/**
+ * Überspringt die entropie-kodierten Scan-Daten nach einem SOS bis zum nächsten
+ * echten Segment-Marker. Byte-Stuffing (`0xFF00`) und Restart-Marker
+ * (`0xFFD0..D7`) gehören zu den Scan-Daten und werden übersprungen. Liefert den
+ * Index des nächsten `0xFF`-Markers bzw. `bytes.length`, wenn keiner mehr folgt.
+ * So scannt die Prüfung **über das erste SOS hinaus** weiter – ein nicht-
+ * kooperierender Client könnte Metadaten hinter den Scan-Daten anhängen.
+ */
+function skipEntropyData(bytes: Uint8Array, from: number): number {
+  let i = from;
+  while (i < bytes.length) {
+    if (bytes[i] === 0xff) {
+      const next = bytes[i + 1];
+      if (next === undefined) return bytes.length;
+      if (next !== 0x00 && !(next >= 0xd0 && next <= 0xd7)) return i;
+    }
+    i += 1;
+  }
+  return bytes.length;
 }
 
 /**
@@ -82,8 +102,8 @@ export function validateUploadedImage(
     if (marker === undefined) return { ok: false, reason: "corrupt" };
     i += 2;
 
-    // EOI/SOS beenden den Header-Bereich – danach kommen keine Metadaten mehr.
-    if (marker === EOI || marker === SOS) break;
+    // EOI beendet das Bild.
+    if (marker === EOI) break;
     if (isStandalone(marker)) continue;
 
     // Längenfeld (Big-Endian, schließt die zwei Längen-Bytes selbst ein).
@@ -92,14 +112,26 @@ export function validateUploadedImage(
       return { ok: false, reason: "corrupt" };
     }
 
-    // Metadaten-Segmente ablehnen: APP1 (EXIF/XMP), alle weiteren APPn, Kommentare.
-    // Nur APP0 (JFIF) bleibt zulässig – es enthält keine personenbezogenen Daten.
-    if (marker === APP1 || (marker > APP0 && marker <= APP15) || marker === COM) {
+    // SOS: Nach dem (gelängten) Scan-Header folgen entropie-kodierte Bilddaten.
+    // Nicht am ersten SOS aufhören (das wäre eine Defense-in-Depth-Lücke: ein
+    // nicht-kooperierender Client könnte Metadaten dahinter anhängen), sondern die
+    // Scan-Daten überspringen und **weiterscannen**.
+    if (marker === SOS) {
+      i = skipEntropyData(bytes, i + segLen);
+      continue;
+    }
+
+    // Metadaten-Segmente ablehnen: alle APPn außer APP0/JFIF (EXIF/XMP/ICC/…) und
+    // Kommentare. APP0 (JFIF) bleibt zulässig – kein personenbezogener Inhalt.
+    if ((marker > APP0 && marker <= APP15) || marker === COM) {
       return { ok: false, reason: "metadata-present" };
     }
 
     if (isStartOfFrame(marker)) {
       // Payload nach den zwei Längen-Bytes: [precision][height:2][width:2][…].
+      // SOF-Nutzlast ist mind. 6 Bytes (precision+H+W) → segLen ≥ 8, sonst läsen
+      // wir die Maße aus dem Folgesegment statt aus dem SOF.
+      if (segLen < 8) return { ok: false, reason: "corrupt" };
       height = u16At(bytes, i + 3);
       width = u16At(bytes, i + 5);
       if (height === undefined || width === undefined) return { ok: false, reason: "corrupt" };

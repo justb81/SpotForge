@@ -82,4 +82,33 @@ describe("validateUploadedImage", () => {
     const truncated = new Uint8Array([0xff, 0xd8, 0xff, 0xc0, 0x00]);
     expect(validateUploadedImage(truncated)).toEqual({ ok: false, reason: "corrupt" });
   });
+
+  it("lehnt ein zu kurzes SOF-Segment ab (Maße lägen im Folgesegment)", () => {
+    // Leeres SOF0 (FFC0 0002): segLen=2 < 8 → die Maße kämen aus dem nächsten
+    // Segment. Muss als korrupt gelten statt bogus-Maße zu liefern.
+    const emptySof = [0xff, 0xc0, 0x00, 0x02];
+    expect(validateUploadedImage(jpeg(emptySof, sof0(800, 600)))).toEqual({
+      ok: false,
+      reason: "corrupt",
+    });
+  });
+
+  it("erkennt Metadaten, die HINTER den Scan-Daten (nach SOS) angehängt sind", () => {
+    // SOF, dann SOS + Scan-Bytes, dann ein angehängtes APP1 (EXIF), dann EOI.
+    // Der Scan darf nicht am ersten SOS enden, sonst bliebe das EXIF unentdeckt.
+    const bytes = new Uint8Array([
+      0xff,
+      0xd8,
+      ...sof0(800, 600),
+      0xff,
+      0xda,
+      ...u16(2), // SOS-Header
+      0x12,
+      0x34, // entropie-kodierte Scan-Daten
+      ...APP1_EXIF, // hinter dem Scan angehängte Metadaten
+      0xff,
+      0xd9,
+    ]);
+    expect(validateUploadedImage(bytes)).toEqual({ ok: false, reason: "metadata-present" });
+  });
 });

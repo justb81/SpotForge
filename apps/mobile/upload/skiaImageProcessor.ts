@@ -56,6 +56,12 @@ interface PixelRect {
 /** Aufweitung knapper Detektor-Boxen, damit Gesicht/Kennzeichen sicher abgedeckt ist. */
 const REGION_PADDING = 0.08;
 
+/** Höchstzahl behaltener sanitisierter Cache-Dateien (FIFO-Beschnitt gegen Wachstum). */
+const SANITIZED_KEEP = 64;
+
+/** Monotoner Zähler – verhindert Namenskollisionen zweier Sanitisierungen derselben ms. */
+let sanitizeCounter = 0;
+
 /**
  * Baut den Skia-{@link ImageProcessor}. Lädt das Bild, skaliert auf
  * `encode.maxEdge`, zeichnet es neu (⇒ Metadaten weg), redigiert jede Region je
@@ -84,7 +90,10 @@ export function createSkiaImageProcessor(options: SkiaImageProcessorOptions = {}
     async process({ imageUri, regions, encode }: ProcessImageRequest): Promise<ProcessedImage> {
       const data = await Skia.Data.fromURI(imageUri);
       const image = Skia.Image.MakeImageFromEncoded(data);
-      if (!image) throw new Error(`Bild konnte nicht dekodiert werden: ${imageUri}`);
+      if (!image) {
+        data.dispose();
+        throw new Error(`Bild konnte nicht dekodiert werden: ${imageUri}`);
+      }
 
       const srcW = image.width();
       const srcH = image.height();
@@ -94,42 +103,93 @@ export function createSkiaImageProcessor(options: SkiaImageProcessorOptions = {}
       const outH = Math.max(1, Math.round(srcH * scale));
 
       const surface = Skia.Surface.MakeOffscreen(outW, outH);
-      if (!surface) throw new Error("Skia-Offscreen-Surface konnte nicht erstellt werden");
-      const canvas = surface.getCanvas();
-      // Ab hier in Quellbild-Pixeln zeichnen; die Skalierung mappt auf die Ausgabe.
-      canvas.scale(scale, scale);
-      canvas.drawImage(image, 0, 0);
-
-      for (const region of regions) {
-        const rect = toPixelRect(region, srcW, srcH);
-        if (rect.width <= 0 || rect.height <= 0) continue;
-        if (region.style === "cover" && options.cover) {
-          drawCover(canvas, rect, options.cover, resolveTypeface());
-        } else {
-          drawBlur(canvas, image, rect);
-        }
+      if (!surface) {
+        image.dispose();
+        data.dispose();
+        throw new Error("Skia-Offscreen-Surface konnte nicht erstellt werden");
       }
 
-      const snapshot = surface.makeImageSnapshot();
-      const quality = Math.round(Math.min(1, Math.max(0, encode.quality)) * 100);
-      const bytes = snapshot.encodeToBytes(ImageFormat.JPEG, quality);
+      // Skia-Objekte sind nativer (Off-Heap-)Speicher und werden NICHT vom GC
+      // eingesammelt → am Ende explizit freigeben (sonst OOM-Risiko im Auto-Spot).
+      let snapshot: SkImage | undefined;
+      try {
+        const canvas = surface.getCanvas();
+        // Ab hier in Quellbild-Pixeln zeichnen; die Skalierung mappt auf die Ausgabe.
+        canvas.scale(scale, scale);
+        canvas.drawImage(image, 0, 0);
 
-      const dir = new Directory(Paths.cache, "spotforge", "sanitized");
-      if (!dir.exists) dir.create({ intermediates: true });
-      const file = new File(dir, `sanitized-${Date.now()}.jpg`);
-      file.write(bytes);
+        for (const region of regions) {
+          const rect = toPixelRect(region, srcW, srcH);
+          if (rect.width <= 0 || rect.height <= 0) continue;
+          if (region.style === "cover" && options.cover) {
+            drawCover(canvas, rect, options.cover, resolveTypeface());
+          } else {
+            drawBlur(canvas, image, rect);
+          }
+        }
 
-      return {
-        imageUri: file.uri,
-        format: "jpeg",
-        width: outW,
-        height: outH,
-        bytes: bytes.length,
-        // Snapshot wird aus rohen Surface-Pixeln enkodiert – keine EXIF/Metadaten.
-        metadataStripped: true,
-      };
+        snapshot = surface.makeImageSnapshot();
+        const quality = Math.round(Math.min(1, Math.max(0, encode.quality)) * 100);
+        // `encodeToBytes` ist zur Laufzeit nullable (Encoder-Fehler) – ungeprüft
+        // schriebe man eine 0-Byte-Datei und meldete trotzdem `metadataStripped:true`.
+        const bytes = snapshot.encodeToBytes(ImageFormat.JPEG, quality) as Uint8Array | null;
+        if (!bytes || bytes.length === 0) {
+          throw new Error("JPEG-Enkodierung lieferte keine Bytes");
+        }
+
+        const dir = new Directory(Paths.cache, "spotforge", "sanitized");
+        if (!dir.exists) dir.create({ intermediates: true });
+        // Timestamp + monotoner Zähler ⇒ kollisionsfrei (zwei Sanitisierungen in
+        // derselben ms überschrieben sich sonst gegenseitig).
+        sanitizeCounter += 1;
+        const file = new File(dir, `sanitized-${Date.now()}-${sanitizeCounter}.jpg`);
+        file.write(bytes);
+        pruneSanitized(dir, file.name);
+
+        return {
+          imageUri: file.uri,
+          format: "jpeg",
+          width: outW,
+          height: outH,
+          bytes: bytes.length,
+          // Snapshot wird aus rohen Surface-Pixeln enkodiert – keine EXIF/Metadaten.
+          metadataStripped: true,
+        };
+      } finally {
+        snapshot?.dispose();
+        surface.dispose();
+        image.dispose();
+        data.dispose();
+      }
     },
   };
+}
+
+/**
+ * Beschneidet das Sanitisierungs-Cache-Verzeichnis auf die jüngsten
+ * {@link SANITIZED_KEEP} Dateien (FIFO; Dateiname trägt Timestamp+Zähler →
+ * lexikografisch ≈ chronologisch). Best-effort: Fehler dürfen die Sanitisierung
+ * **nie** scheitern lassen. (Langfristige Bild-Persistenz dauerhaft gespeicherter
+ * Drafts ist Sache von #102 – der Cache ist bewusst flüchtig.)
+ */
+function pruneSanitized(dir: Directory, keepName: string): void {
+  try {
+    const files = dir
+      .list()
+      .filter((e): e is File => e instanceof File && e.name.startsWith("sanitized-"));
+    if (files.length <= SANITIZED_KEEP) return;
+    files.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    for (const f of files.slice(0, files.length - SANITIZED_KEEP)) {
+      if (f.name === keepName) continue;
+      try {
+        f.delete();
+      } catch {
+        // einzelne Löschfehler ignorieren
+      }
+    }
+  } catch {
+    // Prune ist best-effort und darf die Sanitisierung nie scheitern lassen.
+  }
 }
 
 /** Normalisierte (0..1) Region → aufgeweitetes, auf das Bild geklemmtes Pixel-Rechteck. */
@@ -203,6 +263,10 @@ function drawCover(
 ): void {
   const fill = Skia.Paint();
   fill.setColor(Skia.Color(cover.fillColor));
+  // Volle Deckkraft erzwingen: Theme-Farben dürfen 8-stelliges #RRGGBBAA sein – ein
+  // Alpha < FF ergäbe eine **durchsichtige** Überdeckung (Kennzeichen lesbar), während
+  // der Report sie als redigiert meldet. „cover" muss garantiert opak/unlesbar sein.
+  fill.setAlphaf(1);
   fill.setAntiAlias(true);
   canvas.drawRect(Skia.XYWHRect(rect.x, rect.y, rect.width, rect.height), fill);
 

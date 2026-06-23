@@ -8,8 +8,8 @@
 // Skia-Prozessor auflösungsunabhängig blurrt.
 
 import { RNMLKitFaceDetector } from "@infinitered/react-native-mlkit-face-detection";
-import type { RNMLKitRect } from "@infinitered/react-native-mlkit-core";
 import type { DetectedRegion, RegionDetector } from "@spotforge/ai-engine";
+import { normalizeRect } from "./regions";
 
 export interface MlkitFaceDetectorOptions {
   /** Liefert die Pixel-Maße des Quellbildes (z.B. via Skia). */
@@ -51,21 +51,25 @@ export async function createMlkitFaceDetector(
       const faces = result.faces ?? [];
       if (faces.length === 0) return [];
       const { width, height } = await options.imageSize(imageUri);
-      return faces.map((face) => normalize(face.frame, width, height));
+      // MLKit liefert die Box als origin/size in Quellbild-Pixeln → in Kanten
+      // umrechnen und über `normalizeRect` normalisieren (verwirft 0-/NaN-Flächen,
+      // damit der Report keine nie-ausgeführte Redaktion behauptet).
+      const regions: DetectedRegion[] = [];
+      for (const face of faces) {
+        const region = normalizeRect(
+          {
+            left: face.frame.origin.x,
+            top: face.frame.origin.y,
+            right: face.frame.origin.x + face.frame.size.x,
+            bottom: face.frame.origin.y + face.frame.size.y,
+          },
+          width,
+          height,
+          "face",
+        );
+        if (region) regions.push(region);
+      }
+      return regions;
     },
-  };
-}
-
-/** MLKit-Pixel-Rechteck (origin/size) → normalisierte, auf [0,1] geklemmte Region. */
-function normalize(frame: RNMLKitRect, width: number, height: number): DetectedRegion {
-  const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
-  const x = clamp01(frame.origin.x / width);
-  const y = clamp01(frame.origin.y / height);
-  return {
-    kind: "face",
-    x,
-    y,
-    width: clamp01((frame.origin.x + frame.size.x) / width) - x,
-    height: clamp01((frame.origin.y + frame.size.y) / height) - y,
   };
 }

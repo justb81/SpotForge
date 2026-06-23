@@ -38,15 +38,31 @@ export async function createMobilePhotoSanitizer(
   const { definition, branding } = options;
   const resolved = resolveSanitization(definition);
 
+  // Bildmaße je URI memoisieren: Gesichts- und Text-Detektor lesen sonst dieselbe
+  // Datei jeweils separat über Skia (zusätzlicher Dekodier-Aufwand pro Spot).
+  // Spots laufen sequentiell → ein kleiner Cache der letzten Einträge genügt.
+  const sizeCache = new Map<string, { width: number; height: number }>();
+  const imageSize = async (uri: string): Promise<{ width: number; height: number }> => {
+    const cached = sizeCache.get(uri);
+    if (cached) return cached;
+    const size = await skiaImageSize(uri);
+    sizeCache.set(uri, size);
+    if (sizeCache.size > 8) {
+      const oldest = sizeCache.keys().next().value;
+      if (oldest !== undefined) sizeCache.delete(oldest);
+    }
+    return size;
+  };
+
   const detectors: Partial<Record<RedactionTargetKind, RegionDetector>> = {};
   if (resolved.redact.faces.enabled) {
-    detectors.face = await createMlkitFaceDetector({ imageSize: skiaImageSize });
+    detectors.face = await createMlkitFaceDetector({ imageSize });
   }
   if (resolved.redact.licensePlates.enabled) {
     // MLKit Text Recognition (OCR): redigiert jede lesbare Textzeile und deckt damit
     // Kennzeichen kategorie-neutral mit ab. Kein `initialize()` nötig (`recognizeText`
     // ist zustandslos), daher synchron gebaut.
-    detectors.licensePlate = createMlkitTextDetector({ imageSize: skiaImageSize });
+    detectors.licensePlate = createMlkitTextDetector({ imageSize });
   }
 
   const processor = createSkiaImageProcessor({

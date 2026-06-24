@@ -38,10 +38,12 @@ const useDevClient = process.env.EXPO_USE_DEV_CLIENT === "1";
 // Config-Plugins: expo-camera für den Capture (#49); expo-dev-client nur im
 // Development Build. expo-image-picker nur, wenn die Variante den Galerie-Import
 // aktiviert (features.imageImport) – so trägt nur eine App, die das Feature
-// wirklich nutzt, die Foto-Berechtigung. ExecuTorch (#50) braucht kein Plugin
-// (autolinked).
+// wirklich nutzt, die Foto-Berechtigung. ExecuTorch (#50) und die MLKit-Module der
+// Foto-Sanitisierung (#89, Expo-Module) brauchen kein Plugin (autolinked);
+// expo-image (Abhängigkeit der MLKit-Core-Pakete) wird hier registriert.
 const plugins: NonNullable<ExpoConfig["plugins"]> = [
   ...(useDevClient ? ["expo-dev-client"] : []),
+  "expo-image",
   [
     "expo-camera",
     {

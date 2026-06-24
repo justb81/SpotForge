@@ -22,6 +22,10 @@ Normalisierung (`normMean`/`normStd`) und Labels reisen **mit dem Modell** (glei
 Version) – siehe Manifest-Eintrag/`labels.json` –, nicht im App-Code. So ist das
 gebündelte Modell reproduzierbar und in sich konsistent.
 
+> Die **Foto-Sanitisierungs-Detektoren** (#89, Gesicht/Text) laufen NICHT über
+> dieses Tool: sie nutzen permissive On-Device-**MLKit**-Module (kein gebündeltes
+> Modell, keine AGPL-Gewichte).
+
 ## Zwei Export-Backends (`format`)
 
 | `format`  | Quelle                                            | Labels / Norm                          |

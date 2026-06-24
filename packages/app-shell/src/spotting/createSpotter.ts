@@ -17,6 +17,7 @@ import {
 } from "@spotforge/ai-engine";
 import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { localDraftId, nowIso } from "./ids";
+import type { PhotoSanitizer } from "../upload/createUploadSanitizer";
 
 /** Die fertige Spot-Funktion: Foto → {@link SpotResult} (Draft | rejected | unrecognized). */
 export type Spotter = (input: SpotInput) => Promise<SpotResult>;
@@ -33,6 +34,14 @@ export interface SpottingOptions {
   newId?: () => string;
   /** Zeitquelle; Default: {@link nowIso}. */
   now?: () => string;
+  /**
+   * On-Device-**Foto-Sanitisierung** (#89, **verpflichtend**), z.B. aus
+   * {@link createUploadSanitizer} (bzw. dem nativen `createMobilePhotoSanitizer`).
+   * Jeder erzeugte Draft hält **nur das bereinigte Foto** (das Original diente allein
+   * der Erkennung). Fail-closed (Goldene Regel 5/6): ohne Sanitizer wird **kein**
+   * Spotter gebaut – es gibt keinen Roh-Foto-Fallback.
+   */
+  sanitizer: PhotoSanitizer;
 }
 
 /**
@@ -43,7 +52,7 @@ export interface SpottingOptions {
 export function createSpotter(
   definition: AppDefinition,
   cascade: CascadeClassifier,
-  options: SpottingOptions = {},
+  options: SpottingOptions,
 ): Spotter {
   return createSpot(definition, {
     cascade,
@@ -52,5 +61,6 @@ export function createSpotter(
     newId: options.newId ?? localDraftId,
     now: options.now ?? nowIso,
     ...(options.locale !== undefined ? { locale: options.locale } : {}),
+    sanitizePhoto: options.sanitizer,
   });
 }

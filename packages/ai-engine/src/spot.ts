@@ -12,6 +12,7 @@ import { buildDraft, type AttributeValues, type Card } from "@spotforge/game-cor
 import { resolveText, type AppDefinition, type LocaleCode } from "@spotforge/app-config";
 import type { CascadeClassifier, CascadeTimings, GateConfig } from "./cascade";
 import type { ClassificationResult } from "./classifier";
+import type { SanitizationReport, SanitizeInput, SanitizeResult } from "./sanitize";
 
 /** Eingabe eines Spot-Vorgangs. */
 export interface SpotInput {
@@ -42,6 +43,24 @@ export type SpotResult = {
    * über der strengeren Auto-Schwelle.
    */
   gateMass?: number;
+  /**
+   * **Sanitisierte, persist-/upload-bereite** Foto-URI (#89). Sobald das Gate
+   * akzeptiert (das Foto wird also zu einem Draft – automatisch, per Kandidaten-
+   * Auswahl oder manuell), wird es einmal on-device bereinigt (EXIF/GPS entfernt,
+   * Gesichter/Kennzeichen redigiert) und **ab hier verlässt nur noch diese Version
+   * die Pipeline** – das Original diente allein der Erkennung. Bei `rejected` (kein
+   * Draft) **nicht gesetzt**. Da die Sanitisierung verpflichtend ist (fail-closed),
+   * ist dies bei Draft/unrecognized **immer** die bereinigte URI, nie das Rohbild.
+   */
+  photoUri?: string;
+  /**
+   * Nachweis der **Foto-Sanitisierung** (#89) – wie viele Gesichter/Kennzeichen
+   * redigiert wurden, Ausgabemaße/-größe, Metadaten entfernt. Für die On-Screen-
+   * Diagnose ({@link formatSanitizationReport}, vgl. {@link timings}). Nur gesetzt,
+   * wenn ein {@link SpotDeps.sanitizePhoto} lief (also bei akzeptiertem Gate); bei
+   * `rejected` und ohne injizierten Sanitizer `undefined`.
+   */
+  sanitization?: SanitizationReport;
 } & (
   | {
       kind: "draft";
@@ -99,6 +118,15 @@ export interface SpotDeps {
   now: () => string;
   /** Bevorzugte Sprache der Reject-Meldung (Default: app-config-Standard). */
   locale?: LocaleCode;
+  /**
+   * On-Device-**Foto-Sanitisierung** (#89) – **verpflichtend** (Goldene Regel 5/6,
+   * fail-closed): kein Draft/Upload ohne Bereinigung, kein „erst X, dann Y"-Rohbild-
+   * Fallback. Wird aufgerufen, **sobald das Gate akzeptiert** (das Foto also
+   * persistiert wird) – die Erkennung lief bereits auf dem Original, ab hier hält der
+   * Draft nur die bereinigte Version. Wirft die Funktion, **bricht der Spot ab** (kein
+   * Draft mit Rohbild). Im Reject-Pfad (kein Draft) wird sie nicht aufgerufen.
+   */
+  sanitizePhoto: (input: SanitizeInput) => Promise<SanitizeResult>;
 }
 
 /**
@@ -144,13 +172,14 @@ export function createSpot(
   appDef: AppDefinition,
   deps: SpotDeps,
 ): (input: SpotInput) => Promise<SpotResult> {
-  const { cascade, resolver, factLookup, newId, now, locale } = deps;
+  const { cascade, resolver, factLookup, newId, now, locale, sanitizePhoto } = deps;
 
   return async function spot(input: SpotInput): Promise<SpotResult> {
     const { decision, gate, fine, timings } = await cascade.classify({ imageUri: input.imageUri });
     const gateMass = decision.mass;
 
     // 1) Gate-Guardrail: nicht im Scope → Reject (mit erkanntem Top-Label für die UX).
+    //    Reject persistiert nichts → das Original muss nicht sanitisiert werden.
     if (!decision.accepted) {
       const detectedLabel = gate.candidates[0]?.label;
       return {
@@ -162,29 +191,52 @@ export function createSpot(
       };
     }
 
-    // 2) Feinmodell ohne verwertbares Ergebnis → unrecognized.
+    // 2) Gate akzeptiert ⇒ dieses Foto wird zu einem Draft (auto, per Auswahl oder
+    //    manuell). Die Erkennung lief auf dem Original; **ab hier nur noch die
+    //    bereinigte Version** (#89). Die Sanitisierung ist verpflichtend (fail-closed,
+    //    Goldene Regel 5/6): schlägt sie fehl, propagiert der Fehler → kein Draft mit
+    //    Rohbild, kein Roh-Fallback.
+    const sanitized = await sanitizePhoto({ imageUri: input.imageUri });
+    const photoUri = sanitized.imageUri;
+    const sanitization: SanitizationReport = sanitized.report;
+
+    // 3) Feinmodell ohne verwertbares Ergebnis → unrecognized (mit bereinigtem Foto).
     const topFine = fine?.candidates[0];
     if (topFine === undefined || topFine.label.trim() === "") {
-      return { kind: "unrecognized", label: gate.candidates[0]?.label ?? "", timings, gateMass };
+      return {
+        kind: "unrecognized",
+        label: gate.candidates[0]?.label ?? "",
+        photoUri,
+        timings,
+        gateMass,
+        sanitization,
+      };
     }
 
-    // 3) Label → Domänen-Objekt (Default-Resolver; #72 produktiv).
+    // 4) Label → Domänen-Objekt (Default-Resolver; #72 produktiv).
     const resolution = resolver.resolve(topFine.label);
     if (resolution === undefined) {
-      return { kind: "unrecognized", label: topFine.label, timings, gateMass };
+      return {
+        kind: "unrecognized",
+        label: topFine.label,
+        photoUri,
+        timings,
+        gateMass,
+        sanitization,
+      };
     }
 
-    // 4) Optionale provisorische Offline-Vorschläge (#10) – nicht autoritativ.
+    // 5) Optionale provisorische Offline-Vorschläge (#10) – nicht autoritativ.
     const facts = factLookup?.find(resolution.objectId);
 
-    // 5) Draft bauen (Platzhalter-Rarity, Foto, Vorschläge). Forgen ist online (#76).
+    // 6) Draft bauen mit dem **sanitisierten** Foto. Forgen ist online (#76).
     const card = buildDraft({
       id: newId(),
       categoryId: appDef.category.primary,
       objectName: resolution.objectName,
       spottedBy: input.spottedBy,
       createdAt: now(),
-      photoUri: input.imageUri,
+      photoUri,
       ...(facts !== undefined ? { proposedAttributes: facts.attributes } : {}),
       ...(input.geoRegion !== undefined ? { geoRegion: input.geoRegion } : {}),
     });
@@ -192,8 +244,10 @@ export function createSpot(
     return {
       kind: "draft",
       card,
+      photoUri,
       timings,
       gateMass,
+      sanitization,
       ...(fine !== undefined ? { recognition: fine } : {}),
     };
   };

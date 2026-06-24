@@ -35,6 +35,19 @@ export interface Preferences {
    */
   autoSpotCoachmarkSeen: boolean;
   /**
+   * Einwilligung in den **Foto-Upload** (#89, Hook zu #26 DSGVO). Karten-Fotos
+   * verlassen das Gerät erst nach expliziter Zustimmung (Goldene Regel 5: „Fotos
+   * verlassen das Gerät nur per Opt-in"); davor werden sie on-device sanitisiert.
+   * Default: **nicht erteilt** – der Upload-Pfad fragt vor dem ersten Mal. Über
+   * die Einstellungen widerrufbar (Löschrecht/Transparenz).
+   *
+   * TODO(#81/#19): Diese Einwilligung wird bislang nur **persistiert**, aber noch
+   * nirgends abgefragt (es gibt noch keinen Upload-Endpunkt). Wer den Upload baut,
+   * MUSS hier das Gate setzen (kein Foto verlässt das Gerät bei `false`) und die
+   * `privacy.upload.*`-Texte rendern.
+   */
+  uploadConsentGranted: boolean;
+  /**
    * Die beim App-Start zuerst geöffnete Ansicht – einer der Tab-Leisten-Bereiche
    * ({@link TabKey}). Default: `"spot"` (der Kern-Loop). Ist die gewählte Ansicht
    * beim Start noch nicht freigeschaltet, fällt die Navigation auf die erste
@@ -52,6 +65,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   skipTutorial: false,
   autoSpotEnabled: false,
   autoSpotCoachmarkSeen: false,
+  uploadConsentGranted: false,
   defaultView: "spot",
 };
 
@@ -64,6 +78,7 @@ export function serializePreferences(preferences: Preferences): string {
     skipTutorial: preferences.skipTutorial,
     autoSpotEnabled: preferences.autoSpotEnabled,
     autoSpotCoachmarkSeen: preferences.autoSpotCoachmarkSeen,
+    uploadConsentGranted: preferences.uploadConsentGranted,
     defaultView: preferences.defaultView,
     ...(preferences.autoSpotIntervalMs !== undefined
       ? { autoSpotIntervalMs: preferences.autoSpotIntervalMs }
@@ -88,6 +103,10 @@ export function parsePreferences(raw: string | null): Preferences {
       autoSpotCoachmarkSeen: bool(
         parsed?.autoSpotCoachmarkSeen,
         DEFAULT_PREFERENCES.autoSpotCoachmarkSeen,
+      ),
+      uploadConsentGranted: bool(
+        parsed?.uploadConsentGranted,
+        DEFAULT_PREFERENCES.uploadConsentGranted,
       ),
       defaultView: tabKey(parsed?.defaultView, DEFAULT_PREFERENCES.defaultView),
       // Nur ein endlicher, positiver Wert gilt als Override; sonst Varianten-Default.

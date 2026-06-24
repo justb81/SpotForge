@@ -8,6 +8,14 @@ packages:
 # ein self-contained `/prod/backend` mit eingebetteten game-core/api-contract.
 injectWorkspacePackages: true
 
+# Ein einziges `@infinitered/react-native-mlkit-core` erzwingen: die Text-
+# Recognition 5.0.1 pinnt transitiv core@3.1.0 (Release-Versehen im MLKit-
+# Monorepo), während Face-Detection auf core@5.0.0 läuft. Zwei Kopien desselben
+# Expo-Native-Moduls würden beim Autolinking kollidieren; die `RNMLKitRect`-API
+# ist über die Versionen stabil, daher auf 5.0.0 vereinheitlichen.
+overrides:
+  "@infinitered/react-native-mlkit-core": "5.0.0"
+
 # --- Supply-Chain-Härtung (siehe ADR 0006) ---
 
 # Mindestalter (Quarantäne) für neu veröffentlichte Versionen: 7 Tage
@@ -42,5 +50,12 @@ minimumReleaseAgeExclude:
 # blockiert (häufigster Einfallsvektor für Schad-Pakete). esbuild ist bewusst
 # auf `false`: es läuft über die vorinstallierten Plattform-Binaries (@esbuild/*)
 # ohne eigenes Install-Skript.
+#
+# react-native-skia (#89) muss auf `true`: sein postinstall (`scripts/install-libs.js`)
+# **kopiert** die vorgebauten nativen Skia-Bibliotheken aus den Geschwister-Paketen
+# (`react-native-skia-android`/`-apple-*`) nach `libs/` (rein lokal, kein Download).
+# Der Gradle/CMake-Build erwartet sie unter `SKIA_LIBS_PATH=.../libs/android`; ohne
+# diesen Kopierschritt schlägt der APK-Build fehl ("cmake ... non-zero exit").
 allowBuilds:
+  "@shopify/react-native-skia": true
   esbuild: false

@@ -66,6 +66,22 @@ const clock = {
   now: (): string => "2026-06-15T08:00:00.000Z",
 };
 
+/**
+ * Passthrough-Sanitizer für Tests, die nicht die Sanitisierung selbst prüfen, aber
+ * den jetzt **verpflichtenden** Dep brauchen (fail-closed, #89): gibt dieselbe URI
+ * zurück.
+ */
+const passthroughSanitize = async (input: {
+  imageUri: string;
+}): Promise<import("./sanitize").SanitizeResult> => ({
+  imageUri: input.imageUri,
+  report: {
+    metadataStripped: true,
+    redacted: { face: 0, licensePlate: 0 },
+    output: { imageUri: input.imageUri, format: "jpeg", width: 0, height: 0, bytes: 0 },
+  },
+});
+
 // --- Tests -------------------------------------------------------------------
 
 describe("gateConfigFromAppDefinition", () => {
@@ -99,6 +115,7 @@ describe("createSpot", () => {
       ),
       resolver: slugLabelResolver,
       factLookup,
+      sanitizePhoto: passthroughSanitize,
       ...clock,
     });
 
@@ -124,6 +141,7 @@ describe("createSpot", () => {
     const spot = createSpot(makeAppDef(), {
       cascade: fixedCascade(rejected(classification([["tabby cat", 0.97]]))),
       resolver: slugLabelResolver,
+      sanitizePhoto: passthroughSanitize,
       ...clock,
     });
 
@@ -144,11 +162,99 @@ describe("createSpot", () => {
         accepted(classification([["sports car", 0.9]]), classification([["???", 0.5]])),
       ),
       resolver,
+      sanitizePhoto: passthroughSanitize,
       ...clock,
     });
 
     const out = await spot({ imageUri: "file:///x.jpg", spottedBy: "user-42" });
     expect(out.kind).toBe("unrecognized");
     if (out.kind === "unrecognized") expect(out.label).toBe("???");
+  });
+});
+
+describe("createSpot – Foto-Sanitisierung (#89)", () => {
+  // Sanitizer, der eine neue, „bereinigte" URI zurückgibt.
+  const sanitizePhoto = vi.fn(async (input: { imageUri: string }) => ({
+    imageUri: `${input.imageUri}#sanitized`,
+    report: {
+      metadataStripped: true as const,
+      redacted: { face: 0, licensePlate: 0 },
+      output: {
+        imageUri: `${input.imageUri}#sanitized`,
+        format: "jpeg" as const,
+        width: 1024,
+        height: 768,
+        bytes: 1234,
+      },
+    },
+  }));
+
+  it("erkennt auf dem Original, persistiert im Draft aber das sanitisierte Foto", async () => {
+    const cascade = fixedCascade(
+      accepted(classification([["sports car", 0.9]]), classification([["VW Golf VII", 0.8]])),
+    );
+    const spot = createSpot(makeAppDef(), {
+      cascade,
+      resolver: slugLabelResolver,
+      sanitizePhoto,
+      ...clock,
+    });
+
+    const out = await spot({ imageUri: "file:///golf.jpg", spottedBy: "user-42" });
+
+    // Erkennung lief auf dem ORIGINAL …
+    expect(cascade.classify).toHaveBeenCalledWith({ imageUri: "file:///golf.jpg" });
+    // … aber Draft + Ergebnis tragen das SANITISIERTE Foto.
+    expect(out.photoUri).toBe("file:///golf.jpg#sanitized");
+    if (out.kind === "draft") expect(out.card.photoUri).toBe("file:///golf.jpg#sanitized");
+    expect(sanitizePhoto).toHaveBeenCalledWith({ imageUri: "file:///golf.jpg" });
+    // Der Sanitisierungs-Report wird fürs On-Screen-Diagnose-Panel mitgereicht.
+    expect(out.sanitization?.metadataStripped).toBe(true);
+    expect(out.sanitization?.output.bytes).toBe(1234);
+  });
+
+  it("reicht das sanitisierte Foto auch im unrecognized-Pfad mit (für den manuellen Draft)", async () => {
+    const spot = createSpot(makeAppDef(), {
+      cascade: fixedCascade(
+        accepted(classification([["sports car", 0.9]]), classification([["???", 0.5]])),
+      ),
+      resolver: { resolve: () => undefined },
+      sanitizePhoto,
+      ...clock,
+    });
+
+    const out = await spot({ imageUri: "file:///x.jpg", spottedBy: "user-42" });
+    expect(out.kind).toBe("unrecognized");
+    expect(out.photoUri).toBe("file:///x.jpg#sanitized");
+  });
+
+  it("sanitisiert NICHT, wenn das Gate ablehnt (kein Draft persistiert)", async () => {
+    const sanitize = vi.fn(); // frischer Mock: darf im Reject-Pfad nie laufen
+    const spot = createSpot(makeAppDef(), {
+      cascade: fixedCascade(rejected(classification([["tabby cat", 0.97]]))),
+      resolver: slugLabelResolver,
+      sanitizePhoto: sanitize,
+      ...clock,
+    });
+
+    const out = await spot({ imageUri: "file:///cat.jpg", spottedBy: "user-42" });
+    expect(out.kind).toBe("rejected");
+    expect(out.photoUri).toBeUndefined();
+    expect(sanitize).not.toHaveBeenCalled();
+  });
+
+  it("bricht ab (kein Draft mit Rohbild), wenn die Sanitisierung fehlschlägt", async () => {
+    const spot = createSpot(makeAppDef(), {
+      cascade: fixedCascade(
+        accepted(classification([["sports car", 0.9]]), classification([["VW Golf VII", 0.8]])),
+      ),
+      resolver: slugLabelResolver,
+      sanitizePhoto: () => Promise.reject(new Error("sanitize failed")),
+      ...clock,
+    });
+
+    await expect(spot({ imageUri: "file:///golf.jpg", spottedBy: "user-42" })).rejects.toThrow(
+      "sanitize failed",
+    );
   });
 });

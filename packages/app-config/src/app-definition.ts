@@ -36,6 +36,17 @@ export interface AppDefinition {
   /** Optionale Feature-Schalter der App. Fehlt das Feld, gelten alle Defaults. */
   features?: AppFeatures;
 
+  /**
+   * Verpflichtende On-Device-**Foto-Sanitisierung** vor jedem Upload (#89,
+   * Goldene Regel 5). Optional – fehlt das Feld, gelten die privacy-first
+   * {@link DEFAULT_SANITIZATION}-Werte (EXIF-Strip + Gesichts-Blur an,
+   * Kennzeichen aus). **Was** unkenntlich gemacht wird **und wie**
+   * ({@link RedactionStyle} `blur`/`cover`), ist bewusst variantenspezifisch
+   * (Goldene Regel 1/3): die Tier-App braucht z.B. keine Kennzeichen-Redaktion,
+   * CarForge überdeckt sie als `"cover"`. Aufgelöst über {@link resolveSanitization}.
+   */
+  sanitization?: SanitizationConfig;
+
   // Theme & Assets sind bewusst NICHT Teil der AppDefinition (ADR 0011): sie
   // leben als Branding (@spotforge/app-config `branding.ts`) in einer eigenen
   // Config je Variante, mit `variants/_default` als generischer Basis.
@@ -75,6 +86,120 @@ export function resolveFeatures(definition: AppDefinition): Required<AppFeatures
   return {
     imageImport: definition.features?.imageImport ?? false,
     autoSpot: definition.features?.autoSpot ?? false,
+  };
+}
+
+/**
+ * Wie eine erkannte sensible Region unkenntlich gemacht wird (#89):
+ * - `"blur"`: weichzeichnen (Default; neutral – z.B. für Gesichter Unbeteiligter).
+ * - `"cover"`: mit dem **App-Namen in Theme-Farben** überdecken (vollständig
+ *   opak, garantiert unlesbar und on-brand – z.B. „CarForge" übers Kennzeichen).
+ *   Das eigentliche Rendering (Text + Farben) macht der Host aus Identität/Branding;
+ *   die `AppDefinition` legt nur die **Stil-Policy** fest (Assets sind kein Teil der
+ *   Definition, ADR 0011).
+ */
+export type RedactionStyle = "blur" | "cover";
+
+/**
+ * Konfiguration der verpflichtenden On-Device-**Foto-Sanitisierung** vor dem
+ * Upload (#89). Karten-Fotos verlassen das Gerät zwangsläufig (Sync #19, Schmiede
+ * #76/#81, PvP #20, Tausch #21) und werden anderen Spielern gezeigt – sie müssen
+ * vorher bereinigt werden. **EXIF/Metadaten werden immer entfernt** (kein
+ * Schalter – Privacy-first, Goldene Regel 5); konfigurierbar sind nur die
+ * Re-Enkodier-Grenzen und welche sensiblen Regionen wie unkenntlich gemacht
+ * werden. Aufgelöst über {@link resolveSanitization}.
+ */
+export interface SanitizationConfig {
+  /** Grenzen der Re-Enkodierung; das Re-Enkodieren entfernt zugleich alle Restmetadaten. */
+  encode?: SanitizationEncodeConfig;
+  /** Welche sensiblen Bildregionen on-device erkannt und wie unkenntlich gemacht werden. */
+  redact?: SanitizationRedactConfig;
+}
+
+/** Re-Enkodier-Grenzen (jeder Wert optional; fehlend ⇒ {@link DEFAULT_SANITIZATION}). */
+export interface SanitizationEncodeConfig {
+  /** Maximale Kantenlänge (längere Seite) in px; Größeres wird herunterskaliert. */
+  maxEdge?: number;
+  /** JPEG-Qualität 0..1. */
+  quality?: number;
+}
+
+/** Redaktions-Ziele der Sanitisierung (jedes optional; fehlend ⇒ Default). */
+export interface SanitizationRedactConfig {
+  /**
+   * Gesichter von Passanten. Default: **an**, Stil `"blur"` – schützt Unbeteiligte
+   * unabhängig von der Kategorie (Goldene Regel 5).
+   */
+  faces?: RedactionTargetConfig;
+  /**
+   * Kfz-Kennzeichen. Default: **aus**; nur Varianten mit Fahrzeugbezug (CarForge)
+   * schalten es an (dort als `"cover"`). Synergie mit dem Detektor aus #75.
+   */
+  licensePlates?: RedactionTargetConfig;
+}
+
+/** Pro Ziel: ob es unkenntlich gemacht wird und mit welchem {@link RedactionStyle}. */
+export interface RedactionTargetConfig {
+  /** Ziel überhaupt erkennen & unkenntlich machen. */
+  enabled?: boolean;
+  /** Stil der Unkenntlichmachung (Default: `"blur"`). */
+  style?: RedactionStyle;
+}
+
+/** Vollständig aufgelöster Redaktions-Eintrag eines Ziels. */
+export interface ResolvedRedaction {
+  enabled: boolean;
+  style: RedactionStyle;
+}
+
+/** Vollständig aufgelöste Sanitisierungs-Parameter (alle Felder gesetzt). */
+export interface ResolvedSanitization {
+  encode: { maxEdge: number; quality: number };
+  redact: { faces: ResolvedRedaction; licensePlates: ResolvedRedaction };
+}
+
+/**
+ * Privacy-first-Defaults der Foto-Sanitisierung (#89), genutzt von
+ * {@link resolveSanitization}, wenn eine Variante {@link AppDefinition.sanitization}
+ * nicht (vollständig) setzt: Gesichter **an** (`"blur"`), Kennzeichen **aus**.
+ * EXIF/Metadaten-Stripping ist kein Default-Wert hier, sondern in der Pipeline
+ * (`@spotforge/ai-engine`) **unbedingt** – es lässt sich nicht abschalten.
+ */
+export const DEFAULT_SANITIZATION: ResolvedSanitization = {
+  encode: { maxEdge: 2048, quality: 0.85 },
+  redact: {
+    faces: { enabled: true, style: "blur" },
+    licensePlates: { enabled: false, style: "blur" },
+  },
+};
+
+/**
+ * Löst die optionale {@link AppDefinition.sanitization} auf konkrete Werte auf
+ * (fehlendes Feld/fehlender Wert ⇒ {@link DEFAULT_SANITIZATION}). Einzige Stelle
+ * der Sanitisierungs-Defaults – Konsumenten (Upload-Pfad, ai-engine) fragen nur
+ * das Ergebnis ab.
+ */
+export function resolveSanitization(definition: AppDefinition): ResolvedSanitization {
+  const s = definition.sanitization;
+  const resolveTarget = (
+    target: RedactionTargetConfig | undefined,
+    fallback: ResolvedRedaction,
+  ): ResolvedRedaction => ({
+    enabled: target?.enabled ?? fallback.enabled,
+    style: target?.style ?? fallback.style,
+  });
+  return {
+    encode: {
+      maxEdge: s?.encode?.maxEdge ?? DEFAULT_SANITIZATION.encode.maxEdge,
+      quality: s?.encode?.quality ?? DEFAULT_SANITIZATION.encode.quality,
+    },
+    redact: {
+      faces: resolveTarget(s?.redact?.faces, DEFAULT_SANITIZATION.redact.faces),
+      licensePlates: resolveTarget(
+        s?.redact?.licensePlates,
+        DEFAULT_SANITIZATION.redact.licensePlates,
+      ),
+    },
   };
 }
 

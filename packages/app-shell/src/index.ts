@@ -164,6 +164,13 @@ export { createSpotter } from "./spotting/createSpotter";
 export type { Spotter, SpottingOptions } from "./spotting/createSpotter";
 export { localDraftId, nowIso } from "./spotting/ids";
 
+// Foto-Sanitisierung vor Upload (#89): verpflichtende On-Device-Bereinigung
+// (EXIF/GPS entfernen, Gesichter/Kennzeichen redigieren – blur bzw. cover) als
+// harte Vorbedingung des Upload-Pfads. Ziele, Stil & Grenzen kommen aus der
+// Variante (Goldene Regel 1/3).
+export { createUploadSanitizer } from "./upload/createUploadSanitizer";
+export type { PhotoSanitizer, UploadSanitizerDeps } from "./upload/createUploadSanitizer";
+
 // Manueller Draft (Fallback bei `unrecognized`) und Draft-Bearbeitung: reine Logik + UI.
 export { buildManualDraft } from "./draft/manual-draft";
 export type { ManualDraftInput, ManualDraftDeps } from "./draft/manual-draft";

@@ -44,3 +44,21 @@ export type {
   FactRecord,
   FactLookup,
 } from "./spot";
+
+// Foto-Sanitisierung (On-Device): Rohfoto → upload-bereites, bereinigtes Bild (#89).
+export { createPhotoSanitizer, SanitizationError, formatSanitizationReport } from "./sanitize";
+export type {
+  RedactionStyle,
+  RedactionTargetKind,
+  DetectedRegion,
+  RedactionRegion,
+  DetectorInput,
+  RegionDetector,
+  ProcessImageRequest,
+  ProcessedImage,
+  ImageProcessor,
+  SanitizeDeps,
+  SanitizeInput,
+  SanitizationReport,
+  SanitizeResult,
+} from "./sanitize";

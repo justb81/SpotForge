@@ -4,6 +4,7 @@ import type { AppDefinition, LocaleCode } from "@spotforge/app-config";
 import { DEFAULT_LOCALE, resolveAutoSpot, resolveFeatures } from "@spotforge/app-config";
 import {
   formatCascadeTimings,
+  formatSanitizationReport,
   type CascadeClassifier,
   type SpotResult,
 } from "@spotforge/ai-engine";
@@ -20,6 +21,7 @@ import { createSpotter } from "../spotting/createSpotter";
 import { useAutoSpot } from "../spotting/useAutoSpot";
 import { resolveAutoSpotInterval } from "../spotting/autoSpot";
 import { buildManualDraft } from "../draft/manual-draft";
+import type { PhotoSanitizer } from "../upload/createUploadSanitizer";
 import { DEFAULT_PREFERENCES, type Preferences } from "../preferences/preferences";
 
 export interface SpotScreenProps {
@@ -33,6 +35,13 @@ export interface SpotScreenProps {
   spottedBy: string;
   /** Zwei-Stufen-Kaskade (Gate → Feinmodell, #8/#50); erst gesetzt, wenn die Modelle geladen sind. */
   cascade?: CascadeClassifier;
+  /**
+   * On-Device-**Foto-Sanitisierung** (#89). Ist sie gesetzt, hält **jeder Draft nur
+   * das bereinigte Foto** (EXIF/GPS entfernt, Gesichter/Kennzeichen redigiert) –
+   * das Original dient allein der Erkennung. Erst verfügbar, wenn die Detektor-
+   * Modelle gebündelt sind; bis dahin bleibt die Original-URI (Übergangszustand).
+   */
+  photoSanitizer?: PhotoSanitizer;
   /**
    * Speichert einen bestätigten/korrigierten Draft lokal in der Sammlung (#102).
    * Ohne Handler erscheint kein Speichern-Button.
@@ -68,6 +77,7 @@ export function SpotScreen({
   locale = DEFAULT_LOCALE,
   spottedBy,
   cascade,
+  photoSanitizer,
   onSaveDraft,
   preferences = DEFAULT_PREFERENCES,
   onPreferencesChange,
@@ -84,9 +94,15 @@ export function SpotScreen({
   // (#85) schaltet den intervallgesteuerten Auto-Modus frei.
   const { imageImport: canImportImage, autoSpot: autoSpotAvailable } = resolveFeatures(definition);
 
+  // Fail-closed (#89, Goldene Regel 5/6): der Spotter entsteht **nur**, wenn
+  // sowohl die Kaskade ALS AUCH der Sanitizer bereit sind. Ohne Sanitizer wird
+  // nichts gespottet/persistiert – kein Roh-Foto-Fallback.
   const spotter = useMemo(
-    () => (cascade ? createSpotter(definition, cascade, { locale }) : undefined),
-    [definition, cascade, locale],
+    () =>
+      cascade && photoSanitizer
+        ? createSpotter(definition, cascade, { locale, sanitizer: photoSanitizer })
+        : undefined,
+    [definition, cascade, locale, photoSanitizer],
   );
 
   const [mode, setMode] = useState<Mode>("capturing");
@@ -131,6 +147,18 @@ export function SpotScreen({
     [reset],
   );
 
+  // Fehler im Auto-Spot (z.B. fehlgeschlagene Sanitisierung, #89) nicht
+  // verschlucken: wie im manuellen Pfad sichtbar machen und in den Result-Modus
+  // wechseln – das pausiert zugleich den Auto-Loop (active hängt am capturing-Modus).
+  const handleAutoError = useCallback(
+    (e: unknown) => {
+      reset();
+      setError(__DEV__ ? `${text("spot.error")}\n\n${describeError(e)}` : text("spot.error"));
+      setMode("result");
+    },
+    [reset, text],
+  );
+
   // Stille Aufnahme über die Kamera-Ref (kein Auslöse-Ton/keine Animation).
   const autoCapture = useCallback(
     () => cameraRef.current?.captureSilently() ?? Promise.resolve(null),
@@ -149,6 +177,7 @@ export function SpotScreen({
     capture: autoCapture,
     classify: autoClassify,
     onFire: handleAutoFire,
+    onError: handleAutoError,
   });
 
   // Einmaliger Coachmark für die versteckte Geste (nur bei aktivem Feature, solange
@@ -175,8 +204,12 @@ export function SpotScreen({
         // Kein Auto-Draft mehr: bei akzeptiertem Gate zeigt der RecognitionPicker
         // erst die Top-k-Kandidaten zur Auswahl (Draft entsteht bei der Auswahl).
         setResult(await spotter({ imageUri: uri, spottedBy }));
-      } catch {
-        setError(text("spot.error"));
+      } catch (e) {
+        // Nur im **Dev-Build** die technische Ursache (cause-Kette, z.B. der konkrete
+        // Skia-/MLKit-Fehler) anhängen – sie enthält absolute Geräte-Pfade und native
+        // Interna, die im Release nichts auf dem Bildschirm zu suchen haben. Produktiv
+        // bleibt es bei der generischen Meldung.
+        setError(__DEV__ ? `${text("spot.error")}\n\n${describeError(e)}` : text("spot.error"));
       }
       setMode("result");
     },
@@ -200,29 +233,40 @@ export function SpotScreen({
     }
   }, [handleCapture]);
 
+  // Persist-/Draft-Foto: ausschließlich die vom Spotter gelieferte **sanitisierte**
+  // URI (#89, fail-closed) – **nie** das Rohbild. Ist sie nicht da (kein Ergebnis /
+  // Reject), wird nichts persistiert.
+  const persistUri = result?.photoUri;
+  // Hintergrund-Anzeige: zeigt das aufgenommene Foto (nur Darstellung, wird NICHT
+  // persistiert) – während der Verarbeitung das Original, danach das bereinigte.
+  const backgroundUri = result?.photoUri ?? photoUri;
+
   // Auswahl eines Kandidaten → Draft. Für den Top-1 wird der bereits in der
-  // Pipeline gebaute Draft (inkl. evtl. Vorschläge) genutzt, sonst aus dem Label.
+  // Pipeline gebaute Draft (inkl. evtl. Vorschläge, bereinigtes Foto) genutzt,
+  // sonst aus dem Label – immer mit dem sanitisierten Foto.
   const handleSelectCandidate = useCallback(
     (index: number, label: string) => {
       if (index === 0 && result?.kind === "draft") {
         setDraft(result.card);
         return;
       }
-      if (!photoUri) return;
-      setDraft(buildManualDraft(definition, { objectName: label, photoUri, spottedBy }));
+      if (!persistUri) return;
+      setDraft(
+        buildManualDraft(definition, { objectName: label, photoUri: persistUri, spottedBy }),
+      );
     },
-    [definition, photoUri, spottedBy, result],
+    [definition, persistUri, spottedBy, result],
   );
 
   const handleManualCreate = useCallback(
     (objectName: string) => {
-      if (!photoUri) return;
-      const card = buildManualDraft(definition, { objectName, photoUri, spottedBy });
+      if (!persistUri) return;
+      const card = buildManualDraft(definition, { objectName, photoUri: persistUri, spottedBy });
       setManualMode(false);
       setDraft(card);
-      setResult({ kind: "draft", card });
+      setResult({ kind: "draft", card, photoUri: persistUri });
     },
-    [definition, photoUri, spottedBy],
+    [definition, persistUri, spottedBy],
   );
 
   return (
@@ -274,14 +318,16 @@ export function SpotScreen({
           <>
             {/* Aufgenommenes Foto bleibt als Hintergrund sichtbar (Verarbeitung +
                 Ergebnis/Picker); ein dezenter Scrim hält Texte lesbar. */}
-            {photoUri ? (
+            {/* Sobald das Ergebnis da ist, zeigt der Hintergrund das **sanitisierte**
+                Foto (#89); während der Verarbeitung kurz das Original. */}
+            {backgroundUri ? (
               <Image
-                source={{ uri: photoUri }}
+                source={{ uri: backgroundUri }}
                 style={StyleSheet.absoluteFill}
                 resizeMode="cover"
               />
             ) : null}
-            {photoUri ? <View style={[StyleSheet.absoluteFill, styles.scrim]} /> : null}
+            {backgroundUri ? <View style={[StyleSheet.absoluteFill, styles.scrim]} /> : null}
             {mode === "processing" ? (
               <View style={styles.center}>
                 <ActivityIndicator color={theme.colors.primary} />
@@ -289,6 +335,7 @@ export function SpotScreen({
             ) : (
               <>
                 {renderResult()}
+                {renderSanitization()}
                 {renderLatency()}
               </>
             )}
@@ -421,6 +468,21 @@ export function SpotScreen({
     );
   }
 
+  // Diagnosezeile der **Foto-Sanitisierung** (#89): zeigt direkt am Gerät, ob/wie
+  // viele Gesichter und Kennzeichen/Text-Regionen redigiert wurden, die Ausgabemaße
+  // und dass EXIF/GPS entfernt sind – sonst (kein Metro-/Profiler-Overlay im
+  // Standalone-Release) bliebe die Bereinigung unsichtbar. Nur sichtbar, wenn ein
+  // Sanitizer lief (akzeptiertes Gate); bei reinem Reject gibt es keinen Report.
+  function renderSanitization() {
+    const report = result?.sanitization;
+    if (!report) return null;
+    return (
+      <Text style={[styles.latency, { color: theme.colors.accent }]} accessibilityRole="text">
+        {formatSanitizationReport(report)}
+      </Text>
+    );
+  }
+
   // Dezente Latenz-Diagnosezeile (#63): zeigt die gemessenen Kaskaden-Laufzeiten
   // (Gate-only-Reject vs. Gate→Fein-Accept) **auf dem Bildschirm** an, weil ein
   // Standalone-Release kein Profiler-Overlay hat. Nur sichtbar, wenn ein
@@ -434,6 +496,26 @@ export function SpotScreen({
       </Text>
     );
   }
+}
+
+/**
+ * Flacht eine Fehlerkette (`Error.cause`) zu einer lesbaren, mehrzeiligen Zeichenkette
+ * ab – für die On-Screen-Diagnose (#89): eine `SanitizationError` trägt den
+ * eigentlichen Skia-/MLKit-Fehler als `cause`, der sonst unsichtbar bliebe.
+ */
+function describeError(error: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let guard = 0; current && guard < 5; guard += 1) {
+    if (current instanceof Error) {
+      parts.push(`${current.name}: ${current.message}`);
+      current = (current as { cause?: unknown }).cause;
+    } else {
+      parts.push(String(current));
+      break;
+    }
+  }
+  return parts.join("\n↳ ");
 }
 
 const styles = StyleSheet.create({

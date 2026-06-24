@@ -62,6 +62,44 @@ beliebigem `ref` starten) **und automatisch per `pull_request`** für jeden PR, 
 einen den Build betreffenden Pfad ändert (Mobile-Host, gebündelte Pakete,
 `variants/`, Modell-Beschaffung); `concurrency` bricht überholte Läufe je PR ab.
 
+## Foto-Sanitisierung vor Upload (#89)
+
+`upload/` enthält die nativen Bausteine, die ein Karten-Foto **vor jedem Upload**
+on-device bereinigen (Goldene Regel 5):
+
+- `skiaImageProcessor.ts` – **Skia**-Bildprozessor: lädt das Foto, skaliert auf
+  `encode.maxEdge`, **redigiert** jede erkannte Region (`"blur"` weichzeichnen
+  bzw. `"cover"` mit dem **App-Namen in Theme-Farben** überdecken) und enkodiert
+  als JPEG neu – die Re-Enkodierung aus rohen Pixeln entfernt **alle EXIF/GPS**.
+- `mlkitFaceDetector.ts` – **MLKit**-Gesichtsdetektor (`@infinitered/react-native-mlkit-face-detection`,
+  ein **Expo-Modul** → New-Arch-tauglich): Foto-URI → normalisierte Gesichts-Regionen.
+  Permissiv, on-device, **kein gebündeltes Modell**.
+- `mlkitTextDetector.ts` – **MLKit**-Textdetektor (`@infinitered/react-native-mlkit-text-recognition`,
+  ebenfalls ein Expo-Modul): OCR → jede lesbare **Textzeile** als Region. Deckt
+  **Kennzeichen** kategorie-neutral mit ab (MLKit erkennt Text, nicht „Kennzeichen").
+- `imageSize.ts` – liest Bildmaße via Skia (für die Box-Normalisierung der Detektoren).
+- `createMobilePhotoSanitizer.ts` – baut für die laut `definition.sanitization`
+  aktiven Ziele die MLKit-Detektoren + den Skia-Prozessor und verdrahtet sie über
+  `createUploadSanitizer` (app-shell). `"cover"`-Text/-Farben aus Identität + Branding.
+
+Der Spot-Screen zeigt nach jedem akzeptierten Schuss eine **Diagnosezeile**
+(`formatSanitizationReport`): redigierte Gesichter und Kennzeichen/Text-Regionen,
+Ausgabemaße/-größe und „EXIF entfernt" – damit ist die (sonst unsichtbare)
+Bereinigung direkt am Gerät prüfbar.
+
+Skias `postinstall` ist in `pnpm-workspace.yaml` (`allowBuilds`) auf `true` (kopiert
+die vorgebauten nativen Skia-Libs nach `libs/`); die MLKit-Module sind Expo-Module
+und werden beim `expo prebuild`/Gradle-Build autolinked (kein Config-Plugin nötig;
+`expo-image` ist als Plugin registriert). Die Text-Recognition 5.0.1 pinnt transitiv
+`@infinitered/react-native-mlkit-core@3.1.0`; eine pnpm-`overrides`-Regel
+vereinheitlicht das auf `5.0.0` (eine einzige native Core-Instanz, API stabil).
+
+> **Detektoren (permissiv, kein AGPL):** Gesichter über MLKit Face Detection,
+> Kennzeichen/Text über MLKit Text Recognition (OCR → alle lesbaren Text-Regionen) –
+> beide on-device, ohne gebündeltes Modell. Hintergrund zur Lizenz-/Detektor-
+> Entscheidung: Issue #123. Der Upload-Endpunkt + Storage folgen mit #81/#19; bis
+> dahin redigiert der Sanitizer das Draft-Foto on-device, ohne Upload.
+
 ## Status
 
 Gerüst – Expo (SDK 56) initialisiert: `App.tsx` mountet `@spotforge/app-shell`

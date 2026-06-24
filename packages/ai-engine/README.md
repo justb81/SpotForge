@@ -82,10 +82,54 @@ gehostet und vor dem Build via `tools/fetch-models` **fest ins APK gebündelt** 
 Variante; kein Nachladen/OTA, siehe
 [ADR 0008](../../docs/adr/0008-modell-export-pipeline-und-lifecycle.md)).
 
+## Foto-Sanitisierung vor Upload (`sanitize.ts`, #89)
+
+Karten-Fotos verlassen das Gerät zwangsläufig (Sync #19, Schmiede #76/#81, PvP
+#20, Tausch #21) und werden anderen Spielern gezeigt. **Bevor** ein Foto hochgeht,
+bereinigt `createPhotoSanitizer(config, deps)` es on-device:
+
+```
+sanitize(photo)
+  → detectors[kind].detect(photo)          // je aktivem Ziel (face, licensePlate) – normalisierte Boxen
+  → processor.process({ regions, encode }) // ALLE Metadaten strippen + Regionen redigieren + re-enkodieren
+  → harte Vorbedingung: metadataStripped === true?  // sonst SanitizationError – KEIN Rohbild-Upload
+  ⇒ { imageUri, report }                   // bereinigtes Bild + Nachweis (was wurde redigiert/gestrippt)
+```
+
+- **EXIF/GPS werden immer entfernt** (kein Schalter – Privacy-first, Goldene
+  Regel 5); der `processor` re-enkodiert das Bild metadatenfrei.
+- **Kategorie-neutral (Goldene Regel 1/3):** *welche* Ziele und *wie* (Stil) kommt
+  aus `resolveSanitization(AppDefinition)` (`@spotforge/app-config`) — Gesichter per
+  Default (`blur`), Kfz-Kennzeichen nur bei Varianten mit Fahrzeugbezug (CarForge:
+  `cover`). Kein hartkodiertes „Kennzeichen" hier.
+- **Redaktions-Stile:** `"blur"` (weichzeichnen) oder `"cover"` (mit dem App-Namen
+  in Theme-Farben überdecken). Den Stil hängt die Pipeline je Region aus der Config
+  an; das Rendern macht der `ImageProcessor`.
+- **Harte Vorbedingung:** fehlt ein nötiger Detektor, schlägt die Detektion fehl
+  oder bestätigt der Prozessor das Stripping nicht → `SanitizationError`. Der
+  Upload-Pfad blockt dann, statt das Rohbild zu senden.
+- `RegionDetector` und `ImageProcessor` sind **injizierte Seams** wie `Classifier`:
+  - **Detektoren:** permissive On-Device-**MLKit**-Module im RN-Host
+    (`apps/mobile/upload/`) – Gesichter via `@infinitered/react-native-mlkit-face-detection`,
+    Text/Kennzeichen via MLKit Text Recognition. **Kein gebündeltes Modell, keine
+    AGPL-Gewichte.** Die MLKit-Boxen (Pixel) werden über die injizierte `imageSize`
+    auf 0..1 normalisiert.
+  - **Prozessor:** Skia (`apps/mobile/upload/skiaImageProcessor.ts`) – Strip + Blur
+    bzw. Cover (App-Name in Theme-Farben) + JPEG-Re-Enkodierung.
+  - Beide laufen nativ und werden im RN-Build verifiziert; die Orchestrierung hier
+    ist rein und vitest-getestet (`sanitize.test.ts`).
+
+> **Lizenz-Hinweis:** Ein früher Ansatz nutzte gebündelte YOLO-`.pte` (via
+> `react-native-executorch` Object-Detection) – verworfen, weil die verfügbaren
+> YOLO-Gewichte **AGPL-3.0** sind (nicht auslieferbar) und das OD-JSI-Binding im
+> Build nicht verfügbar war. Stattdessen permissive MLKit-Module (s.o.). Details:
+> Issue #123 (Lizenz) und die Detektor-Wiring in `apps/mobile`.
+
 ## Grenzen
 
-Keine Spielregeln (kommen aus `game-core`), keine fest verdrahtete Kategorie,
-kein Foto-Upload (on-device).
+Keine Spielregeln (kommen aus `game-core`), keine fest verdrahtete Kategorie. Der
+eigentliche Foto-**Upload** (Netz/Storage) liegt im Client/Backend (#81/#19); diese
+Engine liefert nur die verpflichtende On-Device-Sanitisierung davor (#89).
 
 ## Abhängigkeiten
 
@@ -104,7 +148,11 @@ Zwei-Stufen-Kaskade mit summierter-Masse-Gate-Logik (#83) und der Manifest-Parse
 Implementiert: die `spot`-Orchestrierung (#8) – Gate-Guardrail aus der
 `AppDefinition` (`category.gate.allow` + `minConfidence`), trivialer
 Default-`LabelResolver` (`slugLabelResolver`), Reject- und `unrecognized`-Pfad sowie
-`game-core.buildDraft` → Draft. Offen: produktive `FactLookup`-Impl (#10),
+`game-core.buildDraft` → Draft. Dazu die **Foto-Sanitisierung** (#89,
+`sanitize.ts`): generische Orchestrierung (Strip/Redaktion/Re-Enkodierung als harte
+Vorbedingung) mit injizierten Seams; die Detektoren laufen permissiv über MLKit
+(Gesicht aktiv; Text/Kennzeichen folgt), der Skia-Bildprozessor (`apps/mobile`)
+macht Blur/Cover. Geräte-Verifikation offen. Offen: produktive `FactLookup`-Impl (#10),
 `CardArtGenerator` (#11) und der produktive Resolver (#72). Das **Forgen** (World
 Data + autoritative Seltenheit) ist server-seitig ([ADR 0010]), nicht in dieser
 Engine. Produktionsreifes Fahrzeugmodell + Geräte-Verifikation sind Mensch-/Geräte-

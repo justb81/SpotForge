@@ -19,12 +19,16 @@ Zwei Export-Backends (Config-Feld ``format``):
   oder aus einem **Checkpoint** (``.pth``, z.B. Jordo23/vehicle-classifier,
   EfficientNet-B4, 8.949 Klassen). Labels aus einer committeten JSON-Liste
   (``timm.labelsJson``, repo-relativ) oder einer CSV (``timm.labelsFile``),
-  Normalisierung aus der Config. Der Export ist immer **fp32** (ADR 0014 –
-  keine Quantisierung; int8 ist verworfen).
+  Normalisierung aus der Config.
+
+Der Export ist immer **fp32** (ADR 0014 – keine Quantisierung; int8 ist verworfen).
 
 Modell-Kontrakt (von react-native-executorch gefordert): Input
 ``float32[1,3,H,W]`` (RGB, nach ``(pixel - mean) / std``), Output ``float32[1,C]``
 rohe Logits in Label-Reihenfolge; Softmax übernimmt das native Runtime.
+
+Die Foto-Sanitisierungs-Detektoren (#89) laufen NICHT über dieses Tool: sie
+nutzen permissive On-Device-MLKit-Module (kein gebündeltes Modell).
 
 Läuft in CI (``.github/workflows/model-export.yml``) oder lokal:
 

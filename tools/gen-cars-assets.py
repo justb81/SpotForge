@@ -83,6 +83,9 @@ def tint(logo, color):
 
 # ---------------------------------------------------------------- icon
 def make_icon(logo):
+    # Rundes, randlos gefülltes Icon: der Kreis nutzt die volle Fläche, die
+    # Ecken sind transparent. iOS/Android maskieren das Icon ohnehin – die runde
+    # Form ist hier bewusst Teil des Assets (voll ausgefülltes Markenzeichen).
     S = 1024
     bg = radial_bg((S, S), lighten(SURFACE, 0.10), darken(BG, 0.25)).convert("RGBA")
     # warmer Rot-Glow unten
@@ -93,7 +96,15 @@ def make_icon(logo):
     bg.alpha_composite(glow)
     lg = fit(logo, int(S * 0.74))
     bg.alpha_composite(lg, ((S - lg.width) // 2, (S - lg.height) // 2))
-    bg.convert("RGB").save(os.path.join(ASSETS, "icon.png"))
+    # Kreis-Maske über die gesamte Kantenlänge (kantenglättend via Supersampling)
+    scale = 4
+    mask = Image.new("L", (S * scale, S * scale), 0)
+    md = ImageDraw.Draw(mask)
+    md.ellipse([0, 0, S * scale - 1, S * scale - 1], fill=255)
+    mask = mask.resize((S, S), Image.LANCZOS)
+    out = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    out.paste(bg, (0, 0), mask)
+    out.save(os.path.join(ASSETS, "icon.png"))
 
 
 # ---------------------------------------------------------------- logo (transparent)

@@ -18,7 +18,7 @@
     "@spotforge/api-contract": "workspace:*",
     "@spotforge/game-core": "workspace:*",
     "drizzle-orm": "0.45.2",
-    "fastify": "^5.1.0",
+    "fastify": "^5.9.0",
     "fastify-plugin": "6.0.0",
     "ioredis": "5.11.1",
     "jose": "6.2.3",
@@ -29,6 +29,6 @@
     "@types/node": "^24.13.2",
     "drizzle-kit": "0.31.10",
     "tsup": "^8.3.0",
-    "tsx": "^4.19.0"
+    "tsx": "^4.23.0"
   }
 }

@@ -36,17 +36,15 @@ function detectorReturning(boxes: Omit<DetectedRegion, "kind">[]): RegionDetecto
 /** Prozessor, der ein bereinigtes Bild meldet (Metadaten entfernt). */
 function okProcessor(over: Partial<ProcessedImage> = {}): ImageProcessor {
   return {
-    process: vi.fn(
-      async (_req: ProcessImageRequest): Promise<ProcessedImage> => ({
-        imageUri: "file://clean.jpg",
-        format: "jpeg",
-        width: 2048,
-        height: 1536,
-        bytes: 320_000,
-        metadataStripped: true,
-        ...over,
-      }),
-    ),
+    process: vi.fn(async (_req: ProcessImageRequest): Promise<ProcessedImage> => ({
+      imageUri: "file://clean.jpg",
+      format: "jpeg",
+      width: 2048,
+      height: 1536,
+      bytes: 320_000,
+      metadataStripped: true,
+      ...over,
+    })),
   };
 }
 

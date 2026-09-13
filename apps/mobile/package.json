@@ -15,7 +15,7 @@
     "@infinitered/react-native-mlkit-core": "^5.0.0",
     "@infinitered/react-native-mlkit-face-detection": "^5.0.0",
     "@infinitered/react-native-mlkit-text-recognition": "5.0.1",
-    "@shopify/react-native-skia": "2.11.0",
+    "@shopify/react-native-skia": "2.11.2",
     "@spotforge/ai-engine": "workspace:*",
     "@spotforge/app-config": "workspace:*",
     "@spotforge/app-shell": "workspace:*",
@@ -32,14 +32,14 @@
     "react-native": "0.85.3",
     "react-native-executorch": "0.9.3",
     "react-native-executorch-expo-resource-fetcher": "0.9.1",
-    "react-native-reanimated": "4.5.3",
-    "react-native-safe-area-context": "5.8.1",
+    "react-native-reanimated": "4.6.0",
+    "react-native-safe-area-context": "5.9.1",
     "react-native-svg": "15.15.5",
-    "react-native-worklets": "0.11.3"
+    "react-native-worklets": "0.12.1"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
-    "babel-preset-expo": "57.0.6",
-    "tsx": "^4.23.11"
+    "babel-preset-expo": "57.0.10",
+    "tsx": "^4.23.13"
   }
 }

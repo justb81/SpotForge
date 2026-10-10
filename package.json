@@ -24,14 +24,14 @@
     "@spotforge/app-config": "workspace:*",
     "@spotforge/config": "workspace:*",
     "@vitest/coverage-v8": "^4.1.10",
-    "eslint": "^10.8.1",
-    "globals": "^17.9.0",
-    "prettier": "^3.9.6",
-    "tsx": "^4.23.11",
-    "turbo": "^2.10.9",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "turbo": "^2.11.7",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.66.0",
-    "vite": "^8.2.1",
+    "typescript-eslint": "^8.71.0",
+    "vite": "^8.3.2",
     "vitest": "^4.1.10"
   }
 }
